@@ -1,0 +1,66 @@
+/* src/App.css */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #f0f2f5; /* สีพื้นหลังเทาอ่อน สบายตา */
+  font-family: 'Prompt', sans-serif; /* แนะนำให้หา Font ไทยสวยๆ มาใส่ */
+  height: 100vh;
+  overflow: hidden; /* ไม่ให้มี scrollbar */
+}
+
+.dashboard-container {
+  display: grid;
+  width: 100vw;
+  height: 100vh;
+  padding: 20px;
+  gap: 20px;
+  
+  /* แบ่งคอลัมน์: ซ้าย 70%, ขวา 30% */
+  grid-template-columns: 7fr 3fr; 
+  /* แบ่งแถว (เฉพาะฝั่งซ้าย): บน 70%, ล่าง 30% */
+  grid-template-rows: 7fr 3fr; 
+  
+  /* ชื่อพื้นที่ (Grid Areas) */
+  grid-template-areas: 
+    "chart char"
+    "result char";
+}
+
+/* Zone 1: กราฟหลัก */
+.zone-chart {
+  grid-area: chart;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  padding: 20px;
+  position: relative;
+}
+
+/* Zone 2: ผลลัพธ์ */
+.zone-result {
+  grid-area: result;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* Zone 3: ตัวการ์ตูน */
+.zone-char {
+  grid-area: char;
+  background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); /* พื้นหลังสีหวานๆ */
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+}
