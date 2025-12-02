@@ -2,7 +2,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 require('dotenv').config();
 
 // 🔴 ตรวจสอบ Key ของคุณตรงนี้อีกครั้งนะครับ
-const API_KEY = process.env.GEMINI_API_KEY || "AIzaSyA3CLBm2lungU_pFLpKIHnGUmSVx4lPu0w"; 
+const API_KEY = process.env.GEMINI_API_KEY; 
 
 console.log("🔑 Checking Key:", API_KEY && API_KEY.startsWith("AIza") ? "Found Key starting with " + API_KEY.substring(0, 5) : "No Key Found or Invalid");
 

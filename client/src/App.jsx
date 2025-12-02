@@ -10,42 +10,34 @@ import CharacterZone from './components/CharacterZone';
 
 function App() {
 
-  // --- 1. ข้อมูลจำลอง (Mock Data) หลายประเภท ---
+  // --- 1. ข้อมูลจำลอง (Mock Data) ---
   const chartsData = [
-    { 
-      id: 1, type: 'bar', title: "ยอดขายรายเดือน", 
-      data: [{name: 'ม.ค.', uv: 4000}, {name: 'ก.พ.', uv: 3000}, {name: 'มี.ค.', uv: 2000}, {name: 'เม.ย.', uv: 2780}] 
-    },
-    { 
-      id: 2, type: 'line', title: "Trend ผู้ใช้งาน", 
-      data: [{name: 'W1', uv: 100}, {name: 'W2', uv: 200}, {name: 'W3', uv: 150}, {name: 'W4', uv: 300}, {name: 'W5', uv: 250}] 
-    },
-    { 
-      id: 3, type: 'pie', title: "สัดส่วนสินค้า", 
-      data: [{name: 'A', uv: 400}, {name: 'B', uv: 300}, {name: 'C', uv: 300}, {name: 'D', uv: 200}] 
-    },
-    { 
-      id: 4, type: 'area', title: "กำไรสะสม", 
-      data: [{name: 'Q1', uv: 1000}, {name: 'Q2', uv: 1500}, {name: 'Q3', uv: 1200}, {name: 'Q4', uv: 2000}] 
-    },
-    { 
-      id: 5, type: 'bar', title: "ความพึงพอใจลูกค้า", 
-      data: [{name: '1ดาว', uv: 10}, {name: '2ดาว', uv: 20}, {name: '3ดาว', uv: 50}, {name: '4ดาว', uv: 80}, {name: '5ดาว', uv: 120}] 
-    },
-    { 
-      id: 6, type: 'line', title: "Traffic เว็บไซต์", 
-      data: [{name: 'เช้า', uv: 500}, {name: 'สาย', uv: 1200}, {name: 'บ่าย', uv: 1500}, {name: 'เย็น', uv: 900}] 
-    },
+     { id: 1, type: 'bar', title: "ยอดขายรายเดือน", data: [{name: 'ม.ค.', uv: 4000}, {name: 'ก.พ.', uv: 3000}, {name: 'มี.ค.', uv: 2000}, {name: 'เม.ย.', uv: 2780}] },
+     { id: 2, type: 'line', title: "Trend ผู้ใช้งาน", data: [{name: 'W1', uv: 100}, {name: 'W2', uv: 200}, {name: 'W3', uv: 150}, {name: 'W4', uv: 300}, {name: 'W5', uv: 250}] },
+     { id: 3, type: 'pie', title: "สัดส่วนสินค้า", data: [{name: 'A', uv: 400}, {name: 'B', uv: 300}, {name: 'C', uv: 300}, {name: 'D', uv: 200}] },
+     { id: 4, type: 'area', title: "กำไรสะสม", data: [{name: 'Q1', uv: 1000}, {name: 'Q2', uv: 1500}, {name: 'Q3', uv: 1200}, {name: 'Q4', uv: 2000}] },
+     { id: 5, type: 'bar', title: "ความพึงพอใจลูกค้า", data: [{name: '1ดาว', uv: 10}, {name: '2ดาว', uv: 20}, {name: '3ดาว', uv: 50}, {name: '4ดาว', uv: 80}, {name: '5ดาว', uv: 120}] },
+     { id: 6, type: 'line', title: "Traffic เว็บไซต์", data: [{name: 'เช้า', uv: 500}, {name: 'สาย', uv: 1200}, {name: 'บ่าย', uv: 1500}, {name: 'เย็น', uv: 900}] },
   ];
+
+  // --- Config ---
+  const MESSAGE_DURATION = 60000;
 
   // --- 2. State ---
   const [visibleChartIds, setVisibleChartIds] = useState(new Set());
-  const [summaryText, setSummaryText] = useState("เลื่อนดูข้อมูล หรือ คลิกที่กราฟเพื่อวิเคราะห์เชิงลึก...");
-  const [charText, setCharText] = useState("สวัสดีครับ! ผม Gemini พร้อมช่วยวิเคราะห์ข้อมูลครับ");
+  
+  // State: Popup (Zone B)
+  const [summaryText, setSummaryText] = useState("");
+  const [isPopupExpanded, setIsPopupExpanded] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // State: Character (Zone C)
+  const [charText, setCharText] = useState("");
   const [charState, setCharState] = useState("idle");
   const [language, setLanguage] = useState("TH");
+  const [isCharTextVisible, setIsCharTextVisible] = useState(false); // ควบคุมการโชว์ Bubble
 
-  // --- 3. Logic: ตรวจจับการเลื่อนหน้าจอ ---
+  // --- 3. Logic: Scroll Detection ---
   const handleVisibilityChange = (inView, id) => {
     setVisibleChartIds(prev => {
       const newSet = new Set(prev);
@@ -53,57 +45,75 @@ function App() {
       else newSet.delete(id);
       return newSet;
     });
+    if(isPopupExpanded) setIsPopupExpanded(false);
   };
 
   // --- 4. Logic: Smart Auto-Update (Zone B) ---
   useEffect(() => {
     if (visibleChartIds.size === 0) return;
 
-    const callAI = async () => {
-      const currentViewData = chartsData.filter(c => visibleChartIds.has(c.id));
-      // แสดง Log ว่าตอนนี้ User เห็นกราฟอะไรบ้าง
-      console.log("👀 Visible Charts:", currentViewData.map(c => c.title));
+    const debounceTimer = setTimeout(async () => { 
+        setIsProcessing(true);
+        const currentViewData = chartsData.filter(c => visibleChartIds.has(c.id));
+        console.log("👀 Sending to AI (View):", currentViewData.map(c => c.title));
 
-      try {
-        // ยิงไปที่ Server ของเรา (Port 3000)
-        const res = await axios.post('api/summarize-view', { 
-          visibleCharts: currentViewData.map(c => c.title) 
-        });
-        
-        // เอาข้อความจาก AI มาใส่จริง
-        setSummaryText(res.data.message); 
-        
-      } catch (err) {
-        console.warn("Backend Error:", err);
-        setSummaryText("เชื่อมต่อ Server ไม่ได้ (ตรวจสอบว่ารัน node server.js หรือยัง?)");
-      }
-    };
+        try {
+            const res = await axios.post('api/summarize-view', { 
+                visibleCharts: currentViewData.map(c => c.title) 
+            });
+            setSummaryText(res.data.message); 
+            
+            setTimeout(() => {
+                setIsProcessing(false);
+                setIsPopupExpanded(true); 
+            }, 1500);
 
-    const debounceTimer = setTimeout(() => { callAI(); }, 1500); // รอ 1.5 วิหลังหยุดเลื่อน
+        } catch (err) {
+            console.warn("Backend Error:", err);
+            setSummaryText("เชื่อมต่อ Server ไม่ได้");
+            setIsProcessing(false);
+        }
+
+    }, 1500);
 
     return () => clearTimeout(debounceTimer);
   }, [visibleChartIds]);
 
-  // --- 5. Logic: คลิกกราฟ (Zone C) ---
+  // --- 5. Logic: Click Graph -> Character Reaction (Zone C) ---
   const handleGraphClick = async (pointData, fullChartData) => {
+    // 1. เริ่มสถานะ 'ครุ่นคิด'
     setCharState("thinking");
-    setCharText("อืมม... ขอดูก่อนนะครับ...");
+    setIsCharTextVisible(false); // ซ่อนข้อความเก่าก่อน
+    setIsPopupExpanded(false);   // หุบ Zone B ลง
    
     try {
+      // 2. ยิง API ถาม
       const res = await axios.post('api/character-reaction', { 
-        pointData: pointData,      // จุดที่จิ้ม (เช่น ยอดขาย ม.ค. 4000)
-        contextData: fullChartData, // ข้อมูลเพื่อนๆ (เพื่อให้รู้ว่า 4000 นี่เยอะหรือน้อย)
-        language: language 
+        pointData: pointData, contextData: fullChartData, language: language 
       });
 
+      // 3. ได้คำตอบ -> เปลี่ยนเป็น 'พูด' และโชว์ข้อความ
       setCharText(res.data.message);
       setCharState("talking");
-      setTimeout(() => setCharState("idle"), 5000);
+
+      setTimeout(() => {
+        setCharState("idle"); 
+      }, 10000);
+
+      setIsCharTextVisible(true);
+
+      // 4. ตั้งเวลาปิดข้อความและกลับสู่ท่าปกติ
+      setTimeout(() => {
+        setCharState("idle");        // กลับสู่ท่าปกติ
+        setIsCharTextVisible(false);  // ข้อความหายไป
+      }, MESSAGE_DURATION);
 
     } catch (err) {
-      console.error("API Error:", err);
-      setCharText("เชื่อมต่อสมองไม่ติดครับ");
+      // กรณี Error
+      setCharText("เชื่อมต่อสมองไม่ติดครับ...ไพเไพเไพเ่ยไ่ำเยไ่เจ่");
       setCharState("idle");
+      setIsCharTextVisible(true);
+      setTimeout(() => setIsCharTextVisible(false), 10000);
     }
   };
 
@@ -119,7 +129,6 @@ function App() {
                 <MainChart 
                   data={chart.data} 
                   type={chart.type} 
-                  // --- แก้ไขตรงนี้: ส่ง chart.data เข้าไปด้วย ---
                   onDataClick={(point) => handleGraphClick(point, chart.data)} 
                 />
               </div>
@@ -128,23 +137,32 @@ function App() {
         ))}
       </div>
 
-      {/* Zone B: ผลลัพธ์ (Scrollable Text) */}
-      <div className="zone-result">
-        <ResultBox text={summaryText} />
-      </div>
-
-      {/* Zone C: ตัวการ์ตูน (No Input) */}
-      <div className="zone-char">
-        <CharacterZone
-          currentLang={language}
-          setLang={setLanguage}
-          status={charState}
+      {/* Zone B: Result Popup */}
+      <div 
+        className={`zone-result-popup 
+          ${isPopupExpanded ? 'expanded' : 'collapsed'} 
+          ${(!isProcessing && summaryText && !isPopupExpanded) ? 'ready-alert' : ''} 
+        `}
+      >
+        <ResultBox 
+            text={summaryText} 
+            isExpanded={isPopupExpanded}
+            toggleExpand={() => setIsPopupExpanded(!isPopupExpanded)}
+            isLoading={isProcessing}
         />
-        <div className="char-bubble-text">
-           {charText}
-        </div>
       </div>
 
+      {/* Zone C: Character (Full Video Stage) */}
+      <div className="zone-char">
+        <CharacterZone 
+          currentLang={language} 
+          setLang={setLanguage} 
+          status={charState} 
+          text={charText}
+          isTextVisible={isCharTextVisible} // ส่ง Prop ควบคุมการแสดงผล
+          tailRotation="180deg"
+        />
+      </div>
     </div>
   );
 }
