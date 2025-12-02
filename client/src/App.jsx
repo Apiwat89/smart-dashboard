@@ -1,27 +1,51 @@
-// src/App.jsx
-import React, { useState, useEffect, useRef } from 'react';
-import { InView } from 'react-intersection-observer'; // พระเอกของเรา
+import React, { useState, useEffect } from 'react';
+import { InView } from 'react-intersection-observer';
 import axios from 'axios';
 import './App.css';
+
+// Import Components
 import MainChart from './components/MainChart';
 import ResultBox from './components/ResultBox';
 import CharacterZone from './components/CharacterZone';
 
 function App() {
-  // Data Mockup (จำลองข้อมูลกราฟหลายๆ ตัว)
+
+  // --- 1. ข้อมูลจำลอง (Mock Data) หลายประเภท ---
   const chartsData = [
-    { id: 1, title: "ยอดขายรายเดือน", data: [{name: 'ม.ค.', uv: 4000}, {name: 'ก.พ.', uv: 3000}] },
-    { id: 2, title: "จำนวนลูกค้าใหม่", data: [{name: 'ม.ค.', uv: 120}, {name: 'ก.พ.', uv: 200}] },
-    { id: 3, title: "กำไรสุทธิ", data: [{name: 'ม.ค.', uv: 500}, {name: 'ก.พ.', uv: 1000}] },
+    { 
+      id: 1, type: 'bar', title: "ยอดขายรายเดือน", 
+      data: [{name: 'ม.ค.', uv: 4000}, {name: 'ก.พ.', uv: 3000}, {name: 'มี.ค.', uv: 2000}, {name: 'เม.ย.', uv: 2780}] 
+    },
+    { 
+      id: 2, type: 'line', title: "Trend ผู้ใช้งาน", 
+      data: [{name: 'W1', uv: 100}, {name: 'W2', uv: 200}, {name: 'W3', uv: 150}, {name: 'W4', uv: 300}, {name: 'W5', uv: 250}] 
+    },
+    { 
+      id: 3, type: 'pie', title: "สัดส่วนสินค้า", 
+      data: [{name: 'A', uv: 400}, {name: 'B', uv: 300}, {name: 'C', uv: 300}, {name: 'D', uv: 200}] 
+    },
+    { 
+      id: 4, type: 'area', title: "กำไรสะสม", 
+      data: [{name: 'Q1', uv: 1000}, {name: 'Q2', uv: 1500}, {name: 'Q3', uv: 1200}, {name: 'Q4', uv: 2000}] 
+    },
+    { 
+      id: 5, type: 'bar', title: "ความพึงพอใจลูกค้า", 
+      data: [{name: '1ดาว', uv: 10}, {name: '2ดาว', uv: 20}, {name: '3ดาว', uv: 50}, {name: '4ดาว', uv: 80}, {name: '5ดาว', uv: 120}] 
+    },
+    { 
+      id: 6, type: 'line', title: "Traffic เว็บไซต์", 
+      data: [{name: 'เช้า', uv: 500}, {name: 'สาย', uv: 1200}, {name: 'บ่าย', uv: 1500}, {name: 'เย็น', uv: 900}] 
+    },
   ];
 
-  // State
-  const [visibleChartIds, setVisibleChartIds] = useState(new Set()); // เก็บ ID กราฟที่มองเห็น
-  const [summaryText, setSummaryText] = useState("กำลังรอข้อมูล...");
-  const [charText, setCharText] = useState("สวัสดีครับ! ผมพร้อมทำงาน");
+  // --- 2. State ---
+  const [visibleChartIds, setVisibleChartIds] = useState(new Set());
+  const [summaryText, setSummaryText] = useState("เลื่อนดูข้อมูล หรือ คลิกที่กราฟเพื่อวิเคราะห์เชิงลึก...");
+  const [charText, setCharText] = useState("สวัสดีครับ! ผม Gemini พร้อมช่วยวิเคราะห์ข้อมูลครับ");
   const [charState, setCharState] = useState("idle");
+  const [language, setLanguage] = useState("TH");
 
-  // --- Logic 1: จัดการ List ของกราฟที่มองเห็น ---
+  // --- 3. Logic: ตรวจจับการเลื่อนหน้าจอ ---
   const handleVisibilityChange = (inView, id) => {
     setVisibleChartIds(prev => {
       const newSet = new Set(prev);
@@ -31,76 +55,96 @@ function App() {
     });
   };
 
-  // --- Logic 2: ระบบ Auto-Update (Zone B) ---
+  // --- 4. Logic: Smart Auto-Update (Zone B) ---
   useEffect(() => {
-    const interval = setInterval(async () => {
-      if (visibleChartIds.size > 0) {
-        // ดึงข้อมูลจริงของกราฟที่เห็นอยู่
-        const currentViewData = chartsData.filter(c => visibleChartIds.has(c.id));
+    if (visibleChartIds.size === 0) return;
 
-        console.log("Auto-Updating Zone B...", currentViewData);
+    const callAI = async () => {
+      const currentViewData = chartsData.filter(c => visibleChartIds.has(c.id));
+      // แสดง Log ว่าตอนนี้ User เห็นกราฟอะไรบ้าง
+      console.log("👀 Visible Charts:", currentViewData.map(c => c.title));
 
-        try {
-          const res = await axios.post('/api/summarize-view', {
-            visibleCharts: currentViewData.map(c => c.title)
-          }); 
-          setSummaryText(res.data.message);
-        } catch (err) {
-          console.error("Connect Server Error");
-        }
+      try {
+        // ยิงไปที่ Server ของเรา (Port 3000)
+        const res = await axios.post('api/summarize-view', { 
+          visibleCharts: currentViewData.map(c => c.title) 
+        });
+        
+        // เอาข้อความจาก AI มาใส่จริง
+        setSummaryText(res.data.message); 
+        
+      } catch (err) {
+        console.warn("Backend Error:", err);
+        setSummaryText("เชื่อมต่อ Server ไม่ได้ (ตรวจสอบว่ารัน node server.js หรือยัง?)");
       }
-    }, 10000); // อัปเดตทุก 10 วินาที (เพื่อไม่ให้ Ollama ค้าง)
+    };
 
-    return () => clearInterval(interval);
-  }, [visibleChartIds]); // ทำงานใหม่เมื่อการมองเห็นเปลี่ยน
+    const debounceTimer = setTimeout(() => { callAI(); }, 1500); // รอ 1.5 วิหลังหยุดเลื่อน
 
-  // --- Logic 3: คลิกกราฟแล้วตัวการ์ตูนพูด (Zone C) ---
-  const handleGraphClick = async (pointData) => {
+    return () => clearTimeout(debounceTimer);
+  }, [visibleChartIds]);
+
+  // --- 5. Logic: คลิกกราฟ (Zone C) ---
+  const handleGraphClick = async (pointData, fullChartData) => {
     setCharState("thinking");
+    setCharText("อืมม... ขอดูก่อนนะครับ...");
+   
     try {
-      const res = await axios.post('/api/character-reaction', {
-        pointData: pointData,
-        language: "TH"
+      const res = await axios.post('api/character-reaction', { 
+        pointData: pointData,      // จุดที่จิ้ม (เช่น ยอดขาย ม.ค. 4000)
+        contextData: fullChartData, // ข้อมูลเพื่อนๆ (เพื่อให้รู้ว่า 4000 นี่เยอะหรือน้อย)
+        language: language 
       });
+
       setCharText(res.data.message);
       setCharState("talking");
-      setTimeout(() => setCharState("idle"), 3000);
+      setTimeout(() => setCharState("idle"), 5000);
+
     } catch (err) {
-      setCharText("ขออภัย เชื่อมต่อสมองไม่ติดครับ");
+      console.error("API Error:", err);
+      setCharText("เชื่อมต่อสมองไม่ติดครับ");
       setCharState("idle");
     }
   };
 
   return (
     <div className="dashboard-container">
-
-      {/* Zone A: Scrollable Charts */}
-      <div className="zone-chart" style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* Zone A: กราฟ */}
+      <div className="zone-chart">
         {chartsData.map((chart) => (
           <InView key={chart.id} onChange={(inView) => handleVisibilityChange(inView, chart.id)} threshold={0.5}>
             {({ ref }) => (
-              <div ref={ref} style={{ minHeight: '300px', border: '1px solid #ddd', padding: '10px', borderRadius: '10px' }}>
+              <div ref={ref} className="chart-item">
                 <h3>{chart.title}</h3>
-                {/* ส่ง props ข้อมูลลงไปในกราฟ */}
-                <MainChart data={chart.data} onDataClick={handleGraphClick} />
+                <MainChart 
+                  data={chart.data} 
+                  type={chart.type} 
+                  // --- แก้ไขตรงนี้: ส่ง chart.data เข้าไปด้วย ---
+                  onDataClick={(point) => handleGraphClick(point, chart.data)} 
+                />
               </div>
             )}
           </InView>
         ))}
       </div>
 
-      {/* Zone B: Auto Summary */}
+      {/* Zone B: ผลลัพธ์ (Scrollable Text) */}
       <div className="zone-result">
         <ResultBox text={summaryText} />
       </div>
 
-      {/* Zone C: Character */}
+      {/* Zone C: ตัวการ์ตูน (No Input) */}
       <div className="zone-char">
-        <CharacterZone status={charState} />
-        <div style={{ marginTop: '10px', background: 'white', padding: '10px', borderRadius: '10px' }}>
+        <CharacterZone
+          currentLang={language}
+          setLang={setLanguage}
+          status={charState}
+        />
+        <div className="char-bubble-text">
            {charText}
         </div>
       </div>
+
     </div>
   );
 }

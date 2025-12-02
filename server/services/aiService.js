@@ -1,42 +1,34 @@
-// server/services/aiService.js
-const OpenAI = require("openai");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 require('dotenv').config();
 
-// เช็คว่าตอนนี้รันโหมด DEV หรือ PROD
-const isDev = process.env.NODE_ENV !== 'production';
+// 🔴 ตรวจสอบ Key ของคุณตรงนี้อีกครั้งนะครับ
+const API_KEY = process.env.GEMINI_API_KEY || "AIzaSyA3CLBm2lungU_pFLpKIHnGUmSVx4lPu0w"; 
 
-// การตั้งค่า Client
-// ถ้าเป็น Dev -> ยิงเข้า localhost:11434 (Ollama)
-// ถ้าเป็น Prod -> ยิงเข้า api.openai.com (ของจริง)
-const aiClient = new OpenAI({
-    baseURL: isDev ? 'http://localhost:11434/v1' : 'https://api.openai.com/v1',
-    apiKey: isDev ? 'ollama' : process.env.OPENAI_API_KEY, 
-});
+console.log("🔑 Checking Key:", API_KEY && API_KEY.startsWith("AIza") ? "Found Key starting with " + API_KEY.substring(0, 5) : "No Key Found or Invalid");
+
+const genAI = new GoogleGenerativeAI(API_KEY);
+
+// ✅ ปรับมาใช้ Gemini 2.5 Flash ตัวเดียวตามที่ขอครับ
+// รุ่น: gemini-2.5-flash-preview-09-2025 (เร็วและฉลาดที่สุดในตระกูล Flash)
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-preview-09-2025" });
 
 async function generateAIResponse(userMessage, systemRole = "You are a helpful assistant.") {
     try {
-        console.log(`🤖 AI Processing... (Mode: ${isDev ? 'Ollama/Local' : 'OpenAI/Cloud'})`);
+        console.log("🚀 Sending to Gemini (Model: gemini-2.5-flash-preview-09-2025)...");
         
-        const response = await aiClient.chat.completions.create({
-            // ชื่อ Model: ถ้าใช้ Ollama ต้องตรงกับที่โหลดมา (เช่น llama3.2, llama3, qwen)
-            model: isDev ? 'llama3.2' : 'gpt-4o-mini', 
-            messages: [
-                { role: 'system', content: systemRole },
-                { role: 'user', content: userMessage }
-            ],
-            temperature: 0.7, // ความสร้างสรรค์ (0-1)
-            max_tokens: 200,  // จำกัดความยาวคำตอบ
-        });
+        const finalPrompt = `${systemRole}\n\nUser Question: ${userMessage}`;
 
-        return response.choices[0].message.content;
+        const result = await model.generateContent(finalPrompt);
+        const response = await result.response;
+        const text = response.text();
+        
+        console.log("✅ Gemini Replied");
+        return text;
 
     } catch (error) {
-        console.error("AI Error Connection:", error.message);
-        
-        if (error.code === 'ECONNREFUSED') {
-            return "Error: ลืมเปิด Ollama หรือเปล่าครับ? (Connection Refused)";
-        }
-        return "ขออภัย ระบบสมองขัดข้องชั่วคราว";
+        console.error("❌ Gemini Error:", error.message);
+        // เพิ่มคำแนะนำเผื่อกรณีโมเดลรุ่น Preview นี้ปิดปรับปรุง
+        return "ขออภัยครับ ตอนนี้สมองน้อง Gemini (2.5 Flash) เชื่อมต่อไม่ได้ (อาจจะเพราะเป็นรุ่น Preview หรือ API Key มีปัญหา)";
     }
 }
 

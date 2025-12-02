@@ -2,18 +2,22 @@ import React from 'react';
 
 const ResultBox = ({ text }) => {
   return (
-    <div style={{ textAlign: 'center' }}>
-      <h3 style={{ color: '#555', marginBottom: '10px' }}>💡 มุมมองจากน้อง AI</h3>
+    <div style={{ width: '100%' }}>
+      <h3 style={{ color: '#444', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span>💡</span> มุมมองภาพรวม (AI Analysis)
+      </h3>
+      
       <div style={{ 
-        fontSize: '1.2rem', 
+        fontSize: '1.1rem', 
         color: '#333', 
-        minHeight: '60px',
-        padding: '10px',
-        backgroundColor: '#f9f9f9',
-        borderRadius: '10px',
-        borderLeft: '5px solid #82ca9d'
+        lineHeight: '1.6',
+        padding: '20px',
+        backgroundColor: '#f8f9fa',
+        borderRadius: '12px',
+        borderLeft: '6px solid #82ca9d',
+        whiteSpace: 'pre-line' // รองรับการขึ้นบรรทัดใหม่จาก \n
       }}>
-        {text || "คลิกที่กราฟด้านบน เพื่อให้น้องวิเคราะห์ข้อมูล..."}
+        {text || "กำลังรอข้อมูล..."}
       </div>
     </div>
   );

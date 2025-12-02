@@ -1,15 +1,12 @@
-/* src/App.css */
-* {
-  box-sizing: border-box;
+/* =============================
+   GLOBAL
+============================= */
+body {
   margin: 0;
   padding: 0;
-}
-
-body {
-  background-color: #f0f2f5; /* สีพื้นหลังเทาอ่อน สบายตา */
-  font-family: 'Prompt', sans-serif; /* แนะนำให้หา Font ไทยสวยๆ มาใส่ */
-  height: 100vh;
-  overflow: hidden; /* ไม่ให้มี scrollbar */
+  font-family: 'Prompt', sans-serif;
+  background: linear-gradient(145deg, #eef1f5 0%, #dfe5ec 100%);
+  overflow: hidden; /* ล็อคหน้าจอหลักไม่ให้เลื่อน */
 }
 
 .dashboard-container {
@@ -18,49 +15,130 @@ body {
   height: 100vh;
   padding: 20px;
   gap: 20px;
-  
-  /* แบ่งคอลัมน์: ซ้าย 70%, ขวา 30% */
-  grid-template-columns: 7fr 3fr; 
-  /* แบ่งแถว (เฉพาะฝั่งซ้าย): บน 70%, ล่าง 30% */
-  grid-template-rows: 7fr 3fr; 
-  
-  /* ชื่อพื้นที่ (Grid Areas) */
-  grid-template-areas: 
+  box-sizing: border-box;
+
+  /* แบ่งพื้นที่: 
+     - แนวนอน: 70% (กราฟ+ผล) | 30% (ตัวละคร)
+     - แนวตั้ง: 65% (กราฟ) | 35% (ผลลัพธ์) 
+  */
+  grid-template-columns: 7fr 3fr;
+  grid-template-rows: 65fr 35fr;
+  grid-template-areas:
     "chart char"
     "result char";
 }
 
-/* Zone 1: กราฟหลัก */
+/* =============================
+   ZONE A — CHARTS (GRID GALLERY)
+============================= */
 .zone-chart {
   grid-area: chart;
-  background: white;
-  border-radius: 20px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  background-color: #ffffff;
+  border-radius: 22px;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.08);
   padding: 20px;
-  position: relative;
+  
+  /* Scrollbar แนวตั้ง */
+  overflow-y: auto; 
+  
+  /* Grid ภายใน Zone A (Gallery Mode) */
+  display: grid;
+  /* จัดเรียงอัตโนมัติ ขั้นต่ำ 300px ต่อกราฟ */
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); 
+  gap: 20px;
+  align-content: start;
 }
 
-/* Zone 2: ผลลัพธ์ */
+.chart-item {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 15px;
+  padding: 15px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+  /* ความสูงยืดหยุ่นตามเนื้อหา */
+  height: fit-content; 
+}
+
+.chart-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+  border-color: #d1d9e6;
+}
+
+.chart-item h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 1rem;
+  color: #555;
+  text-align: center;
+}
+
+/* =============================
+   ZONE B — RESULT BOX
+============================= */
 .zone-result {
   grid-area: result;
-  background: white;
+  background-color: white;
   border-radius: 20px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  padding: 20px;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+  padding: 25px;
+  
+  /* Scrollbar แนวตั้งอิสระ */
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
 }
 
-/* Zone 3: ตัวการ์ตูน */
+/* =============================
+   ZONE C — CHARACTER
+============================= */
 .zone-char {
   grid-area: char;
-  background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); /* พื้นหลังสีหวานๆ */
-  border-radius: 20px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  background: linear-gradient(145deg, #c8b6ff 0%, #8ec5fc 100%);
+  border-radius: 22px;
+  box-shadow: 0 10px 18px rgba(0,0,0,0.12);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  padding: 22px;
+  overflow: hidden;
+}
+
+/* Bubble Text ของน้อง (Output) */
+.char-bubble-text {
+  margin-top: 20px;
+  background: rgba(255,255,255,0.95);
   padding: 20px;
+  border-radius: 18px;
+  width: 90%;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  font-size: 1.1rem;
+  color: #333;
+  text-align: center;
+  line-height: 1.5;
+  
+  /* เพิ่ม Animation ให้ดูมีชีวิต */
+  animation: popIn 0.3s ease-out;
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Custom Scrollbar Styling (Chrome/Edge/Safari) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f0f0f0; 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb {
+  background: #ccc; 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #bbb; 
 }
