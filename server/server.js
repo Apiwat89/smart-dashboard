@@ -7,79 +7,94 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// --- Helper: แปลงรหัสภาษาเป็นคำสั่ง System Prompt ---
+const getLangInstruction = (lang) => {
+    switch (lang) {
+        case 'EN': return "Respond in English.";
+        case 'JP': return "Respond in Japanese (Natural & Polite).";
+        case 'TH': default: return "Respond in Thai (Natural, Polite, Professional).";
+    }
+};
+
 // =======================================================
-// API 1: สรุปภาพรวม (Zone B) - เน้นภาษาทางการ อ่านง่าย ไม่มี Markdown
+// API 1: สรุปภาพรวม (Zone B)
 // =======================================================
 app.post('/api/summarize-view', async (req, res) => {
-    const { visibleCharts } = req.body;
-    
-    // Prompt สั่งให้วิเคราะห์ทีละกราฟ และห้ามใช้อักขระพิเศษ
+    const { visibleCharts, lang } = req.body;
+    const langInstruction = getLangInstruction(lang);
+
     const prompt = `
-        บทบาท: คุณคือ Senior Data Analyst ที่เชี่ยวชาญด้าน Data Storytelling (การเล่าเรื่องจากข้อมูล)
-
-        ข้อมูลกราฟที่ต้องวิเคราะห์: 
-        ${JSON.stringify(visibleCharts)}
-
-        คำสั่งการจัดรูปแบบคำตอบ (Layout & Style):
-        1. ให้ตอบเป็นข้อๆ ตามจำนวนกราฟ (1., 2., 3.)
-        2. **สำคัญมาก:** ให้เว้นบรรทัดระหว่างข้อกับเนื้อหาที่อธิบายจบแล้วก่อนขึ้นข้อใหม่เสมอ เพื่อความสวยงาม อ่านง่าย (Whitespace is key)
+        Role: Senior Data Analyst.
+        Task: Analyze these charts and provide a concise summary.
+        Data: ${JSON.stringify(visibleCharts)}
         
-        ตัวอย่างรูปแบบที่ต้องการ:
-        "1. [กราฟ: ชื่อกราฟ]
-        [ย่อหน้าเนื้อหา: วิเคราะห์แนวโน้มหรือจุดสังเกตสำคัญ โดยใช้ภาษาไทยที่สละสลวย เป็นทางการแต่ลื่นไหล เหมือนเล่าให้ผู้บริหารฟัง กระชับและได้ใจความ]"
+        **Language Instruction: ${langInstruction}**
 
-        "2. [กราฟ: ชื่อกราฟ]
-        [ย่อหน้าเนื้อหา...]"
+        Format:
+        1. [Title]
+        [Analysis content...]
+        
+        2. [Title]
+        [Analysis content...]
 
-        ข้อห้าม:
-        - ห้ามเกริ่นนำเวิ่นเว้อ ให้เริ่มที่ข้อ 1 เลย
-        - ห้ามใช้ Markdown (ไม่ต้องมีตัวหนา/เอียง) ให้ใช้การเว้นบรรทัดช่วยจัดระเบียบแทน
+        Constraints:
+        - Keep it professional yet easy to read.
+        - Do NOT use Markdown bold/italic symbols (* or #). Keep plain text.
     `;
 
-    const reply = await generateAIResponse(prompt, "You are a professional Data Analyst. You speak Thai fluently.");
+    const reply = await generateAIResponse(prompt, "You are a professional Data Analyst.");
     res.json({ message: reply });
 });
 
 // =======================================================
-// API 2: ตัวการ์ตูน (Zone C) - วิเคราะห์เทียบกับเพื่อนทั้งกราฟ
+// API 2: ตัวการ์ตูน Reaction (Zone C - Click Graph)
 // =======================================================
 app.post('/api/character-reaction', async (req, res) => {
-    try {
-        const { pointData, contextData } = req.body; // รับค่ามา
+    const { pointData, contextData, lang } = req.body;
+    const langInstruction = getLangInstruction(lang);
 
-        // Console Log ดูหน่อยว่า Server ได้รับของครบไหม
-        // console.log("📍 Point:", pointData);
-        // console.log("📚 Context:", contextData); 
+    const prompt = `
+        Role: "Somjeed" (Mascot), cheerful, helpful, and energetic.
+        User Clicked: "${pointData.name}" Value: ${pointData.uv}
+        Context Graph: ${JSON.stringify(contextData)}
+        
+        **Language Instruction: ${langInstruction}**
+        
+        Instructions:
+        1. Analyze the clicked value compared to others in the graph.
+        2. Show emotional reaction (Excited for high stats, encouraging for low stats).
+        3. Keep it short (2-3 sentences).
+        4. No Markdown.
+    `;
 
-        const prompt = `
-            บทบาท: คุณคือ "น้องส้มจี๊ด" (Somjeed) มาสคอต AI ผู้ช่วยสุดร่าเริง ฉลาด และเป็นกันเอง
-            
-            ข้อมูลที่ผู้ใช้คลิก: 
-            - ชื่อรายการ: "${pointData.name}" 
-            - ค่าที่ได้: ${pointData.uv}
-            
-            บริบทของกราฟนี้: 
-            ${JSON.stringify(contextData)}
-            
-            คำสั่งการตอบ:
-            1. วิเคราะห์ค่าที่คลิก (${pointData.uv}) เทียบกับภาพรวมเพื่อนๆ ในกราฟ
-            - มันเป็นแชมป์ (สูงสุด)? หรือรั้งท้าย (ต่ำสุด)? หรือเป็นค่ามาตรฐานทั่วไป?
-            2. แสดงอารมณ์ (Reaction) ให้สมบทบาท
-            - ถ้าค่าสูง/ดีมาก: ดีใจ ตื่นเต้น ชมเชย ("ว้าว!", "สุดยอดไปเลย!")
-            - ถ้าค่าต่ำ/แย่: ให้กำลังใจ หรือแสดงความตกใจเล็กน้อย ("อุ๊ย...", "สู้ๆ นะคะ")
-            - ถ้าค่าปกติ: บอกเล่าข้อมูลน่ารู้
-            3. แทนตัวเองว่า "ส้มจี๊ด" เสมอ และลงท้ายด้วย "ค่ะ/คะ"
-            4. ห้ามใช้ Markdown (ห้ามตัวหนา/ขีดเส้น) พิมพ์เป็นข้อความธรรมดา
-            5. ความยาวไม่เกิน 3-4 ประโยค
-        `;
-
-        const reply = await generateAIResponse(prompt, "You are a helpful AI mascot.");
-        res.json({ message: reply });
-
-    } catch (error) {
-        console.error("Server Error:", error);
-        res.json({ message: "ระบบประมวลผลมีปัญหาเล็กน้อยครับ" });
-    }
+    const reply = await generateAIResponse(prompt, "You are a helpful AI mascot.");
+    res.json({ message: reply });
 });
 
-app.listen(3000, () => console.log('Server running on port 3000'));
+// =======================================================
+// API 3: ถามตอบทั่วไป (Zone C - Chat Input)
+// =======================================================
+app.post('/api/ask-dashboard', async (req, res) => {
+    const { question, allData, lang } = req.body;
+    const langInstruction = getLangInstruction(lang);
+
+    const prompt = `
+        Role: "Somjeed" (Mascot).
+        Context Data: ${JSON.stringify(allData)}
+        User Question: "${question}"
+        
+        **Language Instruction: ${langInstruction}**
+
+        Instructions:
+        1. Answer the question based on the provided data.
+        2. Be cheerful and polite.
+        3. If data is missing, politely say you don't know.
+        4. No Markdown.
+    `;
+
+    const reply = await generateAIResponse(prompt, "You are a helpful AI Dashboard Assistant.");
+    res.json({ message: reply });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

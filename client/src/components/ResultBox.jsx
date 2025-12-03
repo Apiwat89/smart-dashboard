@@ -1,9 +1,9 @@
 import React from 'react';
-import { Sparkles, Copy, RefreshCw, ChevronUp, ChevronDown } from 'lucide-react';
+import { Sparkles, Copy, RefreshCw, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
 
 const ResultBox = ({ text, isExpanded, toggleExpand, isLoading }) => {
   
-  // ฟังก์ชันแปลง **Text** ให้เป็นตัวหนา (เผื่อ AI ส่ง Markdown มา)
+  // ฟังก์ชันแปลง **Text** ให้เป็นตัวหนา
   const formatText = (inputText) => {
     if (!inputText) return "";
     const parts = inputText.split(/(\*\*.*?\*\*)/g);
@@ -21,17 +21,38 @@ const ResultBox = ({ text, isExpanded, toggleExpand, isLoading }) => {
       {/* --- HEADER (คลิกเพื่อพับ/กาง) --- */}
       <div className="result-header" onClick={toggleExpand}>
         <div className="header-left">
-           <Sparkles size={18} className="icon-sparkle" />
-           <span className="header-title">AI Summary</span>
+           {/* เปลี่ยนไอคอน: ถ้าโหลดอยู่ ให้โชว์ Loader หมุนๆ */}
+           {isLoading ? (
+             <Loader2 size={18} className="icon-sparkle spin-anim" />
+           ) : (
+             <Sparkles size={18} className="icon-sparkle" />
+           )}
+           
+           {/* เปลี่ยนข้อความ: ถ้าโหลดอยู่ ให้โชว์ "Analyzing..." แม้จะพับอยู่ก็ตาม */}
+           <span 
+             className="header-title" 
+             style={{ 
+               color: isLoading ? '#00c49f' : '#2d3436', // สีเขียวตอนโหลด
+               transition: 'color 0.3s' 
+             }}
+           >
+              {isLoading ? "Analyzing Data..." : "AI Summary"}
+           </span>
         </div>
         
         <div className="header-right">
-           <button className="icon-btn" title="Copy" onClick={(e) => e.stopPropagation()}>
-             <Copy size={16}/>
-           </button>
-           <button className="icon-btn" title="Refresh" onClick={(e) => e.stopPropagation()}>
-             <RefreshCw size={16}/>
-           </button>
+           {/* ซ่อนปุ่ม Copy/Refresh ตอนกำลังโหลด เพื่อความสะอาดตา */}
+           {!isLoading && (
+             <>
+               <button className="icon-btn" title="Copy" onClick={(e) => e.stopPropagation()}>
+                 <Copy size={16}/>
+               </button>
+               <button className="icon-btn" title="Refresh" onClick={(e) => e.stopPropagation()}>
+                 <RefreshCw size={16}/>
+               </button>
+             </>
+           )}
+           
            {/* ปุ่มลูกศร */}
            <div className="toggle-indicator">
              {isExpanded ? <ChevronDown size={20}/> : <ChevronUp size={20}/>}
@@ -43,12 +64,12 @@ const ResultBox = ({ text, isExpanded, toggleExpand, isLoading }) => {
       <div className="result-content-wrapper">
         
         {isLoading ? (
-          // === LOADING STATE (จุดวิ่งๆ สีเขียว) ===
+          // === LOADING STATE (แสดงเมื่อกางออกมา) ===
           <div className="loading-state">
              <div className="typing-indicator">
                <span></span><span></span><span></span>
              </div>
-             <span className="loading-text">Analyzing dashboard data...</span>
+             <span className="loading-text">Reading chart data & generating insights...</span>
           </div>
         ) : (
           // === RESULT STATE (ข้อความปกติ) ===
@@ -58,6 +79,17 @@ const ResultBox = ({ text, isExpanded, toggleExpand, isLoading }) => {
         )}
 
       </div>
+
+      {/* Style สำหรับ Animation หมุนๆ ใส่ไว้ในนี้เพื่อให้ทำงานได้เลยโดยไม่ต้องแก้ App.css */}
+      <style>{`
+        .spin-anim {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };

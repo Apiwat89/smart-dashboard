@@ -1,32 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Search, Bell, Plus, LayoutGrid, Users, Map, FileText, Settings, User, Mic,
-  ChevronLeft, ChevronRight 
+  Search, Bell, Plus, LayoutGrid, Users, Map, FileText, Settings, User, 
+  ChevronLeft, ChevronRight, Globe 
 } from 'lucide-react';
 import './App.css';
 
 // Components
-import MainChart from './components/MainChart';
+import VisualFactory from './components/VisualFactory'; 
 import ResultBox from './components/ResultBox';
 import CharacterZone from './components/CharacterZone';
 import { MockApi } from './api/mockApi';
 import { backendService } from './api/backendService';
 
 function App() {
-  // --- UI States ---
+  // --- UI & Data States ---
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isSummaryExpanded, setIsSummaryExpanded] = useState(true);
-  
-  // --- Data States ---
+  const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
+  const [currentLang, setCurrentLang] = useState('EN'); 
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   
   // --- AI States ---
   const [aiState, setAiState] = useState('idle');
-  const [aiMessage, setAiMessage] = useState("สวัสดีครับ ส้มจี๊ดพร้อมทำงานครับ!");
-  const [isAiMsgVisible, setIsAiMsgVisible] = useState(true);
+  const [aiMessage, setAiMessage] = useState("");
+  const [isAiMsgVisible, setIsAiMsgVisible] = useState(false); 
   const [summaryText, setSummaryText] = useState("");
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [userQuestion, setUserQuestion] = useState("");
+  const [isAiProcessing, setIsAiProcessing] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
+  // --- Refs ---
+  const widgetRefs = useRef({});
+  const scrollTimeout = useRef(null);
+  const scrollContainerRef = useRef(null);
 
   // 1. Initial Load
   useEffect(() => {
@@ -34,34 +41,95 @@ function App() {
       const data = await MockApi.getDashboardData();
       setDashboardData(data);
       setLoading(false);
-      
-      // ส่งข้อมูลไปให้ AI วิเคราะห์
-      setIsSummaryLoading(true);
-      const chartsToSend = [
-          { name: "Outpatients vs Inpatients Trend", data: data.charts.trend.data },
-          { name: "Patients by Gender", data: data.charts.gender.data }
-      ];
-
-      const aiSummary = await backendService.getDashboardSummary(chartsToSend);
-      setSummaryText(aiSummary);
-      setIsSummaryLoading(false);
+      // เรียกใช้ analyzeVisibleCharts ครั้งแรก (จะใช้ค่า Default EN)
+      setTimeout(() => analyzeVisibleCharts(data, 'EN'), 500);
     };
-
     initDashboard();
   }, []);
 
-  // 2. Handle Click on Graph (Zone C)
+  // 2. Timer Logic (นับถอยหลังปิดข้อความ AI)
+  useEffect(() => {
+    let timer;
+    if (isAiMsgVisible && countdown > 0) {
+      timer = setInterval(() => setCountdown((prev) => prev - 1), 1000);
+    } else if (countdown === 0 && isAiMsgVisible) {
+      setIsAiMsgVisible(false); setAiMessage(""); setAiState('idle');
+    }
+    return () => clearInterval(timer);
+  }, [isAiMsgVisible, countdown]);
+
+  // 3. ✨ NEW: Language Change Logic ✨
+  // เมื่อ currentLang เปลี่ยน ให้ทำการ Analyze หน้าจอใหม่ เพื่อขอ Summary ภาษาใหม่ทันที
+  useEffect(() => {
+    if (!loading && dashboardData) {
+        analyzeVisibleCharts(dashboardData, currentLang);
+    }
+  }, [currentLang]);
+
+  // --- Handlers ---
+
   const handleChartClick = async (pointData, fullChartData) => {
-    setAiState('thinking');
-    setIsAiMsgVisible(false);
+    if (isAiProcessing) return;
+    setIsAiProcessing(true); setIsAiMsgVisible(false); setAiMessage(""); setAiState('thinking');
+    try {
+      // ✨ FIX: ส่ง currentLang ไปด้วย
+      const reaction = await backendService.getCharacterReaction(pointData, fullChartData, currentLang);
+      setAiMessage(reaction); setAiState('talking'); setIsAiMsgVisible(true); setCountdown(60);
+      setTimeout(() => setAiState('idle'), 5000); 
+    } catch (err) { setAiState('idle'); } finally { setIsAiProcessing(false); }
+  };
 
-    const reaction = await backendService.getCharacterReaction(pointData, fullChartData);
+  const handleAskSomjeed = async (e) => {
+    e.preventDefault();
+    if (!userQuestion.trim() || isAiProcessing) return;
+    setIsAiProcessing(true); setIsAiMsgVisible(false); setAiMessage(""); setAiState('thinking');
+    try {
+      // ✨ FIX: ส่ง currentLang ไปด้วย
+      const reaction = await backendService.getCharacterReactionInput(userQuestion, dashboardData, currentLang);
+      setAiMessage(reaction); setAiState('talking'); setIsAiMsgVisible(true); setCountdown(60); setUserQuestion("");
+      setTimeout(() => setAiState('idle'), 5000);
+    } catch (err) { 
+        setAiMessage("Error connecting."); setIsAiMsgVisible(true); setCountdown(5); 
+    } finally { setIsAiProcessing(false); }
+  };
 
-    setAiMessage(reaction);
-    setAiState('talking');
-    setIsAiMsgVisible(true);
+  // --- Dynamic Visibility Check ---
+  // ✨ FIX: รับ parameter lang (ถ้าไม่ส่งมาให้ใช้ state ปัจจุบัน)
+  const analyzeVisibleCharts = async (currentData = dashboardData, lang = currentLang) => {
+    if (!currentData || !scrollContainerRef.current) return;
+    const visibleCharts = [];
+    const container = scrollContainerRef.current;
+    const containerRect = container.getBoundingClientRect();
 
-    setTimeout(() => setAiState('idle'), 6000);
+    // วนลูปหา Widget ทุกตัวใน Data
+    currentData.widgets.forEach(widget => {
+        // สนใจเฉพาะ Type ที่เป็นกราฟ
+        if (['area', 'doughnut', 'bar', 'line'].includes(widget.type)) {
+            const el = widgetRefs.current[widget.id];
+            if (el) {
+                const rect = el.getBoundingClientRect();
+                if (rect.top < containerRect.bottom && rect.bottom > containerRect.top) {
+                    visibleCharts.push({ name: widget.title, data: widget.data });
+                }
+            }
+        }
+    });
+
+    if (visibleCharts.length > 0) {
+        setIsSummaryLoading(true);
+        try {
+            // ✨ FIX: ส่ง lang ไปยัง backendService
+            const aiSummary = await backendService.getDashboardSummary(visibleCharts, lang);
+            setSummaryText(aiSummary);
+        } catch (error) {}
+        setIsSummaryLoading(false);
+    }
+  };
+
+  const handleScroll = () => {
+    if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+    // เวลา Scroll ให้ใช้ currentLang ปัจจุบัน
+    scrollTimeout.current = setTimeout(() => analyzeVisibleCharts(dashboardData, currentLang), 1000);
   };
 
   if (loading) return <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh', color:'#00c49f'}}>Loading Dashboard...</div>;
@@ -69,7 +137,7 @@ function App() {
   return (
     <div className={`app-container ${isSidebarCollapsed ? 'sidebar-closed' : ''}`}>
       
-      {/* === ZONE 1: SIDEBAR === */}
+      {/* Sidebar & Header */}
       <aside className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="brand-wrapper">
           <div className="brand-icon">H+</div>
@@ -80,127 +148,107 @@ function App() {
              </button>
           )}
         </div>
-
-        {isSidebarCollapsed && (
+          {isSidebarCollapsed && (
              <button className="toggle-btn" style={{margin: '0 auto 20px auto'}} onClick={() => setIsSidebarCollapsed(false)}>
                <ChevronRight size={16} />
              </button>
-        )}
-
-        <button className="nav-btn" style={{
-            background: 'var(--primary-green)', color:'white', border:'none', padding:'12px', 
-            borderRadius:'12px', display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', 
-            width:'100%', cursor:'pointer', fontWeight:'600'
-        }}>
-           <Plus size={20} /> <span className="menu-text">Register</span>
-        </button>
-        
-        <nav style={{display:'flex', flexDirection:'column', gap:'5px', marginTop:'20px'}}>
+          )}
+        <nav style={{display:'flex', flexDirection:'column', gap:'5px', marginTop:'20px', marginTop:'0'}}>
            {[
-             { icon: Users, label: 'Patients' },
-             { icon: LayoutGrid, label: 'Overview', active: true },
-             { icon: Map, label: 'Map' },
-             { icon: FileText, label: 'Departments' },
-             { icon: User, label: 'Doctors' },
+             { icon: Users, label: 'Patients' }, 
+             { icon: LayoutGrid, label: 'Overview', active: true }, 
+             { icon: Map, label: 'Map' }, 
+             { icon: FileText, label: 'Departments' }, 
+             { icon: User, label: 'Doctors' }
            ].map((item, idx) => (
              <div key={idx} className={`menu-item ${item.active ? 'active' : ''}`}>
                <item.icon size={20} /> <span className="menu-text">{item.label}</span>
              </div>
            ))}
         </nav>
-        <div className="menu-item" style={{marginTop:'auto'}}><Settings size={20}/><span className="menu-text">Settings</span></div>
       </aside>
 
-      {/* === ZONE 2: HEADER === */}
       <header className="header">
-         <div className="search-bar">
-            <Search size={18} color="#999" />
-            <input type="text" placeholder="Search..." style={{border:'none', outline:'none', width:'100%'}} />
-         </div>
-         <div style={{display:'flex', alignItems:'center', gap:'15px', fontWeight:'500'}}>
-            <Bell size={20} color="#666" style={{cursor:'pointer'}} />
-            <img src={dashboardData.user.avatar} className="avatar" alt="user" />
-            <span>{dashboardData.user.name}</span>
-         </div>
+         <div className="search-bar"><Search size={18} color="#999" /><input type="text" placeholder="Search..." style={{border:'none', outline:'none', width:'100%'}} /></div>
+         <div style={{display:'flex', alignItems:'center', gap:'15px', fontWeight:'500'}}><Bell size={20} color="#666" style={{cursor:'pointer'}} /><img src={dashboardData.user.avatar} className="avatar" alt="user" /><span>{dashboardData.user.name}</span></div>
       </header>
 
-      {/* === ZONE 3: MAIN CONTENT === */}
+      {/* Main Content */}
       <main className="main-content">
-        
-        {/* 3.1 Scrollable Area (Zone A) */}
-        <div className="content-scroll-wrapper">
-            {/* Stats */}
-            <div style={{display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'15px'}}>
-               {dashboardData.stats.map((stat, idx) => (
-                 <div className="stat-card" key={idx}>
-                    <div style={{background:'#e6f7f3', padding:'10px', borderRadius:'10px', color:'#00c49f'}}><Users size={20}/></div>
-                    <div>
-                        <h3 style={{margin:0, fontSize:'1.4rem'}}>{stat.value}</h3>
-                        <span style={{fontSize:'0.8rem', color:'#888'}}>{stat.title}</span>
-                    </div>
-                 </div>
-               ))}
+        <div className="content-scroll-wrapper" ref={scrollContainerRef} onScroll={handleScroll}>
+            
+            {/* KPI CARDS */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '20px'
+            }}>
+                {dashboardData?.widgets
+                    .filter(w => w.type === 'kpi')
+                    .map(widget => (
+                        <div key={widget.id} ref={el => widgetRefs.current[widget.id] = el}>
+                            <VisualFactory widget={widget} onChartClick={handleChartClick} />
+                        </div>
+                    ))
+                }
             </div>
 
-            {/* Charts */}
-            <div style={{display:'grid', gridTemplateColumns:'2fr 1fr', gap:'20px', minHeight:'300px'}}>
-                <div className="chart-card">
-                   <div style={{display:'flex',justifyContent:'space-between', marginBottom:'10px'}}>
-                      <h3>{dashboardData.charts.trend.title}</h3>
-                      <select style={{border:'1px solid #ddd', borderRadius:'5px'}}><option>Monthly</option></select>
-                   </div>
-                   <div style={{flex:1}}>
-                      <MainChart 
-                        type="area" 
-                        data={dashboardData.charts.trend.data} 
-                        onDataClick={(point) => handleChartClick(point, dashboardData.charts.trend.data)}
-                      />
-                   </div>
-                </div>
-
-                <div className="chart-card">
-                   <h3>{dashboardData.charts.gender.title}</h3>
-                   <div style={{flex:1, position:'relative'}}>
-                      <MainChart 
-                        type="doughnut" 
-                        data={dashboardData.charts.gender.data} 
-                        onDataClick={(point) => handleChartClick(point, dashboardData.charts.gender.data)}
-                      />
-                   </div>
-                </div>
+            {/* MAIN CHARTS */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gridAutoRows: 'minmax(300px, auto)',
+                rowGap: '60px',
+                columnGap: '20px',
+            }}>
+                {dashboardData?.widgets
+                    .filter(w => w.type !== 'kpi')
+                    .map(widget => (
+                        <div key={widget.id} ref={el => widgetRefs.current[widget.id] = el}>
+                            <VisualFactory widget={widget} onChartClick={handleChartClick} />
+                        </div>
+                    ))
+                }
             </div>
-            <div style={{height: '20px'}}></div>
+            
+            <div style={{height: '40px'}}></div>
         </div>
 
-        {/* 3.2 Collapsible Summary (Zone B) - แก้ไขใหม่ */}
+        {/* AI Summary Zone */}
         <div className="fixed-bottom-summary">
-            {/* wrapper นี้จะถูกควบคุม class expanded/collapsed */}
             <div className={`ai-summary-wrapper ${isSummaryExpanded ? 'expanded' : 'collapsed'}`}>
-                <ResultBox 
-                    text={summaryText} 
-                    isExpanded={isSummaryExpanded}
-                    toggleExpand={() => setIsSummaryExpanded(!isSummaryExpanded)}
-                    isLoading={isSummaryLoading} 
-                />
+                <ResultBox text={summaryText} isExpanded={isSummaryExpanded} toggleExpand={() => setIsSummaryExpanded(!isSummaryExpanded)} isLoading={isSummaryLoading} />
             </div>
         </div>
       </main>
 
-      {/* === ZONE 4: RIGHT PANEL (Character) === */}
+      {/* Right Panel */}
       <aside className="right-panel">
          <div className="char-stage">
-            <CharacterZone 
-                status={aiState} 
-                text={aiMessage} 
-                isTextVisible={isAiMsgVisible}
-                currentLang="EN"
-                setLang={()=>{}}
-            />
+            <CharacterZone status={aiState} text={aiMessage} isTextVisible={isAiMsgVisible} countdown={countdown} />
          </div>
+
          <div className="control-panel">
-             <button className="action-btn" onClick={() => handleChartClick({name: 'User Ask', uv: 0}, [])}>
-                <Mic size={20} /> Ask Somjeed
-             </button>
+             <form onSubmit={handleAskSomjeed} className="ask-input-wrapper">
+                <input type="text" placeholder="Ask Somjeed..." value={userQuestion} onChange={(e) => setUserQuestion(e.target.value)} disabled={isAiProcessing} />
+                <button type="submit" disabled={isAiProcessing || !userQuestion} style={{display:'flex', alignItems:'center', justifyContent:'center', padding:0}}>
+                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                     <line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                   </svg>
+                </button>
+             </form>
+             <div className="lang-switcher-row">
+                <Globe size={16} color="#666" />
+                {['TH', 'EN', 'JP'].map(lang => (
+                    <button 
+                        key={lang} 
+                        className={`lang-btn ${currentLang === lang ? 'active' : ''}`} 
+                        onClick={() => setCurrentLang(lang)}
+                    >
+                        {lang}
+                    </button>
+                ))}
+             </div>
          </div>
       </aside>
 

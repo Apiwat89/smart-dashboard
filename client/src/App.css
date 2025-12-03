@@ -16,10 +16,10 @@ body {
   font-family: 'Poppins', sans-serif;
   background-color: var(--bg-gray);
   color: var(--text-dark);
-  overflow: hidden;
+  overflow: hidden; /* ซ่อน Scrollbar หลัก เพราะเรา Scroll ข้างใน */
 }
 
-/* --- GRID LAYOUT --- */
+/* --- GRID LAYOUT (โครงสร้างหลัก 3 ส่วน) --- */
 .app-container {
   display: grid;
   width: 100vw;
@@ -46,19 +46,54 @@ body {
   overflow: hidden;
   transition: all var(--transition-speed);
 }
-.brand-wrapper { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; height: 50px; }
-.brand-icon { min-width: 40px; height: 40px; background: var(--primary-green); color: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-.brand-text { font-size: 1.2rem; font-weight: bold; white-space: nowrap; opacity: 1; transition: opacity 0.2s; }
 
-.toggle-btn { background: none; border: 1px solid #eee; padding: 5px; border-radius: 8px; cursor: pointer; margin-left: auto; display: flex; align-items: center; }
-.menu-item { display: flex; align-items: center; gap: 15px; padding: 12px 15px; color: #a4b0be; cursor: pointer; border-radius: 12px; transition: 0.2s; white-space: nowrap; }
+.brand-wrapper {display: flex; align-items: center; gap: 15px; margin-bottom: 20px; height: 50px; justify-content: space-between; overflow: hidden;}
+.brand-icon { min-width: 40px; height: 40px; background: var(--primary-green); color: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold;}
+.brand-text { font-size: 1.2rem; font-weight: bold; white-space: nowrap; opacity: 1; transition: opacity var(--transition-speed); }
+
+.toggle-btn { 
+  background: none; 
+  border: 1px solid #eee; 
+  padding: 5px; 
+  border-radius: 8px; 
+  cursor: pointer; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  color: #a4b0be;
+  min-width: 32px; /* ล็อกขนาดปุ่มไว้กันบี้ */
+  min-height: 32px;
+  transition: 1.0s;
+}
+.toggle-btn:hover {
+  background: #f8f9fa;
+  color: var(--primary-green);
+}
+
+/* --- สถานะตอนพับ (COLLAPSED) --- */
+
+/* 1. จัด Wrapper ให้ปุ่มอยู่ตรงกลาง */
+.sidebar.collapsed .brand-wrapper {
+  justify-content: center; 
+}
+
+/* 3. ซ่อน Text เมนูอื่นๆ ด้วยเทคนิคเดียวกัน */
+.sidebar.collapsed .brand-text, 
+.sidebar.collapsed .menu-text { 
+  display: none; /* หรือใช้ opacity/width 0 ถ้าอยากให้เฟด */
+}
+
+.menu-item { display: flex; align-items: center; gap: 15px; padding: 12px 12px; color: #a4b0be; cursor: pointer; border-radius: 12px; transition: 0.2s; white-space: nowrap; }
 .menu-item:hover { background: #f8f9fa; color: var(--primary-green); }
 .menu-item.active { background: #e6f7f3; color: var(--primary-green); font-weight: 600; }
 
-.sidebar.collapsed .brand-text, .sidebar.collapsed .menu-text { opacity: 0; width: 0; display: none; }
-.sidebar.collapsed .menu-item { justify-content: center; padding: 12px; }
+/* --- HEADER --- */
+.header { grid-area: header; background: white; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; }
+.search-bar { background: white; padding: 8px 15px; border-radius: 20px; border: 1px solid #eee; display: flex; align-items: center; gap: 10px; width: 300px;}
+.search-bar input { background: white; outline: none; flex: 1; color: black;}
+.avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
 
-/* --- MAIN CONTENT --- */
+/* --- MAIN CONTENT (Zone A + B) --- */
 .main-content {
   grid-area: main;
   padding: 0; overflow: hidden; display: flex; flex-direction: column;
@@ -70,162 +105,118 @@ body {
   display: flex; flex-direction: column; gap: 25px;
 }
 
+/* Card Styles */
+.stat-card { background: white; padding: 15px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); display: flex; align-items: center; gap: 15px; transition: transform 0.2s; }
+.stat-card:hover { transform: translateY(-2px); }
+
+.chart-card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; transition: transform 0.2s; }
+.chart-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.06); }
+
 /* =========================================
    ZONE B: AI SUMMARY (WHITE CARD STYLE)
    ========================================= */
-
-/* Container หลักที่ติดขอบล่าง */
 .fixed-bottom-summary {
   flex-shrink: 0;
-  background: transparent; /* โปร่งใส */
-  padding: 0 30px 20px 30px; /* เว้นระยะจากขอบ */
+  background: transparent;
+  padding: 0 30px 20px 30px;
   z-index: 20;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-/* ตัวการ์ดสีขาว */
 .ai-summary-wrapper {
   background: white;
   border-radius: 16px;
-  box-shadow: 0 -10px 30px rgba(0,0,0,0.06); /* เงาลอยนุ่มๆ */
+  box-shadow: 0 -10px 30px rgba(0,0,0,0.06);
   border: 1px solid #f0f0f0;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  display: flex; flex-direction: column;
   transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
-/* ความสูงตอนพับ/กาง */
 .ai-summary-wrapper.collapsed { height: 52px; cursor: pointer; }
-.ai-summary-wrapper.expanded { height: 180px; }
+.ai-summary-wrapper.expanded { height: 220px; }
 
-
-/* --- STYLING ภายใน ResultBox --- */
-.result-box-container {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-/* HEADER: ขาวสะอาด */
-.result-header {
-  height: 52px;
-  min-height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  border-bottom: 1px solid #f5f5f5;
-  background: white;
-  cursor: pointer;
-  transition: background 0.2s;
-}
+/* ResultBox Styling */
+.result-box-container { display: flex; flex-direction: column; height: 100%; }
+.result-header { height: 52px; min-height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid #f5f5f5; background: white; cursor: pointer; transition: background 0.2s; }
 .result-header:hover { background-color: #fafafa; }
-
 .header-left { display: flex; align-items: center; gap: 8px; }
 .icon-sparkle { color: #00c49f; fill: #e6f7f3; }
 .header-title { font-weight: 600; font-size: 0.95rem; color: #2d3436; }
-
 .header-right { display: flex; align-items: center; gap: 8px; }
-.icon-btn {
-  background: none; border: none; cursor: pointer; color: #a4b0be;
-  padding: 6px; border-radius: 6px; display: flex; transition: 0.2s;
-}
+.icon-btn { background: none; border: none; cursor: pointer; color: #a4b0be; padding: 6px; border-radius: 6px; display: flex; transition: 0.2s; }
 .icon-btn:hover { background: #f0f0f0; color: #00c49f; }
 .toggle-indicator { color: #888; margin-left: 5px; display: flex; }
+.result-content-wrapper { flex: 1; padding: 15px 20px; overflow-y: auto; background-color: #fff; }
+.result-text { font-size: 0.9rem; line-height: 1.6; color: #444; white-space: pre-line; }
 
-
-/* CONTENT: พื้นที่แสดงผล */
-.result-content-wrapper {
-  flex: 1;
-  padding: 15px 20px;
-  overflow-y: auto;
-  background-color: #fff;
-}
-
-/* RESULT TEXT */
-.result-text {
-  font-size: 0.9rem;
-  line-height: 1.6;
-  color: #444;
-  white-space: pre-line;
-}
-
-/* LOADING ANIMATION (จุดวิ่งๆ สีเขียว) */
-.loading-state {
-  display: flex; align-items: center; gap: 12px; height: 100%; color: #666; font-size: 0.9rem;
-}
+/* Loading Animations */
+.loading-state { display: flex; align-items: center; gap: 12px; height: 100%; color: #666; font-size: 0.9rem; }
 .typing-indicator { display: flex; gap: 4px; }
-.typing-indicator span {
-  width: 6px; height: 6px; background-color: #00c49f; border-radius: 50%;
-  animation: blink 1.4s infinite both;
-}
+.typing-indicator span { width: 6px; height: 6px; background-color: #00c49f; border-radius: 50%; animation: blink 1.4s infinite both; }
 .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
 .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
 
-@keyframes blink {
-  0% { opacity: 0.2; transform: scale(0.8); }
-  20% { opacity: 1; transform: scale(1); }
-  100% { opacity: 0.2; transform: scale(0.8); }
-}
-
-/* --- Header & Right Panel --- */
-.header { grid-area: header; background: white; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; padding: 0 30px; }
-.right-panel { grid-area: right; background: white; padding: 20px; display: flex; flex-direction: column; }
-.search-bar { background: white; padding: 8px 15px; border-radius: 20px; border: 1px solid #eee; display: flex; align-items: center; gap: 10px; width: 300px; }
-.avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
-.stat-card { background: white; padding: 15px; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); display: flex; align-items: center; gap: 15px; }
-.chart-card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); display: flex; flex-direction: column; }
-.char-stage { flex: 1; width: 100%; position: relative; border-radius: 20px; background: #e6f7f3; overflow: hidden; margin-bottom: 20px; }
-.control-panel { width: 100%; display: flex; flex-direction: column; gap: 15px; }
-.action-btn { width: 100%; padding: 12px; border-radius: 15px; border: none; background: var(--primary-green); color: white; font-weight: 600; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 10px; }
+.spin-anim { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes blink { 0% { opacity: 0.2; transform: scale(0.8); } 20% { opacity: 1; transform: scale(1); } 100% { opacity: 0.2; transform: scale(0.8); } }
 
 /* =========================================
-   ZONE C: Character AI
+   ZONE C: RIGHT PANEL & CHARACTER
    ========================================= */
+.right-panel { grid-area: right; background: white; padding: 20px; display: flex; flex-direction: column; }
+.char-stage { flex: 1; width: 100%; position: relative; border-radius: 20px; background: #e6f7f3; overflow: hidden; margin-bottom: 20px; }
 
+/* Character Bubble */
 .char-floating-bubble {
-  position: absolute;
-  top: 25%;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.95);
-  padding: 15px 20px;
-  border-radius: 20px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-  max-width: 80%;
-  text-align: center;
-  font-size: 1rem;
-  color: #333;
+  position: absolute; top: 28%; left: 50%; transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.95); padding: 15px 20px; border-radius: 20px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 60%; text-align: center; font-size: 1rem; color: #333;
   animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-  width: 60%;
 }
 .char-floating-bubble::after {
-  content: '';
-  position: absolute;
-  top: 0%;
-  left: 50%;
-  margin-left: -10px;
-  border-width: 10px;
-  border-style: solid;
-  border-color: rgba(255, 255, 255, 0.95) transparent transparent transparent;
-  transform: rotate(var(--tail-rotation)); /* เพิ่มการหมุนตามค่า tailRotation */
-  transform-origin: top center;
+  content: ''; position: absolute; top: 0%; left: 50%; margin-left: -10px;
+  border-width: 10px; border-style: solid; border-color: rgba(255, 255, 255, 0.95) transparent transparent transparent;
+  transform: rotate(var(--tail-rotation)); transform-origin: top center;
 }
-.cursor-blink {
-  animation: blink 1s infinite;
-  margin-left: 2px;
-  color: #ccc;
+.cursor-blink { animation: blink-cursor 1s infinite; margin-left: 2px; color: #ccc; }
+@keyframes popUp { from { opacity: 0; transform: translate(-50%, 10px) scale(0.9); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+@keyframes blink-cursor { 50% { opacity: 0; } }
+
+/* Bubble Timer */
+.bubble-timer { font-size: 0.65rem; color: #999; text-align: right; margin-top: 8px; border-top: 1px solid #eee; padding-top: 4px; }
+
+/* Control Panel (Input Area) */
+.control-panel { width: 100%; display: flex; flex-direction: column; gap: 15px; }
+.ask-input-wrapper { display: flex; gap: 10px; background: #f5f7fa; padding: 8px; border-radius: 12px; border: 1px solid #eee; }
+.ask-input-wrapper input { flex: 1; border: none; background: transparent; outline: none; font-size: 0.9rem; color: #333; }
+.ask-input-wrapper button {
+  background: var(--primary-green); color: white; border: none; width: 36px; height: 36px;
+  border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;
 }
-@keyframes popUp {
-  from { opacity: 0; transform: translate(-50%, 10px) scale(0.9); }
-  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.ask-input-wrapper button:disabled { background: #ccc; cursor: not-allowed; }
+.ask-input-wrapper button:hover:not(:disabled) { transform: scale(1.05); }
+
+/* Language Switcher */
+.lang-switcher-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; padding-top: 15px; border-top: 1px solid #f0f0f0; }
+.lang-btn { background: none; border: 1px solid #ddd; padding: 4px 12px; border-radius: 15px; font-size: 0.75rem; color: #888; cursor: pointer; transition: 0.2s; }
+.lang-btn.active { background: #333; color: white; border-color: #333; }
+
+/* =========================================
+   MEDIA QUERIES (Responsive)
+   ========================================= */
+@media (max-width: 1200px) {
+  /* ถ้าจอเล็ก ย่อ Right Panel ลง */
+  :root { --right-panel-width: 280px; }
+  .char-floating-bubble { top: 20%; width: 70%; }
 }
-@keyframes blink { 50% { opacity: 0; } }
-.lang-switcher-floating {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  display: flex;
-  gap: 8px;
+
+@media (max-width: 992px) {
+  /* ซ่อน Right Panel ในจอ Tablet (หรือจะทำปุ่ม Toggle ก็ได้) */
+  .app-container {
+    grid-template-columns: var(--sidebar-collapsed-width) 1fr 0px; /* ซ่อนขวาสุด */
+    grid-template-areas: "sidebar header header" "sidebar main main";
+  }
+  .right-panel { display: none; } 
+  .sidebar { width: var(--sidebar-collapsed-width); }
+  .brand-text, .menu-text { display: none; }
+  .menu-item { justify-content: center; }
 }
