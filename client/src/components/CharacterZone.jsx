@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const CharacterZone = ({ currentLang, setLang, status, text, isTextVisible, tailRotation = "0deg" }) => {
+const CharacterZone = ({ currentLang, setLang, status, text, isTextVisible, tailRotation = "180deg" }) => {
   
   const [displayedText, setDisplayedText] = useState("");
   const typingSpeed = 40; // ความเร็วในการพิมพ์ (ms ต่อ 1 ตัวอักษร)
@@ -28,7 +28,7 @@ const CharacterZone = ({ currentLang, setLang, status, text, isTextVisible, tail
 
   // ฟังก์ชันเลือกไฟล์วิดีโอ
   const getVideoSource = () => {
-    // ** แก้ Path ให้ตรงกับที่คุณเก็บไฟล์ (ใน public/assets) **
+    // ** ตรวจสอบว่าไฟล์วิดีโออยู่ในโฟลเดอร์ public/assets จริงหรือไม่ **
     switch (status) {
       case 'thinking': return '/assets/char-thinking.mp4';
       case 'talking':  return '/assets/char-talking.mp4';
@@ -71,7 +71,7 @@ const CharacterZone = ({ currentLang, setLang, status, text, isTextVisible, tail
         {['TH', 'EN', 'JP'].map((lang) => (
           <button 
             key={lang}
-            onClick={() => setLang(lang)}
+            onClick={() => setLang && setLang(lang)}
             style={{
               padding: '6px 12px',
               borderRadius: '20px',
