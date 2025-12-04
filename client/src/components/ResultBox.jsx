@@ -1,9 +1,12 @@
-import React from 'react';
-import { Sparkles, Copy, RefreshCw, ChevronUp, ChevronDown, Loader2 } from 'lucide-react';
+import React, { useState } from 'react'; // ✨ เพิ่ม useState
+import { Sparkles, Copy, RefreshCw, ChevronUp, ChevronDown, Loader2, Check } from 'lucide-react'; // ✨ เพิ่ม Check icon
 
-const ResultBox = ({ text, isExpanded, toggleExpand, isLoading }) => {
+// ✨ รับ onRefresh เข้ามาใน props
+const ResultBox = ({ text, isExpanded, toggleExpand, isLoading, onRefresh }) => {
   
-  // ฟังก์ชันแปลง **Text** ให้เป็นตัวหนา
+  // สร้าง State สำหรับโชว์ว่า "ก๊อปแล้วนะ" (เปลี่ยนไอคอน Copy -> Check)
+  const [isCopied, setIsCopied] = useState(false);
+
   const formatText = (inputText) => {
     if (!inputText) return "";
     const parts = inputText.split(/(\*\*.*?\*\*)/g);
@@ -15,24 +18,38 @@ const ResultBox = ({ text, isExpanded, toggleExpand, isLoading }) => {
     });
   };
 
+  // 📋 ฟังก์ชันกด Copy
+  const handleCopy = (e) => {
+      e.stopPropagation(); // กันไม่ให้ไปกดพับกล่อง
+      if (!text) return;
+
+      navigator.clipboard.writeText(text).then(() => {
+          setIsCopied(true); // เปลี่ยนไอคอนเป็นถูก
+          setTimeout(() => setIsCopied(false), 2000); // 2 วิเปลี่ยนกลับ
+      });
+  };
+
+  // 🔄 ฟังก์ชันกด Refresh
+  const handleRefresh = (e) => {
+      e.stopPropagation(); // กันไม่ให้ไปกดพับกล่อง
+      if (onRefresh) onRefresh(); // เรียกฟังก์ชันวิเคราะห์ใหม่จาก App.jsx
+  };
+
   return (
     <div className="result-box-container">
       
-      {/* --- HEADER (คลิกเพื่อพับ/กาง) --- */}
+      {/* --- HEADER --- */}
       <div className="result-header" onClick={toggleExpand}>
         <div className="header-left">
-           {/* เปลี่ยนไอคอน: ถ้าโหลดอยู่ ให้โชว์ Loader หมุนๆ */}
            {isLoading ? (
              <Loader2 size={18} className="icon-sparkle spin-anim" />
            ) : (
              <Sparkles size={18} className="icon-sparkle" />
            )}
-           
-           {/* เปลี่ยนข้อความ: ถ้าโหลดอยู่ ให้โชว์ "Analyzing..." แม้จะพับอยู่ก็ตาม */}
            <span 
              className="header-title" 
              style={{ 
-               color: isLoading ? '#00c49f' : '#2d3436', // สีเขียวตอนโหลด
+               color: isLoading ? '#00c49f' : '#2d3436', 
                transition: 'color 0.3s' 
              }}
            >
@@ -41,30 +58,37 @@ const ResultBox = ({ text, isExpanded, toggleExpand, isLoading }) => {
         </div>
         
         <div className="header-right">
-           {/* ซ่อนปุ่ม Copy/Refresh ตอนกำลังโหลด เพื่อความสะอาดตา */}
            {!isLoading && (
              <>
-               <button className="icon-btn" title="Copy" onClick={(e) => e.stopPropagation()}>
-                 <Copy size={16}/>
+               {/* ✨ ปุ่ม COPY: แก้ไข onClick และเปลี่ยนไอคอนตามสถานะ */}
+               <button 
+                  className="icon-btn" 
+                  title="Copy" 
+                  onClick={handleCopy}
+               >
+                 {isCopied ? <Check size={16} color="green"/> : <Copy size={16}/>}
                </button>
-               <button className="icon-btn" title="Refresh" onClick={(e) => e.stopPropagation()}>
+
+               {/* ✨ ปุ่ม REFRESH: แก้ไข onClick */}
+               <button 
+                  className="icon-btn" 
+                  title="Refresh / Re-analyze" 
+                  onClick={handleRefresh}
+               >
                  <RefreshCw size={16}/>
                </button>
              </>
            )}
            
-           {/* ปุ่มลูกศร */}
            <div className="toggle-indicator">
              {isExpanded ? <ChevronDown size={20}/> : <ChevronUp size={20}/>}
            </div>
         </div>
       </div>
 
-      {/* --- CONTENT AREA --- */}
+      {/* --- CONTENT AREA (เหมือนเดิม) --- */}
       <div className="result-content-wrapper">
-        
         {isLoading ? (
-          // === LOADING STATE (แสดงเมื่อกางออกมา) ===
           <div className="loading-state">
              <div className="typing-indicator">
                <span></span><span></span><span></span>
@@ -72,15 +96,12 @@ const ResultBox = ({ text, isExpanded, toggleExpand, isLoading }) => {
              <span className="loading-text">Reading chart data & generating insights...</span>
           </div>
         ) : (
-          // === RESULT STATE (ข้อความปกติ) ===
           <div className="result-text">
              {text ? formatText(text) : "Waiting for data..."}
           </div>
         )}
-
       </div>
 
-      {/* Style สำหรับ Animation หมุนๆ ใส่ไว้ในนี้เพื่อให้ทำงานได้เลยโดยไม่ต้องแก้ App.css */}
       <style>{`
         .spin-anim {
           animation: spin 1s linear infinite;

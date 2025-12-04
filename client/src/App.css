@@ -132,7 +132,7 @@ body {
   transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .ai-summary-wrapper.collapsed { height: 52px; cursor: pointer; }
-.ai-summary-wrapper.expanded { height: 300px; }
+.ai-summary-wrapper.expanded { height: 400px; }
 
 /* ResultBox Styling */
 .result-box-container { display: flex; flex-direction: column; height: 100%; }

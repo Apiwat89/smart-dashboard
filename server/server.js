@@ -36,7 +36,8 @@ app.post('/api/summarize-view', async (req, res) => {
         [2. Title]
         Analysis content...
         (Blank line)
-
+        [3. Title]
+        
         Guidelines:
         1. Write in a professional and easy-to-understand tone.
         2. Do not use Markdown symbols (*, #). Bold is allowed ONLY for titles using **text**.

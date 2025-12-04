@@ -73,7 +73,12 @@ function App() {
     setIsAiProcessing(true); setIsAiMsgVisible(false); setAiMessage(""); setAiState('thinking');
     try {
       const reaction = await backendService.getCharacterReaction(pointData, fullChartData, currentLang);
-      setAiMessage(reaction); setAiState('talking'); setIsAiMsgVisible(true); setCountdown(100);
+      console.log(reaction);
+      setAiMessage(reaction.message); 
+      setAiState('talking'); 
+      setIsAiMsgVisible(true); 
+      if (reaction.isError) setCountdown(10);
+      else setCountdown(100);
       setTimeout(() => setAiState('idle'), 5000); 
     } catch (err) { setAiState('idle'); } finally { setIsAiProcessing(false); }
   };
@@ -84,11 +89,23 @@ function App() {
     setIsAiProcessing(true); setIsAiMsgVisible(false); setAiMessage(""); setAiState('thinking');
     try {
       const reaction = await backendService.getCharacterReactionInput(userQuestion, dashboardData, currentLang);
-      setAiMessage(reaction); setAiState('talking'); setIsAiMsgVisible(true); setCountdown(100); setUserQuestion("");
-      setTimeout(() => setAiState('idle'), 5000);
+      setAiMessage(reaction.message); 
+      setAiState('talking'); 
+      setIsAiMsgVisible(true); 
+      setUserQuestion("");
+      if (reaction.isError) setCountdown(10);
+      else setCountdown(100);
+      setTimeout(() => setAiState('idle'), 5000); 
     } catch (err) { 
         setAiMessage("Error connecting."); setIsAiMsgVisible(true); setCountdown(5); 
     } finally { setIsAiProcessing(false); }
+  };
+
+  const handleCloseSomjeed = () => {
+    setIsAiMsgVisible(false);
+    setAiMessage("");
+    setAiState('idle'); // ให้น้องกลับมายืนเฉยๆ
+    setCountdown(0);    // เคลียร์ตัวนับเวลา
   };
 
   // --- Dynamic Visibility Check ---
@@ -132,8 +149,8 @@ function App() {
       
       <aside className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="brand-wrapper">
-          <div className="brand-icon">H+</div>
-          <span className="brand-text">H-care</span>
+          <div className="brand-icon">S</div>
+          <span className="brand-text">Somjeed</span>
           {!isSidebarCollapsed && (
              <button className="toggle-btn" onClick={() => setIsSidebarCollapsed(true)}>
                <ChevronLeft size={16} />
@@ -205,14 +222,27 @@ function App() {
 
         <div className="fixed-bottom-summary">
             <div className={`ai-summary-wrapper ${isSummaryExpanded ? 'expanded' : 'collapsed'}`}>
-                <ResultBox text={summaryText} isExpanded={isSummaryExpanded} toggleExpand={() => setIsSummaryExpanded(!isSummaryExpanded)} isLoading={isSummaryLoading} />
+                <ResultBox 
+                  text={summaryText} 
+                  isExpanded={isSummaryExpanded} 
+                  toggleExpand={() => setIsSummaryExpanded(!isSummaryExpanded)} 
+                  isLoading={isSummaryLoading} 
+                  onRefresh={() => analyzeVisibleCharts(dashboardData, currentLang)}/>
             </div>
         </div>
       </main>
 
       <aside className="right-panel">
          <div className="char-stage">
-            <CharacterZone status={aiState} text={aiMessage} isTextVisible={isAiMsgVisible} countdown={countdown} />
+            <CharacterZone 
+              status={aiState} 
+              text={aiMessage} 
+              isTextVisible={isAiMsgVisible} 
+              countdown={countdown} 
+              
+              /* ✨ ส่งฟังก์ชันนี้เข้าไป */
+              onClose={handleCloseSomjeed}
+            />
          </div>
 
          <div className="control-panel">
