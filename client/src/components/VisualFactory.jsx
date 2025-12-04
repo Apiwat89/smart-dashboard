@@ -3,7 +3,7 @@ import { Users, Clock, Activity, DollarSign } from 'lucide-react';
 import MainChart from './MainChart';
 
 const VisualFactory = ({ widget, onChartClick }) => {
-  const { type, title, value, trend, data, status } = widget;
+   const { type, title, value, trend, data, status, keys = { x: 'X', y: 'Y' } } = widget;
 
   // 1. KPI CARD (คงเดิม)
   if (type === 'kpi') {
@@ -34,7 +34,7 @@ const VisualFactory = ({ widget, onChartClick }) => {
 
   if (chartTypeMap[type]) {
      return (
-        <div className="chart-card" style={{height: '100%', display:'flex', flexDirection:'column'}}>
+        <div className="chart-card" style={{height: '100%', display:'flex', flexDirection:'column', cursor: 'pointer'}} onClick={() => onChartClick(null, data)}>
            <div style={{display:'flex',justifyContent:'space-between', marginBottom:'15px'}}>
               <h3 style={{margin:0, fontSize:'0.95rem', fontWeight:'600'}}>{title}</h3>
               {type === 'area' && <select style={{border:'1px solid #ddd', borderRadius:'5px', fontSize:'0.8rem'}}><option>Monthly</option></select>}
@@ -45,6 +45,7 @@ const VisualFactory = ({ widget, onChartClick }) => {
               <MainChart 
                  type={chartTypeMap[type]} 
                  data={data} 
+                 dataKeys={keys}
                  onDataClick={(point) => onChartClick(point, data)}
               />
            </div>

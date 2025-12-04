@@ -16,7 +16,7 @@ function App() {
   // --- UI & Data States ---
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
-  const [currentLang, setCurrentLang] = useState('EN'); 
+  const [currentLang, setCurrentLang] = useState('TH'); 
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState(null);
   
@@ -41,8 +41,8 @@ function App() {
       const data = await MockApi.getDashboardData();
       setDashboardData(data);
       setLoading(false);
-      // เรียกใช้ analyzeVisibleCharts ครั้งแรก (จะใช้ค่า Default EN)
-      setTimeout(() => analyzeVisibleCharts(data, 'EN'), 500);
+      // เรียกใช้ analyzeVisibleCharts ครั้งแรกตามภาษาที่ตั้งค่าไว้
+      setTimeout(() => analyzeVisibleCharts(data, currentLang), 500);
     };
     initDashboard();
   }, []);
@@ -72,9 +72,8 @@ function App() {
     if (isAiProcessing) return;
     setIsAiProcessing(true); setIsAiMsgVisible(false); setAiMessage(""); setAiState('thinking');
     try {
-      // ✨ FIX: ส่ง currentLang ไปด้วย
       const reaction = await backendService.getCharacterReaction(pointData, fullChartData, currentLang);
-      setAiMessage(reaction); setAiState('talking'); setIsAiMsgVisible(true); setCountdown(60);
+      setAiMessage(reaction); setAiState('talking'); setIsAiMsgVisible(true); setCountdown(100);
       setTimeout(() => setAiState('idle'), 5000); 
     } catch (err) { setAiState('idle'); } finally { setIsAiProcessing(false); }
   };
@@ -84,9 +83,8 @@ function App() {
     if (!userQuestion.trim() || isAiProcessing) return;
     setIsAiProcessing(true); setIsAiMsgVisible(false); setAiMessage(""); setAiState('thinking');
     try {
-      // ✨ FIX: ส่ง currentLang ไปด้วย
       const reaction = await backendService.getCharacterReactionInput(userQuestion, dashboardData, currentLang);
-      setAiMessage(reaction); setAiState('talking'); setIsAiMsgVisible(true); setCountdown(60); setUserQuestion("");
+      setAiMessage(reaction); setAiState('talking'); setIsAiMsgVisible(true); setCountdown(100); setUserQuestion("");
       setTimeout(() => setAiState('idle'), 5000);
     } catch (err) { 
         setAiMessage("Error connecting."); setIsAiMsgVisible(true); setCountdown(5); 
@@ -94,16 +92,13 @@ function App() {
   };
 
   // --- Dynamic Visibility Check ---
-  // ✨ FIX: รับ parameter lang (ถ้าไม่ส่งมาให้ใช้ state ปัจจุบัน)
   const analyzeVisibleCharts = async (currentData = dashboardData, lang = currentLang) => {
     if (!currentData || !scrollContainerRef.current) return;
     const visibleCharts = [];
     const container = scrollContainerRef.current;
     const containerRect = container.getBoundingClientRect();
 
-    // วนลูปหา Widget ทุกตัวใน Data
     currentData.widgets.forEach(widget => {
-        // สนใจเฉพาะ Type ที่เป็นกราฟ
         if (['area', 'doughnut', 'bar', 'line'].includes(widget.type)) {
             const el = widgetRefs.current[widget.id];
             if (el) {
@@ -118,7 +113,6 @@ function App() {
     if (visibleCharts.length > 0) {
         setIsSummaryLoading(true);
         try {
-            // ✨ FIX: ส่ง lang ไปยัง backendService
             const aiSummary = await backendService.getDashboardSummary(visibleCharts, lang);
             setSummaryText(aiSummary);
         } catch (error) {}
@@ -128,7 +122,6 @@ function App() {
 
   const handleScroll = () => {
     if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
-    // เวลา Scroll ให้ใช้ currentLang ปัจจุบัน
     scrollTimeout.current = setTimeout(() => analyzeVisibleCharts(dashboardData, currentLang), 1000);
   };
 
@@ -137,7 +130,6 @@ function App() {
   return (
     <div className={`app-container ${isSidebarCollapsed ? 'sidebar-closed' : ''}`}>
       
-      {/* Sidebar & Header */}
       <aside className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="brand-wrapper">
           <div className="brand-icon">H+</div>
@@ -153,7 +145,7 @@ function App() {
                <ChevronRight size={16} />
              </button>
           )}
-        <nav style={{display:'flex', flexDirection:'column', gap:'5px', marginTop:'20px', marginTop:'0'}}>
+        <nav style={{display:'flex', flexDirection:'column', gap:'5px', marginTop:'0'}}>
            {[
              { icon: Users, label: 'Patients' }, 
              { icon: LayoutGrid, label: 'Overview', active: true }, 
@@ -173,11 +165,9 @@ function App() {
          <div style={{display:'flex', alignItems:'center', gap:'15px', fontWeight:'500'}}><Bell size={20} color="#666" style={{cursor:'pointer'}} /><img src={dashboardData.user.avatar} className="avatar" alt="user" /><span>{dashboardData.user.name}</span></div>
       </header>
 
-      {/* Main Content */}
       <main className="main-content">
         <div className="content-scroll-wrapper" ref={scrollContainerRef} onScroll={handleScroll}>
             
-            {/* KPI CARDS */}
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
@@ -193,7 +183,6 @@ function App() {
                 }
             </div>
 
-            {/* MAIN CHARTS */}
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
@@ -214,7 +203,6 @@ function App() {
             <div style={{height: '40px'}}></div>
         </div>
 
-        {/* AI Summary Zone */}
         <div className="fixed-bottom-summary">
             <div className={`ai-summary-wrapper ${isSummaryExpanded ? 'expanded' : 'collapsed'}`}>
                 <ResultBox text={summaryText} isExpanded={isSummaryExpanded} toggleExpand={() => setIsSummaryExpanded(!isSummaryExpanded)} isLoading={isSummaryLoading} />
@@ -222,7 +210,6 @@ function App() {
         </div>
       </main>
 
-      {/* Right Panel */}
       <aside className="right-panel">
          <div className="char-stage">
             <CharacterZone status={aiState} text={aiMessage} isTextVisible={isAiMsgVisible} countdown={countdown} />

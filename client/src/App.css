@@ -132,7 +132,7 @@ body {
   transition: height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .ai-summary-wrapper.collapsed { height: 52px; cursor: pointer; }
-.ai-summary-wrapper.expanded { height: 220px; }
+.ai-summary-wrapper.expanded { height: 300px; }
 
 /* ResultBox Styling */
 .result-box-container { display: flex; flex-direction: column; height: 100%; }
@@ -168,15 +168,45 @@ body {
 /* Character Bubble */
 .char-floating-bubble {
   position: absolute; top: 28%; left: 50%; transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.95); padding: 15px 20px; border-radius: 20px;
+  background: rgba(255, 255, 255, 0.95); padding: 10px 15px; border-radius: 20px;
   box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 60%; text-align: center; font-size: 1rem; color: #333;
   animation: popUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  display: flex;        /* ✨ เพิ่ม: จัด Layout ให้ Timer อยู่ก้นกล่องเสมอ */
+  flex-direction: column;
+  max-height: 80%;      /* ✨ เพิ่ม: กันไม่ให้กล่องใหญ่เกินหน้าจอ */
+  width: 80%;
 }
 .char-floating-bubble::after {
   content: ''; position: absolute; top: 0%; left: 50%; margin-left: -10px;
   border-width: 10px; border-style: solid; border-color: rgba(255, 255, 255, 0.95) transparent transparent transparent;
   transform: rotate(var(--tail-rotation)); transform-origin: top center;
 }
+
+.bubble-content {
+  max-height: 280px;    /* 👈 ปรับความสูงตรงนี้ตามต้องการ (เช่น 150px, 200px, 300px) */
+  overflow-y: auto;     /* 👈 คำสั่งสำคัญ: ถ้าเนื้อหายาวเกิน ให้ขึ้น Scrollbar แนวตั้ง */
+  padding-right: 10px;  /* เว้นช่องขวานิดนึงไม่ให้ตัวหนังสือติด Scrollbar */
+  text-align: left;     /* (แนะนำ) จัดชิดซ้ายจะอ่านง่ายกว่าเมื่อมี Scrollbar */
+  
+  /* ปรับแต่ง Scrollbar ให้สวยงาม (สำหรับ Chrome/Edge/Safari) */
+  scrollbar-width: thin; /* สำหรับ Firefox */
+}
+
+.bubble-content::-webkit-scrollbar {
+  width: 6px;
+}
+.bubble-content::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.05);
+  border-radius: 4px;
+}
+.bubble-content::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+.bubble-content::-webkit-scrollbar-thumb:hover {
+  background: #bbb;
+}
+
 .cursor-blink { animation: blink-cursor 1s infinite; margin-left: 2px; color: #ccc; }
 @keyframes popUp { from { opacity: 0; transform: translate(-50%, 10px) scale(0.9); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
 @keyframes blink-cursor { 50% { opacity: 0; } }

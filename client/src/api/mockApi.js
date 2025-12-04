@@ -2,191 +2,189 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const MockApi = {
   getDashboardData: async () => {
-    await delay(800); // จำลองโหลดนิดนึงให้สมจริง
+    // จำลองการโหลดข้อมูล (Loading Simulation)
+    await delay(800); 
 
     return {
-      user: { name: "Dr. Somchai", role: "Director", avatar: "https://i.pravatar.cc/150?img=11" },
+      // ข้อมูลผู้ใช้งาน (User Profile)
+      user: { 
+          name: "Alex Morgan", 
+          role: "VP of Sales", 
+          avatar: "https://i.pravatar.cc/150?img=12" 
+      },
       
-      // รวม Widgets ทั้งหมด (KPI + 10 กราฟ)
       widgets: [
         // =============================================
-        // ZONE 1: KPI CARDS (แสดงผลแถวบนสุด)
+        // ZONE 1: KPI CARDS (Key Performance Indicators)
         // =============================================
         { 
-            id: "kpi_1", type: "kpi", title: "Total Patients", 
-            value: "15,234", trend: "+12.5%", status: "up" 
+            id: "kpi_1", type: "kpi", title: "Total Revenue", 
+            value: "$4.2M", trend: "+12.5%", status: "up" 
         },
         { 
-            id: "kpi_2", type: "kpi", title: "Avg Wait Time", 
-            value: "14m", trend: "-2m", status: "good" 
+            id: "kpi_2", type: "kpi", title: "Net Profit", 
+            value: "$840K", trend: "+5.2%", status: "up" 
         },
         { 
-            id: "kpi_3", type: "kpi", title: "Satisfaction", 
-            value: "4.8/5", trend: "+0.1", status: "up" 
+            id: "kpi_3", type: "kpi", title: "Active Users", 
+            value: "15.4K", trend: "-2.1%", status: "down" 
         },
         { 
-            id: "kpi_4", type: "kpi", title: "Monthly Revenue", 
-            value: "฿45.2M", trend: "+8%", status: "up" 
+            id: "kpi_4", type: "kpi", title: "Conversion Rate", 
+            value: "3.8%", trend: "+0.4%", status: "good" 
         },
 
         // =============================================
-        // ZONE 2: CHARTS (10 กราฟ หลากหลายรูปแบบ)
+        // ZONE 2: CHARTS (With Dynamic Keys)
         // =============================================
         
-        // --- Graph 1: Area (Large) ---
+        // --- Graph 1: Area (Large) - ยอดขายรายปี ---
         { 
           id: "chart_01", 
           type: "area", 
           size: "large", 
-          title: "Yearly Patient Visits (Outpatient vs Inpatient)", 
+          title: "Yearly Sales Performance", 
+          
+          // ✨ Config: บอกว่าแกน X คือ 'month', แกน Y คือ 'total_sales'
+          keys: { x: "month", y: "total_sales" },
+          
           data: [
-            { name: 'Jan', uv: 2400, pv: 2400 },
-            { name: 'Feb', uv: 1398, pv: 2210 },
-            { name: 'Mar', uv: 9800, pv: 2290 },
-            { name: 'Apr', uv: 3908, pv: 2000 },
-            { name: 'May', uv: 4800, pv: 2181 },
-            { name: 'Jun', uv: 3800, pv: 2500 },
-            { name: 'Jul', uv: 4300, pv: 2100 },
-            { name: 'Aug', uv: 5300, pv: 2600 },
-            { name: 'Sep', uv: 4100, pv: 2300 },
-            { name: 'Oct', uv: 6500, pv: 2800 },
-            { name: 'Nov', uv: 5900, pv: 2400 },
-            { name: 'Dec', uv: 7200, pv: 3100 }
+            { month: 'Jan', total_sales: 320 },
+            { month: 'Feb', total_sales: 450 },
+            { month: 'Mar', total_sales: 400 },
+            { month: 'Apr', total_sales: 520 },
+            { month: 'May', total_sales: 610 },
+            { month: 'Jun', total_sales: 550 },
+            { month: 'Jul', total_sales: 670 },
+            { month: 'Aug', total_sales: 720 },
+            { month: 'Sep', total_sales: 690 },
+            { month: 'Oct', total_sales: 850 },
+            { month: 'Nov', total_sales: 920 },
+            { month: 'Dec', total_sales: 1100 }
           ]
         },
 
-        // --- Graph 2: Doughnut (Medium) ---
+        // --- Graph 2: Bar (Medium) - สินค้าขายดี ---
         { 
-          id: "chart_02", 
-          type: "doughnut", 
-          size: "medium", 
-          title: "Demographics by Gender", 
-          data: [
-            { name: 'Male', uv: 450 },
-            { name: 'Female', uv: 550 },
-            { name: 'Child', uv: 120 },
-            { name: 'Elderly', uv: 300 },
-          ]
-        },
-
-        // --- Graph 3: Bar (Large) ---
-        { 
-            id: "chart_03", 
+            id: "chart_02", 
             type: "bar", 
-            size: "large", 
-            title: "Top 5 Departments (Traffic Volume)", 
+            size: "medium", 
+            title: "Top Products (Units Sold)", 
+            
+            keys: { x: "product_name", y: "units" }, // X=ชื่อสินค้า, Y=จำนวนชิ้น
+            
             data: [
-              { name: 'Cardio', uv: 1200 },
-              { name: 'Ortho', uv: 980 },
-              { name: 'Neuro', uv: 600 },
-              { name: 'Pediatric', uv: 1450 },
-              { name: 'ER', uv: 2100 }
+              { product_name: 'Laptop Pro', units: 1200 },
+              { product_name: 'Smart Watch', units: 980 },
+              { product_name: 'Headphones', units: 850 },
+              { product_name: 'Camera 4K', units: 430 }
             ]
         },
 
-        // --- Graph 4: Line (Medium) ---
+        // --- Graph 3: Doughnut (Medium) - ส่วนแบ่งตลาด ---
+        { 
+          id: "chart_03", 
+          type: "doughnut", 
+          size: "medium", 
+          title: "Market Share by Brand", 
+          
+          keys: { x: "brand", y: "share" }, // X=แบรนด์, Y=เปอร์เซ็นต์
+          
+          data: [
+            { brand: 'Our Brand', share: 45 },
+            { brand: 'Competitor A', share: 30 },
+            { brand: 'Competitor B', share: 15 },
+            { brand: 'Others', share: 10 },
+          ]
+        },
+
+        // --- Graph 4: Line (Large) - ผู้เข้าชมเว็บไซต์ 24 ชม. ---
         { 
             id: "chart_04", 
             type: "line", 
-            size: "medium", 
-            title: "Patient Satisfaction (Last 7 Days)", 
+            size: "large", 
+            title: "Real-time Traffic (Visitors)", 
+            
+            keys: { x: "time", y: "visitors" }, // X=เวลา, Y=คนเข้าชม
+            
             data: [
-              { name: 'Mon', uv: 4.2 },
-              { name: 'Tue', uv: 4.5 },
-              { name: 'Wed', uv: 4.1 },
-              { name: 'Thu', uv: 4.8 },
-              { name: 'Fri', uv: 4.9 },
-              { name: 'Sat', uv: 4.7 },
-              { name: 'Sun', uv: 4.8 }
+              { time: '06:00', visitors: 120 },
+              { time: '09:00', visitors: 850 },
+              { time: '12:00', visitors: 1400 },
+              { time: '15:00', visitors: 1100 },
+              { time: '18:00', visitors: 950 },
+              { time: '21:00', visitors: 1600 }, // Peak
+              { time: '00:00', visitors: 400 }
             ]
         },
 
-        // --- Graph 5: Bar (Medium) - ช่วงอายุคนไข้ ---
+        // --- Graph 5: Bar (Medium) - ยอดขายตามภูมิภาค ---
         { 
             id: "chart_05", 
             type: "bar", 
             size: "medium", 
-            title: "Patient Age Groups", 
+            title: "Revenue by Region", 
+            
+            keys: { x: "region", y: "revenue" }, // X=ภูมิภาค, Y=รายได้
+            
             data: [
-              { name: '0-18', uv: 320 },
-              { name: '19-35', uv: 450 },
-              { name: '36-60', uv: 800 },
-              { name: '60+', uv: 650 }
+              { region: 'North America', revenue: 5400 },
+              { region: 'Europe', revenue: 4100 },
+              { region: 'Asia Pacific', revenue: 6200 }, // สูงสุด
+              { region: 'Latin America', revenue: 2300 }
             ]
         },
 
-        // --- Graph 6: Area (Large) - รายได้ ---
+        // --- Graph 6: Area (Medium) - อัตรากำไร (Profit Margin) ---
         { 
             id: "chart_06", 
             type: "area", 
-            size: "large", 
-            title: "Revenue Trend (Million THB)", 
+            size: "medium", 
+            title: "Profit Margin Trend (%)", 
+            
+            keys: { x: "quarter", y: "margin" }, 
+            
             data: [
-              { name: 'W1', uv: 10.5 },
-              { name: 'W2', uv: 12.1 },
-              { name: 'W3', uv: 9.8 },
-              { name: 'W4', uv: 14.2 },
+              { quarter: 'Q1', margin: 12 },
+              { quarter: 'Q2', margin: 15 },
+              { quarter: 'Q3', margin: 11 }, // Drop
+              { quarter: 'Q4', margin: 18 }, // Recovery
             ]
         },
 
-        // --- Graph 7: Doughnut (Medium) - ประเภทประกัน ---
+        // --- Graph 7: Doughnut (Medium) - ช่องทางการขาย ---
         { 
             id: "chart_07", 
             type: "doughnut", 
             size: "medium", 
-            title: "Payment Methods", 
+            title: "Sales Channels", 
+            
+            keys: { x: "channel", y: "volume" }, 
+            
             data: [
-              { name: 'Cash', uv: 30 },
-              { name: 'Insurance', uv: 50 },
-              { name: 'Social Sec.', uv: 20 },
+              { channel: 'Online Store', volume: 60 },
+              { channel: 'Retail', volume: 25 },
+              { channel: 'Partners', volume: 15 },
             ]
         },
-
-        // --- Graph 8: Line (Large) - ปริมาณคนไข้ ER รายชั่วโมง ---
+        
+        // --- Graph 8: Line (Medium) - ความพึงพอใจลูกค้า ---
         { 
             id: "chart_08", 
             type: "line", 
-            size: "large", 
-            title: "Emergency Room Traffic (24 Hours)", 
-            data: [
-              { name: '00:00', uv: 15 },
-              { name: '04:00', uv: 8 },
-              { name: '08:00', uv: 45 },
-              { name: '12:00', uv: 60 },
-              { name: '16:00', uv: 55 },
-              { name: '20:00', uv: 90 }, // Peak ช่วงค่ำ
-              { name: '23:59', uv: 30 }
-            ]
-        },
-
-        // --- Graph 9: Bar (Medium) - หมอยอดฮิต ---
-        { 
-            id: "chart_09", 
-            type: "bar", 
             size: "medium", 
-            title: "Top Doctors (Cases/Month)", 
+            title: "CSAT Score (Last 7 Days)", 
+            
+            keys: { x: "day", y: "score" }, 
+            
             data: [
-              { name: 'Dr.A', uv: 150 },
-              { name: 'Dr.B', uv: 142 },
-              { name: 'Dr.C', uv: 120 },
-              { name: 'Dr.D', uv: 110 }
-            ]
-        },
-
-        // --- Graph 10: Area (Medium) - อัตราครองเตียง ---
-        { 
-            id: "chart_10", 
-            type: "area", 
-            size: "medium", 
-            title: "Bed Occupancy Rate (%)", 
-            data: [
-              { name: 'Mon', uv: 75 },
-              { name: 'Tue', uv: 78 },
-              { name: 'Wed', uv: 82 },
-              { name: 'Thu', uv: 80 },
-              { name: 'Fri', uv: 88 },
-              { name: 'Sat', uv: 90 },
-              { name: 'Sun', uv: 85 }
+              { day: 'Mon', score: 4.2 },
+              { day: 'Tue', score: 4.3 },
+              { day: 'Wed', score: 4.1 },
+              { day: 'Thu', score: 4.5 },
+              { day: 'Fri', score: 4.8 }, // Happy Friday
+              { day: 'Sat', score: 4.7 },
+              { day: 'Sun', score: 4.6 }
             ]
         }
       ]

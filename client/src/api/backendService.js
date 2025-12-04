@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:3000/api'; // ตรวจสอบ Port ให้ตรงกับ Server
+const BASE_URL = 'api';
 
 export const backendService = {
   // เพิ่ม parameter 'lang'
@@ -13,7 +13,9 @@ export const backendService = {
       return response.data.message;
     } catch (error) {
       console.error("API Error:", error);
-      return "System is currently unavailable.";
+      if (lang == "TH") return "นักวิเคราะห์ข้อมูลไม่สามารถวิเคราะห์ข้อมูลได้ โปรดตรวจสอบระบบ"
+      else if (lang == "EN") return "The data analyst is unable to process the data at the moment. Please check the system.";
+      else if (lang == "JP") return "「現在、データアナリストはデータを分析できません。システムをご確認ください。」";
     }
   },
 
@@ -27,7 +29,9 @@ export const backendService = {
       return response.data.message;
     } catch (error) {
       console.error("API Error:", error);
-      return "Cannot connect to AI.";
+      if (lang == "TH") return "แย่จัง... ส้มจี๊ดยังไม่สามารถพร้อมช่วยเหลือในตอนนี้ได้ค่ะ โปรดเช็คระบบให้ส้มจี๊ดด้วยน่าา";
+      else if (lang == "EN") return "Oops… Somjeed isn’t able to help at the moment. Please check the system for me, okay?";
+      else if (lang == "JP") return "「わぁ…今はソムジードがお手伝いできないみたいです。システムを確認してくれると嬉しいです！」";
     }
   },
 
@@ -38,10 +42,12 @@ export const backendService = {
           allData: allData,
           lang: lang
       });
-      return response.data.message;
+      return response.data.message
     } catch (error) {
       console.error("API Error:", error);
-      return "Cannot connect to AI.";
+      if (lang == "TH") return "แย่จัง... ส้มจี๊ดยังไม่สามารถพร้อมช่วยเหลือในตอนนี้ได้ค่ะ โปรดเช็คระบบให้ส้มจี๊ดด้วยน่าา";
+      else if (lang == "EN") return "Oops… Somjeed isn’t able to help at the moment. Please check the system for me, okay?";
+      else if (lang == "JP") return "「わぁ…今はソムジードがお手伝いできないみたいです。システムを確認してくれると嬉しいです！」";
     }
   }
 };
