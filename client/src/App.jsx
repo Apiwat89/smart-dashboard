@@ -11,6 +11,7 @@ import ResultBox from './components/ResultBox';
 import CharacterZone from './components/CharacterZone';
 import { MockApi } from './api/mockApi';
 import { backendService } from './api/backendService';
+import Footer from './components/Footer';
 
 function App() {
   // --- UI & Data States ---
@@ -142,15 +143,39 @@ function App() {
     scrollTimeout.current = setTimeout(() => analyzeVisibleCharts(dashboardData, currentLang), 1000);
   };
 
-  if (loading) return <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh', color:'#00c49f'}}>Loading Dashboard...</div>;
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        {/* ส่วน Logo และ Animation */}
+        <div style={{position: 'relative'}}>
+           <div className="pulse-ring"></div>
+           <div className="loading-logo-wrapper">
+              S
+           </div>
+        </div>
+
+        {/* ส่วนข้อความ */}
+        <div className="loading-text-container">
+           <div className="loading-title">SOMJEED DASHBOARD</div>
+           <div className="loading-sub">Preparing insights for you...</div>
+           
+           {/* Progress Bar วิ่งๆ */}
+           <div className="loading-bar-wrapper">
+              <div className="loading-bar-fill"></div>
+           </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
+    <div className="screenAll">
     <div className={`app-container ${isSidebarCollapsed ? 'sidebar-closed' : ''}`}>
       
       <aside className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
         <div className="brand-wrapper">
           <div className="brand-icon">S</div>
-          <span className="brand-text">Somjeed</span>
+          <span className="brand-text">SOMJEED</span>
           {!isSidebarCollapsed && (
              <button className="toggle-btn" onClick={() => setIsSidebarCollapsed(true)}>
                <ChevronLeft size={16} />
@@ -164,11 +189,11 @@ function App() {
           )}
         <nav style={{display:'flex', flexDirection:'column', gap:'5px', marginTop:'0'}}>
            {[
-             { icon: Users, label: 'Patients' }, 
+            //  { icon: Users, label: 'Patients' }, 
              { icon: LayoutGrid, label: 'Overview', active: true }, 
-             { icon: Map, label: 'Map' }, 
-             { icon: FileText, label: 'Departments' }, 
-             { icon: User, label: 'Doctors' }
+            //  { icon: Map, label: 'Map' }, 
+            //  { icon: FileText, label: 'Departments' }, 
+            //  { icon: User, label: 'Doctors' }
            ].map((item, idx) => (
              <div key={idx} className={`menu-item ${item.active ? 'active' : ''}`}>
                <item.icon size={20} /> <span className="menu-text">{item.label}</span>
@@ -184,12 +209,11 @@ function App() {
 
       <main className="main-content">
         <div className="content-scroll-wrapper" ref={scrollContainerRef} onScroll={handleScroll}>
-            
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                 gap: '20px'
-            }}>
+            }}> 
                 {dashboardData?.widgets
                     .filter(w => w.type === 'kpi')
                     .map(widget => (
@@ -198,15 +222,15 @@ function App() {
                         </div>
                     ))
                 }
-            </div>
+            </div> 
 
             <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                gridAutoRows: 'minmax(300px, auto)',
+                gridAutoRows: 'minmax(250px, auto)',
                 rowGap: '60px',
                 columnGap: '20px',
-            }}>
+            }}> 
                 {dashboardData?.widgets
                     .filter(w => w.type !== 'kpi')
                     .map(widget => (
@@ -216,7 +240,6 @@ function App() {
                     ))
                 }
             </div>
-            
             <div style={{height: '40px'}}></div>
         </div>
 
@@ -267,9 +290,11 @@ function App() {
                 ))}
              </div>
          </div>
+         
       </aside>
-
-    </div>
+      </div> 
+      <Footer />
+    </div> 
   );
 }
 

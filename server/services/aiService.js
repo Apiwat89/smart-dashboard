@@ -28,7 +28,7 @@ async function generateAIResponse(userMessage, systemRole = "You are a helpful a
     } catch (error) {
         console.error("❌ Gemini Error:", error.message);
         // เพิ่มคำแนะนำเผื่อกรณีโมเดลรุ่น Preview นี้ปิดปรับปรุง
-        return "ขออภัยครับ ตอนนี้สมองน้อง Gemini (2.5 Flash) เชื่อมต่อไม่ได้ (อาจจะเพราะเป็นรุ่น Preview หรือ API Key มีปัญหา)";
+        return {message: "ขออภัยครับ ตอนนี้สมองน้อง Gemini (2.5 Flash) เชื่อมต่อไม่ได้ (อาจจะเพราะเป็นรุ่น Preview หรือ API Key มีปัญหา)", isError: true};
     }
 }
 

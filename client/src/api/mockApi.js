@@ -3,7 +3,7 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 export const MockApi = {
   getDashboardData: async () => {
     // จำลองการโหลดข้อมูล (Loading Simulation)
-    await delay(800); 
+    await delay(3000); 
 
     return {
       // ข้อมูลผู้ใช้งาน (User Profile)

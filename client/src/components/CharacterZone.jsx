@@ -72,15 +72,16 @@ const CharacterZone = ({ status, text, isTextVisible, countdown, tailRotation = 
                         justifyContent: 'center',
                         cursor: 'pointer',
                         color: '#666',
-                        transition: '0.2s'
+                        transition: '0.2s',
+                        marginTop: '10px',
                     }}
                     onMouseEnter={(e) => { e.currentTarget.style.background = '#ff7675'; e.currentTarget.style.color = 'white'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.1)'; e.currentTarget.style.color = '#666'; }}
                 >
-                    <X size={14} />
+                    <div style={{display:'flex'}}><X size={14}/></div>
                 </button>
 
-              <div>Auto close in {countdown}s</div> 
+              <div style={{marginTop:'10px'}}>Auto close in {countdown}s</div> 
            </div>
         </div>
       )}

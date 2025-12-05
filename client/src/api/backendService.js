@@ -26,7 +26,7 @@ export const backendService = {
         contextData,
         lang: lang
       });
-      return {message: response.data.message, isError: false}
+      return {message: response.data.message, isError: response.data.isError}
     } catch (error) {
       console.error("API Error:", error);
       let message = "";
@@ -44,7 +44,7 @@ export const backendService = {
           allData: allData,
           lang: lang
       });
-      return {message: response.data.message, isError: false}
+      return {message: response.data.message, isError: response.data.isError}
     } catch (error) {
       console.error("API Error:", error);
       let message = "";
