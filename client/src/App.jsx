@@ -1,301 +1,191 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Search, Bell, Plus, LayoutGrid, Users, Map, FileText, Settings, User, 
-  ChevronLeft, ChevronRight, Globe 
-} from 'lucide-react';
 import './App.css';
-
-// Components
-import VisualFactory from './components/VisualFactory'; 
-import ResultBox from './components/ResultBox';
-import CharacterZone from './components/CharacterZone';
-import { MockApi } from './api/mockApi';
-import { backendService } from './api/backendService';
-import Footer from './components/Footer';
+import DashboardLayout from './components/Layout/DashboardLayout';
+import LoadingScreen from './components/Layout/LoadingScreen';
+import VisualFactory from './components/Widgets/VisualFactory';
+import ResultBox from './components/Widgets/ResultBox';
+import { dashboardService } from './api/apiClient';
 
 function App() {
-  // --- UI & Data States ---
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
-  const [currentLang, setCurrentLang] = useState('TH'); 
   const [loading, setLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState(null);
+  const [data, setData] = useState(null);
+  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
   
-  // --- AI States ---
-  const [aiState, setAiState] = useState('idle');
-  const [aiMessage, setAiMessage] = useState("");
-  const [isAiMsgVisible, setIsAiMsgVisible] = useState(false); 
-  const [summaryText, setSummaryText] = useState("");
-  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
-  const [userQuestion, setUserQuestion] = useState("");
-  const [isAiProcessing, setIsAiProcessing] = useState(false);
+  // AI States
+  const [lang, setLang] = useState('TH');
+  const [aiState, setAiState] = useState({ status: 'idle', message: '', isVisible: false });
+  const [isProcessing, setProcessing] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [question, setQuestion] = useState("");
+  
+  // Summary States
+  const [summary, setSummary] = useState("");
+  const [isSummaryLoading, setSummaryLoading] = useState(false);
+  const [isSummaryExpanded, setSummaryExpanded] = useState(false);
 
-  // --- Refs ---
+  // Refs
   const widgetRefs = useRef({});
-  const scrollTimeout = useRef(null);
-  const scrollContainerRef = useRef(null);
+  const scrollRef = useRef(null); // ✨ Ref สำหรับกล่อง Scroll
+  const timeoutRef = useRef(null); // ✨ Ref สำหรับตัวจับเวลา
+  const talkTimerRef = useRef(null);
 
   // 1. Initial Load
   useEffect(() => {
-    const initDashboard = async () => {
-      const data = await MockApi.getDashboardData();
-      setDashboardData(data);
-      setLoading(false);
-      // เรียกใช้ analyzeVisibleCharts ครั้งแรกตามภาษาที่ตั้งค่าไว้
-      setTimeout(() => analyzeVisibleCharts(data, currentLang), 500);
-    };
-    initDashboard();
+    dashboardService.getData().then(res => {
+      if (res) { 
+          setData(res); 
+          setLoading(false); 
+          // รอ 1 วิหลังโหลดเสร็จ เพื่อวิเคราะห์หน้าแรกทันที
+          setTimeout(() => analyzeView(res), 1000); 
+      }
+    });
   }, []);
 
-  // 2. Timer Logic (นับถอยหลังปิดข้อความ AI)
+  // 2. ✨ Scroll Detection Logic (เพิ่มส่วนนี้)
   useEffect(() => {
-    let timer;
-    if (isAiMsgVisible && countdown > 0) {
-      timer = setInterval(() => setCountdown((prev) => prev - 1), 1000);
-    } else if (countdown === 0 && isAiMsgVisible) {
-      setIsAiMsgVisible(false); setAiMessage(""); setAiState('idle');
-    }
-    return () => clearInterval(timer);
-  }, [isAiMsgVisible, countdown]);
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer) return;
 
-  // 3. ✨ NEW: Language Change Logic ✨
-  // เมื่อ currentLang เปลี่ยน ให้ทำการ Analyze หน้าจอใหม่ เพื่อขอ Summary ภาษาใหม่ทันที
+    const handleScroll = () => {
+      // ทุกครั้งที่ขยับ ให้ล้างตัวจับเวลาเก่าทิ้ง (ยังไม่วิเคราะห์)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      
+      // ตั้งเวลาใหม่: ถ้าหยุดนิ่งครบ 1.5 วินาที ให้เริ่มวิเคราะห์ (analyzeView)
+      timeoutRef.current = setTimeout(() => {
+        analyzeView(); 
+      }, 1500);
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll);
+    return () => {
+        scrollContainer.removeEventListener('scroll', handleScroll);
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [data]); // ใส่ dependency เป็น data เพื่อให้มั่นใจว่ามีข้อมูลแล้วค่อยจับ
+
+  // Timer Logic (Character)
   useEffect(() => {
-    if (!loading && dashboardData) {
-        analyzeVisibleCharts(dashboardData, currentLang);
-    }
-  }, [currentLang]);
-
-  // --- Handlers ---
-
-  const handleChartClick = async (pointData, fullChartData) => {
-    if (isAiProcessing) return;
-    setIsAiProcessing(true); setIsAiMsgVisible(false); setAiMessage(""); setAiState('thinking');
-    try {
-      const reaction = await backendService.getCharacterReaction(pointData, fullChartData, currentLang);
-      console.log(reaction);
-      setAiMessage(reaction.message); 
-      setAiState('talking'); 
-      setIsAiMsgVisible(true); 
-      if (reaction.isError) setCountdown(10);
-      else setCountdown(100);
-      setTimeout(() => setAiState('idle'), 5000); 
-    } catch (err) { setAiState('idle'); } finally { setIsAiProcessing(false); }
+    let t;
+    if (aiState.isVisible && countdown > 0) t = setInterval(() => setCountdown(c => c - 1), 1000);
+    else if (countdown === 0) setAiState(p => ({ ...p, isVisible: false, status: 'idle' }));
+    return () => clearInterval(t);
+  }, [aiState.isVisible, countdown]);
+  
+  // Handlers ... (เหมือนเดิม)
+  const updateAi = (res) => {
+    if (talkTimerRef.current) clearTimeout(talkTimerRef.current);
+    setAiState({ status: 'talking', message: res.message, isVisible: true });
+    setCountdown(res.isError ? 10 : 100);
+    setProcessing(false);
+    talkTimerRef.current = setTimeout(() => {
+        setAiState(prev => ({
+            ...prev,    // คงค่าเดิมไว้ (message, isVisible)
+            status: 'idle' // เปลี่ยนแค่ท่าทางเป็นท่านิ่ง
+        }));
+    }, 10000);
   };
 
-  const handleAskSomjeed = async (e) => {
+  const handleChartClick = async (point, context) => {
+     if(isProcessing) return;
+     setProcessing(true); 
+     setAiState({ status: 'thinking', message: '', isVisible: false });
+     const res = await dashboardService.getReaction(point, context, lang);
+     updateAi(res);
+  };
+
+  const handleAsk = async (e) => {
     e.preventDefault();
-    if (!userQuestion.trim() || isAiProcessing) return;
-    setIsAiProcessing(true); setIsAiMsgVisible(false); setAiMessage(""); setAiState('thinking');
-    try {
-      const reaction = await backendService.getCharacterReactionInput(userQuestion, dashboardData, currentLang);
-      setAiMessage(reaction.message); 
-      setAiState('talking'); 
-      setIsAiMsgVisible(true); 
-      setUserQuestion("");
-      if (reaction.isError) setCountdown(10);
-      else setCountdown(100);
-      setTimeout(() => setAiState('idle'), 5000); 
-    } catch (err) { 
-        setAiMessage("Error connecting."); setIsAiMsgVisible(true); setCountdown(5); 
-    } finally { setIsAiProcessing(false); }
+    if(!question.trim()) return;
+    setProcessing(true); 
+    setAiState({ status: 'thinking', message: '', isVisible: false });
+    const res = await dashboardService.chat(question, data, lang);
+    setQuestion(""); 
+    updateAi(res);
   };
 
-  const handleCloseSomjeed = () => {
-    setIsAiMsgVisible(false);
-    setAiMessage("");
-    setAiState('idle'); // ให้น้องกลับมายืนเฉยๆ
-    setCountdown(0);    // เคลียร์ตัวนับเวลา
-  };
+  // ✨ Logic คำนวณว่ากราฟไหนอยู่บนจอบ้าง
+  const analyzeView = async (currentData = data, currentLang = lang) => {
+    if (!currentData || !scrollRef.current) return;
 
-  // --- Dynamic Visibility Check ---
-  const analyzeVisibleCharts = async (currentData = dashboardData, lang = currentLang) => {
-    if (!currentData || !scrollContainerRef.current) return;
-    const visibleCharts = [];
-    const container = scrollContainerRef.current;
-    const containerRect = container.getBoundingClientRect();
+    // หาขอบเขตของหน้าจอที่มองเห็น (Viewport)
+    const container = scrollRef.current.getBoundingClientRect();
+    
+    // กรองเฉพาะกราฟที่ "มองเห็น" ในหน้าจอ
+    const visibleCharts = currentData.widgets
+      .filter(w => ['area', 'bar', 'line', 'doughnut'].includes(w.type))
+      .filter(w => {
+         const el = widgetRefs.current[w.id];
+         if (!el) return false;
+         
+         const rect = el.getBoundingClientRect();
+         // สูตรเช็คว่า Element อยู่ในกรอบสายตาหรือไม่
+         return (
+             rect.top < container.bottom - 100 && // ขอบบนกราฟ อยู่สูงกว่าขอบล่างจอ (เข้ามานิดนึง)
+             rect.bottom > container.top + 100    // ขอบล่างกราฟ อยู่ต่ำกว่าขอบบนจอ
+         );
+      })
+      .map(w => ({ name: w.title, data: w.data }));
 
-    currentData.widgets.forEach(widget => {
-        if (['area', 'doughnut', 'bar', 'line'].includes(widget.type)) {
-            const el = widgetRefs.current[widget.id];
-            if (el) {
-                const rect = el.getBoundingClientRect();
-                if (rect.top < containerRect.bottom && rect.bottom > containerRect.top) {
-                    visibleCharts.push({ name: widget.title, data: widget.data });
-                }
-            }
-        }
-    });
-
+    // ถ้าเจอกราฟในจอ ให้ส่งไป AI Summary
     if (visibleCharts.length > 0) {
-        setIsSummaryLoading(true);
-        try {
-            const aiSummary = await backendService.getDashboardSummary(visibleCharts, lang);
-            setSummaryText(aiSummary);
-        } catch (error) {}
-        setIsSummaryLoading(false);
+       setSummaryLoading(true);
+       // เรียก Service (ของจริงอาจต้องเช็คว่า visibleCharts ไม่ซ้ำกับอันเดิมเพื่อลด API Call)
+       const text = await dashboardService.getSummary(visibleCharts, currentLang);
+       if(text) setSummary(text.message);
+       setSummaryLoading(false);
     }
   };
 
-  const handleScroll = () => {
-    if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
-    scrollTimeout.current = setTimeout(() => analyzeVisibleCharts(dashboardData, currentLang), 1000);
-  };
-
-  if (loading) {
-    return (
-      <div className="loading-screen">
-        {/* ส่วน Logo และ Animation */}
-        <div style={{position: 'relative'}}>
-           <div className="pulse-ring"></div>
-           <div className="loading-logo-wrapper">
-              S
-           </div>
-        </div>
-
-        {/* ส่วนข้อความ */}
-        <div className="loading-text-container">
-           <div className="loading-title">SOMJEED DASHBOARD</div>
-           <div className="loading-sub">Preparing insights for you...</div>
-           
-           {/* Progress Bar วิ่งๆ */}
-           <div className="loading-bar-wrapper">
-              <div className="loading-bar-fill"></div>
-           </div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <LoadingScreen />;
 
   return (
-    <div className="screenAll">
-    <div className={`app-container ${isSidebarCollapsed ? 'sidebar-closed' : ''}`}>
-      
-      <aside className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
-        <div className="brand-wrapper">
-          <div className="brand-icon">S</div>
-          <span className="brand-text">SOMJEED</span>
-          {!isSidebarCollapsed && (
-             <button className="toggle-btn" onClick={() => setIsSidebarCollapsed(true)}>
-               <ChevronLeft size={16} />
-             </button>
-          )}
-        </div>
-          {isSidebarCollapsed && (
-             <button className="toggle-btn" style={{margin: '0 auto 20px auto'}} onClick={() => setIsSidebarCollapsed(false)}>
-               <ChevronRight size={16} />
-             </button>
-          )}
-        <nav style={{display:'flex', flexDirection:'column', gap:'5px', marginTop:'0'}}>
-           {[
-            //  { icon: Users, label: 'Patients' }, 
-             { icon: LayoutGrid, label: 'Overview', active: true }, 
-            //  { icon: Map, label: 'Map' }, 
-            //  { icon: FileText, label: 'Departments' }, 
-            //  { icon: User, label: 'Doctors' }
-           ].map((item, idx) => (
-             <div key={idx} className={`menu-item ${item.active ? 'active' : ''}`}>
-               <item.icon size={20} /> <span className="menu-text">{item.label}</span>
-             </div>
-           ))}
-        </nav>
-      </aside>
-
-      <header className="header">
-         <div className="search-bar"><Search size={18} color="#999" /><input type="text" placeholder="Search..." style={{border:'none', outline:'none', width:'100%'}} /></div>
-         <div style={{display:'flex', alignItems:'center', gap:'15px', fontWeight:'500'}}><Bell size={20} color="#666" style={{cursor:'pointer'}} /><img src={dashboardData.user.avatar} className="avatar" alt="user" /><span>{dashboardData.user.name}</span></div>
-      </header>
-
-      <main className="main-content">
-        <div className="content-scroll-wrapper" ref={scrollContainerRef} onScroll={handleScroll}>
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '20px'
-            }}> 
-                {dashboardData?.widgets
-                    .filter(w => w.type === 'kpi')
-                    .map(widget => (
-                        <div key={widget.id} ref={el => widgetRefs.current[widget.id] = el}>
-                            <VisualFactory widget={widget} onChartClick={handleChartClick} />
-                        </div>
-                    ))
-                }
-            </div> 
-
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-                gridAutoRows: 'minmax(250px, auto)',
-                rowGap: '60px',
-                columnGap: '20px',
-            }}> 
-                {dashboardData?.widgets
-                    .filter(w => w.type !== 'kpi')
-                    .map(widget => (
-                        <div key={widget.id} ref={el => widgetRefs.current[widget.id] = el}>
-                            <VisualFactory widget={widget} onChartClick={handleChartClick} />
-                        </div>
-                    ))
-                }
-            </div>
-            <div style={{height: '40px'}}></div>
-        </div>
-
-        <div className="fixed-bottom-summary">
-            <div className={`ai-summary-wrapper ${isSummaryExpanded ? 'expanded' : 'collapsed'}`}>
-                <ResultBox 
-                  text={summaryText} 
+      <DashboardLayout
+        user={data.user}
+        isSidebarCollapsed={isSidebarCollapsed}
+        toggleSidebar={() => setSidebarCollapsed(!isSidebarCollapsed)}
+        scrollRef={scrollRef} // ✨ ส่ง Ref ไปให้ Layout แปะ
+        
+        summaryWidget={
+          <div className={`ai-summary-wrapper ${isSummaryExpanded ? 'expanded' : 'collapsed'}`}>
+              <ResultBox 
+                  text={summary} 
                   isExpanded={isSummaryExpanded} 
-                  toggleExpand={() => setIsSummaryExpanded(!isSummaryExpanded)} 
-                  isLoading={isSummaryLoading} 
-                  onRefresh={() => analyzeVisibleCharts(dashboardData, currentLang)}/>
-            </div>
-        </div>
-      </main>
+                  toggleExpand={() => setSummaryExpanded(!isSummaryExpanded)}
+                  isLoading={isSummaryLoading}
+                  
+                  // 👉 เพิ่มบรรทัดนี้ เพื่อให้ปุ่ม Refresh ทำงาน
+                  onRefresh={() => analyzeView()} 
+              />
+          </div>
+        } 
 
-      <aside className="right-panel">
-         <div className="char-stage">
-            <CharacterZone 
-              status={aiState} 
-              text={aiMessage} 
-              isTextVisible={isAiMsgVisible} 
-              countdown={countdown} 
-              
-              /* ✨ ส่งฟังก์ชันนี้เข้าไป */
-              onClose={handleCloseSomjeed}
-            />
-         </div>
+        rightPanelProps={{
+          aiState, countdown,
+          closeAi: () => {
+             setAiState(prev => ({ ...prev, isVisible: false, status: 'idle' }));
+             if (talkTimerRef.current) clearTimeout(talkTimerRef.current);
+          },
+          userQuestion: question, setUserQuestion: setQuestion, handleAsk,
+          currentLang: lang, setCurrentLang: setLang, isProcessing
+        }}
+      >
+          {/* Charts Area */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+              {data.widgets.filter(w => w.type === 'kpi').map(w => (
+                  <VisualFactory key={w.id} widget={w} onChartClick={() => {}} />
+              ))}
+          </div>
 
-         <div className="control-panel">
-             <form onSubmit={handleAskSomjeed} className="ask-input-wrapper">
-                <input type="text" placeholder="Ask Somjeed..." value={userQuestion} onChange={(e) => setUserQuestion(e.target.value)} disabled={isAiProcessing} />
-                <button type="submit" disabled={isAiProcessing || !userQuestion} style={{display:'flex', alignItems:'center', justifyContent:'center', padding:0}}>
-                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                     <line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                   </svg>
-                </button>
-             </form>
-             <div className="lang-switcher-row">
-                <Globe size={16} color="#666" />
-                {['TH', 'EN', 'JP'].map(lang => (
-                    <button 
-                        key={lang} 
-                        className={`lang-btn ${currentLang === lang ? 'active' : ''}`} 
-                        onClick={() => setCurrentLang(lang)}
-                    >
-                        {lang}
-                    </button>
-                ))}
-             </div>
-         </div>
-         
-      </aside>
-      </div> 
-      <Footer />
-    </div> 
-  );
-}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', marginTop: '10px' }}>
+              {data.widgets.filter(w => w.type !== 'kpi').map(w => (
+                  <div key={w.id} ref={el => widgetRefs.current[w.id] = el} style={{ height: '280px' }}>
+                      <VisualFactory widget={w} onChartClick={handleChartClick} />
+                  </div>
+              ))}
+          </div>
+
+      </DashboardLayout>
+    );
+  }
 
 export default App;
