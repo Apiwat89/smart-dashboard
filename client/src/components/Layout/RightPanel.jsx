@@ -16,10 +16,12 @@ const RightPanel = ({
            isTextVisible={aiState.isVisible} 
            countdown={countdown} 
            onClose={closeAi}
+           lang={currentLang}  // ✨ เพิ่มบรรทัดนี้: ส่งภาษาปัจจุบันเข้าไป
          />
       </div>
 
       <div className="control-panel">
+          {/* ... (ส่วนอื่นๆ เหมือนเดิม) ... */}
           <form onSubmit={handleAsk} className="ask-input-wrapper">
              <input 
                 type="text" placeholder="Ask Somjeed..." 

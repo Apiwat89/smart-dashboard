@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Github, Twitter } from 'lucide-react';
+import { Heart, Github, Twitter, Instagram } from 'lucide-react';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -23,10 +23,10 @@ const Footer = () => {
 
         <div className="footer-right">
           <div className='footer-right-vs'>
-            <span className="version-tag">v2.5.0 (Beta)</span>
+            <span className="version-tag">v1.0.0 (Beta)</span>
             <div className="social-icons">
-             <div style={{marginRight:'10px'}}><Github size={20} /></div> 
-              <Twitter size={20} />
+             <div style={{marginRight:'10px'}}><a href='https://github.com/Apiwat89/smart-dashboard.git' target="_blank"><Github size={20} /></a></div> 
+              <a href=''><Instagram size={20} /></a>
             </div>
           </div>
         </div>
