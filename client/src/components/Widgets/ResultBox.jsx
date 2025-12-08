@@ -4,7 +4,7 @@ import { Sparkles, Copy, RefreshCw, ChevronUp, ChevronDown, Loader2, Check } fro
 const ResultBox = ({ text, isExpanded, toggleExpand, isLoading, onRefresh }) => {
   const [isCopied, setIsCopied] = useState(false);
 
-  // ฟังก์ชันจัดรูปแบบข้อความ (ตัวหนา)
+  // ฟังก์ชันจัดรูปแบบข้อความ
   const renderFormattedText = (inputText) => {
     if (typeof inputText !== 'string' || !inputText) {
         return "Waiting for data analysis...";

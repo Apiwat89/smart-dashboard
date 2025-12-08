@@ -207,7 +207,7 @@ body {
   border: 1px solid #f0f0f0;
   pointer-events: auto;
   
-  /* ✨ FIX: ใช้ Flex เพื่อคุมลูกข้างใน */
+  /* FIX: ใช้ Flex เพื่อคุมลูกข้างใน */
   display: flex;
   flex-direction: column;
   
@@ -228,7 +228,7 @@ body {
 
 /* --- Container ข้างใน (เพื่อให้ Flex ทำงานถูกต้อง) --- */
 .result-box-container {
-  /* ✨ FIX: สั่งให้ยืดเต็มพ่อแม่ แต่ห้ามเกิน */
+  /* FIX: สั่งให้ยืดเต็มพ่อแม่ แต่ห้ามเกิน */
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -267,7 +267,7 @@ body {
   padding: 15px;      /* ระยะห่างจากขอบกล่องใหญ่ */
   border-top: 1px solid #f2f2f2;
 
-  /* ✨ Key Logic: ยืดเต็มพื้นที่ + Scroll */
+  /* Key Logic: ยืดเต็มพื้นที่ + Scroll */
   flex: 1;            /* ยืดเต็มพื้นที่ที่เหลือจาก Header */
   overflow-y: auto;   /* Scroll แนวตั้งถ้าเนื้อหายาว */
   min-height: 0;      /* ป้องกัน Flexbox ดันทะลุ */
@@ -391,21 +391,64 @@ body {
    8. FOOTER
    ========================================= */
 .dashboard-footer {
-  margin-top: 40px;
-  padding: 20px 0;
+  padding: 10px 10px;
   border-top: 1px solid #e0e0e0;
   color: #a4b0be;
   font-size: 0.85rem;
   width: 100%;
 }
 .footer-content {
-  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  flex-wrap: wrap; 
+  gap: 15px;
 }
-.footer-links { display: flex; gap: 15px; align-items: center; }
+
+.footer-left {
+  flex: 2;     
+  text-align: left;
+  min-width: 200px; 
+}
+
+.footer-links {
+  flex: 3;           /* กินพื้นที่ 3 ส่วน */
+  display: flex;
+  justify-content: center; /* จัดลิ้งค์ให้อยู่กึ่งกลางกล่อง */
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;   /* ถ้าจอเล็กให้ปัดลงมา */
+  margin-left: -280px;
+}
 .footer-links a { text-decoration: none; color: #888; transition: 0.2s; }
 .footer-links a:hover { color: var(--primary-green); }
+
+.footer-right {
+  flex: 1;           /* กินพื้นที่ 1 ส่วน */
+  display: flex;
+  justify-content: flex-end; /* ดันเนื้อหาไปชิดขวาสุด */
+}
+
+.footer-right-vs {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
 .version-tag {
-  background: #f0f0f0; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; color: #666;
+  background: #f0f0f0; 
+  padding: 2px 8px; 
+  border-radius: 4px; 
+  font-size: 0.75rem; 
+  color: #666;
+  margin-right: 20px;
+}
+.social-icons {
+  display: flex;
+}
+
+.footer-bottom {
+  text-align: center;
 }
 
 /* =========================================

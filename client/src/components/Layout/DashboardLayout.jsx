@@ -2,6 +2,7 @@ import React from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import RightPanel from './RightPanel';
+import Footer from './Footer';
 
 const DashboardLayout = ({ 
   children, 
@@ -9,33 +10,38 @@ const DashboardLayout = ({
   user,
   rightPanelProps,
   summaryWidget,
-  scrollRef // ✨ รับ Ref เข้ามาเพื่อจับ Event การเลื่อน
+  scrollRef 
 }) => {
   return (
-    <div className={`app-container ${isSidebarCollapsed ? 'sidebar-closed' : ''}`}>
-      
-      <Sidebar isCollapsed={isSidebarCollapsed} toggle={toggleSidebar} />
-      <Header user={user} />
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+      <div 
+        className={`app-container ${isSidebarCollapsed ? 'sidebar-closed' : ''}`}
+        style={{ flex: 1, height: 'auto', minHeight: 0 }} 
+      >
+        <Sidebar isCollapsed={isSidebarCollapsed} toggle={toggleSidebar} />
+        <Header user={user} />
 
-      <main className="main-content">
-        
-        {/* ✨ แปะ ref ไว้ตรงนี้ เพื่อให้ App.jsx มาสั่งจับ event scroll ได้ */}
-        <div className="content-scroll-area" ref={scrollRef}>
-            <div className="widgets-container">
-                {children}
-            </div>
-            <div className="bottom-spacer" style={{ height: '80px' }}></div>
-        </div>
+        <main className="main-content">
+          <div className="content-scroll-area" ref={scrollRef}>
+              <div className="widgets-container">
+                  {children}
+              </div>
+              <div className="bottom-spacer" style={{ height: '80px' }}></div>
+          </div>
 
-        {summaryWidget && (
-           <div className="fixed-bottom-summary">
-              {summaryWidget}
-           </div>
-        )}
+          {summaryWidget && (
+             <div className="fixed-bottom-summary">
+                {summaryWidget}
+             </div>
+          )}
+        </main>
 
-      </main>
+        <RightPanel {...rightPanelProps} />
+      </div>
 
-      <RightPanel {...rightPanelProps} />
+      <div style={{ flexShrink: 0, zIndex: 100, background: 'white'}}>
+         <Footer />
+      </div>
     </div>
   );
 };

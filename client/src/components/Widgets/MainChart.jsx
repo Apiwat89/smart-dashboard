@@ -17,7 +17,7 @@ const commonChartProps = { margin: { top: 5, right: 5, left: -25, bottom: 0 } };
 const axisStyle = { axisLine: false, tickLine: false, fontSize: 10, tick: { fill: '#aaa' } };
 const tooltipStyle = { borderRadius: '10px', fontSize: '12px', border: 'none', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' };
 
-// จุด Trigger สีส้มตอน Hover
+// จุด Trigger Hover
 const CustomActiveDot = ({ cx, cy, payload, onDotClick }) => {
   if (!cx || !cy) return null;
   return (
@@ -31,7 +31,7 @@ const CustomActiveDot = ({ cx, cy, payload, onDotClick }) => {
   );
 };
 
-// ✨ สร้าง Component Tooltip แบบกำหนดเอง (ใส่ไว้ใน MainChart หรือข้างนอกก็ได้)
+// สร้าง Component Tooltip แบบกำหนดเอง สำหรับ RadialChart
 const CustomRadialTooltip = ({ active, payload, dataKeys }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
@@ -167,14 +167,7 @@ const MainChart = ({ data, type = 'bar', onDataClick, dataKeys = { x: 'name', y:
 
       case 'radial':
         return (
-          <RadialBarChart 
-            cx="35%"  // ✨ แก้จุดที่ 1: ขยับกราฟไปซ้ายเยอะๆ (30%) จะได้ห่างจาก Legend
-            cy="50%" 
-            innerRadius="20%" 
-            outerRadius="100%" 
-            barSize={20} 
-            data={data}
-          >
+          <RadialBarChart cx="35%" cy="50%" innerRadius="20%" outerRadius="100%" barSize={20} data={data}>
             <RadialBar
               minAngle={15}
               label={{ position: 'insideStart', fill: '#fff', fontSize: 10 }}
@@ -195,7 +188,6 @@ const MainChart = ({ data, type = 'bar', onDataClick, dataKeys = { x: 'name', y:
               layout="vertical" 
               verticalAlign="middle" 
               align="right"
-              // ✨ แก้จุดที่ 2: ปรับแต่ง Legend ให้สวยงาม
               wrapperStyle={{ 
                  right: 0, 
                  fontSize: '12px', 
@@ -203,10 +195,7 @@ const MainChart = ({ data, type = 'bar', onDataClick, dataKeys = { x: 'name', y:
                  color: '#555' 
               }} 
             />
-            
-            {/* ✨ แก้จุดที่ 3: ใช้ Custom Tooltip แทนของเดิม */}
             <Tooltip content={<CustomRadialTooltip dataKeys={dataKeys} />} cursor={false} />
-            
           </RadialBarChart>
         );
 
@@ -217,8 +206,6 @@ const MainChart = ({ data, type = 'bar', onDataClick, dataKeys = { x: 'name', y:
             <XAxis dataKey={dataKeys.x} {...axisStyle} tickFormatter={formatXAxis} />
             <YAxis {...axisStyle} />
             <Tooltip contentStyle={tooltipStyle} />
-            
-            {/* ✨ เพิ่ม onClick ให้ Bar */}
             <Bar 
               dataKey={dataKeys.y} 
               barSize={20} 
@@ -228,8 +215,6 @@ const MainChart = ({ data, type = 'bar', onDataClick, dataKeys = { x: 'name', y:
               cursor="pointer"
               onClick={(data, i, e) => handleClick(data, e)}
             />
-            
-            {/* ✨ เพิ่ม ActiveDot ให้ Line */}
             <Line 
               type="monotone" 
               dataKey={dataKeys.y} 

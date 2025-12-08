@@ -25,8 +25,8 @@ function App() {
 
   // Refs
   const widgetRefs = useRef({});
-  const scrollRef = useRef(null); // ✨ Ref สำหรับกล่อง Scroll
-  const timeoutRef = useRef(null); // ✨ Ref สำหรับตัวจับเวลา
+  const scrollRef = useRef(null); // Ref สำหรับกล่อง Scroll
+  const timeoutRef = useRef(null); // Ref สำหรับตัวจับเวลา
   const talkTimerRef = useRef(null);
 
   // 1. Initial Load
@@ -41,7 +41,7 @@ function App() {
     });
   }, []);
 
-  // 2. ✨ Scroll Detection Logic (เพิ่มส่วนนี้)
+  // 2. Scroll Detection Logic 
   useEffect(() => {
     const scrollContainer = scrollRef.current;
     if (!scrollContainer) return;
@@ -50,7 +50,7 @@ function App() {
       // ทุกครั้งที่ขยับ ให้ล้างตัวจับเวลาเก่าทิ้ง (ยังไม่วิเคราะห์)
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       
-      // ตั้งเวลาใหม่: ถ้าหยุดนิ่งครบ 1.5 วินาที ให้เริ่มวิเคราะห์ (analyzeView)
+      // ตั้งเวลาใหม่: ถ้าหยุดนิ่งครบ x วินาที ให้เริ่มวิเคราะห์ (analyzeView)
       timeoutRef.current = setTimeout(() => {
         analyzeView(); 
       }, 1500);
@@ -71,7 +71,7 @@ function App() {
     return () => clearInterval(t);
   }, [aiState.isVisible, countdown]);
   
-  // Handlers ... (เหมือนเดิม)
+  // Handlers ...
   const updateAi = (res) => {
     if (talkTimerRef.current) clearTimeout(talkTimerRef.current);
     setAiState({ status: 'talking', message: res.message, isVisible: true });
@@ -103,7 +103,7 @@ function App() {
     updateAi(res);
   };
 
-  // ✨ Logic คำนวณว่ากราฟไหนอยู่บนจอบ้าง
+  // Logic คำนวณว่ากราฟไหนอยู่บนจอบ้าง
   const analyzeView = async (currentData = data, currentLang = lang) => {
     if (!currentData || !scrollRef.current) return;
 
@@ -112,7 +112,7 @@ function App() {
     
     // กรองเฉพาะกราฟที่ "มองเห็น" ในหน้าจอ
     const visibleCharts = currentData.widgets
-      .filter(w => ['area', 'bar', 'line', 'doughnut'].includes(w.type))
+      .filter(w => ['area', 'bar', 'line', 'doughnut', 'radar', 'radial', 'composed'].includes(w.type))
       .filter(w => {
          const el = widgetRefs.current[w.id];
          if (!el) return false;
@@ -143,7 +143,7 @@ function App() {
         user={data.user}
         isSidebarCollapsed={isSidebarCollapsed}
         toggleSidebar={() => setSidebarCollapsed(!isSidebarCollapsed)}
-        scrollRef={scrollRef} // ✨ ส่ง Ref ไปให้ Layout แปะ
+        scrollRef={scrollRef} 
         
         summaryWidget={
           <div className={`ai-summary-wrapper ${isSummaryExpanded ? 'expanded' : 'collapsed'}`}>
@@ -152,8 +152,6 @@ function App() {
                   isExpanded={isSummaryExpanded} 
                   toggleExpand={() => setSummaryExpanded(!isSummaryExpanded)}
                   isLoading={isSummaryLoading}
-                  
-                  // 👉 เพิ่มบรรทัดนี้ เพื่อให้ปุ่ม Refresh ทำงาน
                   onRefresh={() => analyzeView()} 
               />
           </div>

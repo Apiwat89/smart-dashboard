@@ -24,7 +24,6 @@ const VisualFactory = ({ widget, onChartClick }) => {
     );
   }
 
-  // ✨ FIX: เพิ่ม style height 100% ให้แน่ใจว่ายืดเต็ม
   if (['area', 'doughnut', 'bar', 'line', 'radar', 'radial', 'composed'].includes(type)) {
      return (
         <div className="chart-card" 
@@ -34,7 +33,6 @@ const VisualFactory = ({ widget, onChartClick }) => {
               <h3 style={{margin:0, fontSize:'0.95rem', fontWeight:'600'}}>{title}</h3>
            </div>
            
-           {/* ✨ ส่วนนี้สำคัญมาก: minHeight: 0 ช่วยให้ Flexbox ไม่ดันจนล้น */}
            <div style={{flex:1, width:'100%', minHeight:0}}>
               <MainChart type={type} data={data} dataKeys={keys} onDataClick={(point) => onChartClick(point, data)} />
            </div>
