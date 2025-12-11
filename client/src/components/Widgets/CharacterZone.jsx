@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Volume2, VolumeX } from 'lucide-react';
 
-const CharacterZone = ({ status, text, isTextVisible, countdown, onClose, lang }) => {
+const CharacterZone = ({ status, text, isTextVisible, countdown, onClose, lang, onSpeechEnd}) => {
   const [displayedText, setDisplayedText] = useState("");
   const [isMuted, setIsMuted] = useState(false);
   const synthesisRef = useRef(window.speechSynthesis);
@@ -35,48 +35,77 @@ const CharacterZone = ({ status, text, isTextVisible, countdown, onClose, lang }
     } 
   }, [text, isTextVisible]);
 
-  // 3. ✨ Logic การพูด (แก้ไขใหม่ให้เลือกเสียงแม่นยำ)
+  // 3. ✨ Logic การพูด (ปรับจูนให้หาเสียงผู้หญิง)
   useEffect(() => {
-    if (isMuted || !isTextVisible || !text || status !== 'talking') {
-      synthesisRef.current.cancel();
-      return;
-    }
-    
-    if (availableVoices.length === 0) return;
+    if (status !== 'talking') return;
 
-    // หยุดเสียงเก่า
+    // Check พื้นฐาน
+    if (isMuted || !isTextVisible || !text || availableVoices.length === 0) {
+       const fakeDuration = Math.max(2000, text ? text.length * 80 : 2000);
+       const timer = setTimeout(() => {
+           if (onSpeechEnd) onSpeechEnd();
+       }, fakeDuration);
+       return () => clearTimeout(timer);
+    }
+
     synthesisRef.current.cancel();
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    // Helper: สร้าง Utterance
+    const createUtterance = (textToSpeak, preferredVoice = null) => {
+      const u = new SpeechSynthesisUtterance(textToSpeak);
+      u.rate = 0.8; // ความเร็ว (1.0 = ปกติ)
+      u.pitch = 1.1; // ✨ เพิ่ม Pitch นิดนึง (1.1-1.2) ให้เสียงดูเป็นผู้หญิง/สดใสขึ้น
+      
+      if (preferredVoice) {
+        u.voice = preferredVoice;
+        u.lang = preferredVoice.lang;
+      }
+      return u;
+    };
 
-    // แปลงรหัสภาษา (เช่น TH -> th-TH)
-    const targetLangCode = {
-      'TH': 'th',
-      'EN': 'en',
-      'JP': 'ja'
-    }[lang] || 'th';
+    const targetLangCode = { 'TH': 'th', 'EN': 'en', 'JP': 'ja' }[lang] || 'th';
+    
+    // ✨✨ KEY CHANGE: ล็อคเป้าเสียงผู้หญิง (Prioritize Female Voices) ✨✨
+    // 1. Google (เสียง Google ภาษาไทยส่วนใหญ่เป็นผู้หญิง)
+    // 2. Microsoft Premwadee / Achara (เสียงผู้หญิงของ Microsoft)
+    // 3. Samantha / Zira (เสียงผู้หญิงภาษาอังกฤษ)
+    const primaryVoice = 
+         // หา Google ก่อน (ดีที่สุด)
+         availableVoices.find(v => v.lang.toLowerCase().includes(targetLangCode) && v.name.includes('Google')) 
+         // หาเสียงผู้หญิง Microsoft ไทย (Premwadee / Achara)
+      || availableVoices.find(v => v.lang.toLowerCase().includes(targetLangCode) && (v.name.includes('Premwadee') || v.name.includes('Achara')))
+         // หาเสียงผู้หญิงสากล (ถ้าเป็น Eng)
+      || availableVoices.find(v => v.lang.toLowerCase().includes(targetLangCode) && (v.name.includes('Samantha') || v.name.includes('Zira')))
+         // ถ้าไม่เจอจริงๆ เอาอะไรก็ได้ที่ตรงภาษา
+      || availableVoices.find(v => v.lang.toLowerCase().includes(targetLangCode));
 
-    // ✨ FIX: วิธีเลือกเสียงแบบยืดหยุ่น (Fuzzy Matching)
-    // 1. หาเสียง Google ที่ตรงภาษา (ดีที่สุด)
-    // 2. ถ้าไม่มี หาเสียงอะไรก็ได้ที่ตรงภาษา (เช่น Microsoft, Apple)
-    // 3. เช็คทั้ง 'th-TH' และ 'th_TH'
-    const voice = availableVoices.find(v => v.name.includes('Google') && v.lang.toLowerCase().includes(targetLangCode)) 
-               || availableVoices.find(v => v.lang.toLowerCase().includes(targetLangCode));
+    const utterance = createUtterance(text, primaryVoice);
 
-    if (voice) {
-      utterance.voice = voice;
-      utterance.lang = voice.lang; // ตั้งค่า lang ตามเสียงที่เจอจริงๆ
-      console.log(`🗣️ ใช้เสียง: ${voice.name} (${voice.lang})`);
-    } else {
-      console.warn(`⚠️ หาเสียงภาษา ${targetLangCode} ไม่เจอ ระบบอาจใช้เสียง Default`);
-    }
+    console.log(`🗣️ Selected Voice: ${primaryVoice ? primaryVoice.name : 'System Default'}`);
 
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
+    // Error Handling (Retry)
+    utterance.onerror = (e) => {
+      if (e.error === 'interrupted' || e.error === 'canceled') return;
+      console.warn("⚠️ Voice Failed, Retrying with Default...");
+      
+      const retryUtterance = createUtterance(text, null); 
+      retryUtterance.onend = () => { if (onSpeechEnd) onSpeechEnd(); };
+      
+      synthesisRef.current.cancel();
+      setTimeout(() => synthesisRef.current.speak(retryUtterance), 100);
+    };
 
-    synthesisRef.current.speak(utterance);
+    utterance.onend = () => {
+      console.log("✅ Speech finished");
+      if (onSpeechEnd) onSpeechEnd();
+    };
+
+    const timer = setTimeout(() => {
+      synthesisRef.current.speak(utterance);
+    }, 50);
 
     return () => {
+      clearTimeout(timer);
       synthesisRef.current.cancel();
     };
   }, [text, status, isTextVisible, isMuted, lang, availableVoices]);

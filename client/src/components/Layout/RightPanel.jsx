@@ -5,7 +5,7 @@ import CharacterZone from '../Widgets/CharacterZone';
 const RightPanel = ({ 
   aiState, countdown, closeAi, 
   userQuestion, setUserQuestion, handleAsk, isProcessing, 
-  currentLang, setCurrentLang 
+  currentLang, setCurrentLang, onSpeechEnd
 }) => {
   return (
     <aside className="right-panel">
@@ -17,6 +17,7 @@ const RightPanel = ({
            countdown={countdown} 
            onClose={closeAi}
            lang={currentLang}  // ✨ เพิ่มบรรทัดนี้: ส่งภาษาปัจจุบันเข้าไป
+           onSpeechEnd={onSpeechEnd}
          />
       </div>
 
