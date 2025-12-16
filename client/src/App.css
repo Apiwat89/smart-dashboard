@@ -523,43 +523,168 @@ body {
 /* =========================================
    9. LOADING SCREEN & ANIMATIONS
    ========================================= */
-.loading-screen {
-  position: fixed; inset: 0; background: white; z-index: 9999;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-}
-.loading-logo-wrapper {
-  width: 80px; height: 80px; background: var(--primary-green); 
-  border-radius: 24px; color: white; font-size: 2.5rem; font-weight: bold;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 15px 35px rgba(0, 196, 159, 0.3);
-  position: relative; z-index: 2; animation: float 3s ease-in-out infinite;
-}
-.pulse-ring {
-  position: absolute; width: 80px; height: 80px; border-radius: 24px;
-  background: var(--primary-green); z-index: 1; opacity: 0;
-  animation: pulse 2s ease-out infinite;
-}
-.loading-text-container { margin-top: 40px; text-align: center; }
-.loading-title { font-weight: 600; font-size: 1.2rem; color: #333; letter-spacing: 1px; margin-bottom: 5px; }
-.loading-sub { color: #aaa; font-size: 0.9rem; }
-.loading-bar-wrapper {
-  width: 150px; height: 4px; background: #f0f0f0; border-radius: 10px; 
-  margin: 25px auto 0; overflow: hidden;
-}
-.loading-bar-fill {
-  width: 50%; height: 100%; background: var(--primary-green); 
-  animation: slide 1.5s infinite ease-in-out; border-radius: 10px;
-}
-
-/* Keyframes */
-@keyframes float { 0%,100% {transform:translateY(0)} 50% {transform:translateY(-10px)} }
-@keyframes pulse { 0% {transform:scale(0.9); opacity:0.6} 100% {transform:scale(2.5); opacity:0} }
-@keyframes slide { 0% {transform:translateX(-100%)} 100% {transform:translateX(250%)} }
-@keyframes blink { 0%,100% {opacity:1} 50% {opacity:0.3} }
-@keyframes popUp { from {opacity:0; transform:translate(-50%,15px)} to {opacity:1; transform:translate(-50%,0)} }
-@keyframes spin { 100% { transform: rotate(360deg); } }
-
-.spin-anim { animation: spin 1s linear infinite; }
+   .loading-container {
+    position: fixed;
+    inset: 0;
+    background: #f8fafc; /* พื้นหลังสีขาวเทาๆ สะอาดตา */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    overflow: hidden;
+    font-family: 'Poppins', sans-serif;
+  }
+  
+  /* --- Background Blobs (ลูกบอลสีฟุ้งๆ ข้างหลัง) --- */
+  .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.6;
+    animation: floatBlob 8s infinite ease-in-out;
+  }
+  .blob-1 { width: 300px; height: 300px; background: #00c49f33; top: -50px; left: -50px; }
+  .blob-2 { width: 250px; height: 250px; background: #0078d433; bottom: -50px; right: -50px; animation-delay: -2s; }
+  .blob-3 { width: 150px; height: 150px; background: #ffce0033; top: 40%; left: 60%; animation-delay: -4s; }
+  
+  @keyframes floatBlob {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(20px, -20px) scale(1.1); }
+  }
+  
+  /* --- Content Wrapper --- */
+  .loading-content {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 10;
+  }
+  
+  /* --- Logo & Rings --- */
+  .logo-wrapper {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 30px;
+  }
+  
+  .icon-box {
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, #00c49f 0%, #059669 100%);
+    border-radius: 24px;
+    display: flex; justify-content: center; align-items: center;
+    box-shadow: 0 10px 30px rgba(0, 196, 159, 0.4);
+    z-index: 5;
+    animation: floatLogo 3s ease-in-out infinite;
+  }
+  
+  .spin-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid transparent;
+  }
+  
+  .ring-1 {
+    width: 100%; height: 100%;
+    border-top-color: #00c49f;
+    border-left-color: #00c49f;
+    opacity: 0.5;
+    animation: spin 2s linear infinite;
+  }
+  
+  .ring-2 {
+    width: 140%; height: 140%;
+    border-bottom-color: #0078d4;
+    border-right-color: #0078d4;
+    opacity: 0.3;
+    animation: spin 3s linear infinite reverse;
+  }
+  
+  /* ไอคอนจิ๋วลอยรอบๆ */
+  .orbit-icon {
+    position: absolute;
+    color: #64748b;
+    background: white;
+    padding: 5px;
+    border-radius: 50%;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    animation: orbit 4s linear infinite;
+  }
+  .orbit-1 { top: -20px; animation-delay: 0s; }
+  .orbit-2 { bottom: -10px; right: -20px; animation-delay: -1.3s; }
+  .orbit-3 { bottom: -10px; left: -20px; animation-delay: -2.6s; }
+  
+  /* --- Text --- */
+  .loading-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2d3436;
+    margin: 0;
+    letter-spacing: 1px;
+  }
+  
+  .loading-status {
+    height: 30px; /* Fix height กันกระตุก */
+    margin-top: 5px;
+    display: flex; justify-content: center; align-items: center;
+  }
+  
+  .status-text {
+    font-size: 0.9rem;
+    color: #64748b;
+    font-weight: 500;
+    animation: fadeInOut 0.6s ease-in-out; /* ข้อความกระพริบเปลี่ยน */
+  }
+  
+  /* --- Progress Bar --- */
+  .progress-bar-wrapper {
+    width: 200px;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 10px;
+    margin-top: 20px;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .progress-bar-fill {
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(90deg, #00c49f, #0078d4);
+    border-radius: 10px;
+    position: absolute;
+    left: 0;
+    animation: loadingSlide 1.5s infinite ease-in-out;
+  }
+  
+  /* --- Keyframes Animations --- */
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+  @keyframes floatLogo { 0%,100% {transform:translateY(0)} 50% {transform:translateY(-10px)} }
+  @keyframes orbit {
+      0% { transform: rotate(0deg) translateX(60px) rotate(0deg); }
+      100% { transform: rotate(360deg) translateX(60px) rotate(-360deg); }
+  }
+  @keyframes loadingSlide {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
+  @keyframes fadeInOut {
+    0% { opacity: 0; transform: translateY(5px); }
+    50% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 1; }
+  }
+  
+  /* Pulse Icon Effect */
+  .pulse-icon { animation: pulseIcon 2s infinite; }
+  @keyframes pulseIcon {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+      100% { transform: scale(1); opacity: 1; }
+  }
 
 /* =========================================
    10. MEDIA QUERIES

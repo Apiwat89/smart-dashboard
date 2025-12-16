@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PowerBIEmbed } from 'powerbi-client-react';
 import { models } from 'powerbi-client';
 import { useMsal } from "@azure/msal-react"; // ใช้ MSAL
-import { loginRequest } from "../../authConfig";
+import { powerBIRequest } from "../../authConfig";
 
 const RealPowerBIEmbed = ({ eventHandlers, getEmbeddedComponent, onReportRendered, targetPageName }) => {
   const { instance, accounts } = useMsal(); // ดึง User
@@ -14,8 +14,8 @@ const RealPowerBIEmbed = ({ eventHandlers, getEmbeddedComponent, onReportRendere
       try {
         // 1. ขอ Token จาก Microsoft (สิทธิ์ User)
         const response = await instance.acquireTokenSilent({
-            ...loginRequest,
-            account: accounts[0]
+          ...powerBIRequest, // 👈 ⭐ แก้ตรงนี้! เปลี่ยนจาก loginRequest เป็น powerBIRequest
+          account: accounts[0]
         });
 
         // 2. ตั้งค่า Config

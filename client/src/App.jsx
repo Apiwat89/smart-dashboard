@@ -8,7 +8,7 @@ import { loginRequest } from "./authConfig";
 
 // Layouts & Widgets
 import DashboardLayout from './components/Layout/DashboardLayout';
-import LoadingScreen from './components/Layout/LoadingScreen'; // ✅ ต้องมั่นใจว่า import เข้ามาแล้ว
+import LoadingScreen from './components/Layout/LoadingScreen';
 import RealPowerBIEmbed from './components/Widgets/RealPowerBIEmbed'; 
 import ResultBox from './components/Widgets/ResultBox';
 import LoginPage from './components/Layout/LoginPage';
@@ -21,8 +21,8 @@ function App() {
   const { instance, accounts } = useMsal();
   const isAuthenticated = useIsAuthenticated();
 
-  // ⭐ เพิ่ม State สำหรับเช็คว่า App พร้อมทำงานหรือยัง (Loading State)
   const [isAppReady, setAppReady] = useState(false);
+  const [userAvatar, setUserAvatar] = useState(null);
 
   // App State
   const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -55,6 +55,7 @@ function App() {
 
   useEffect(() => { langRef.current = lang; }, [lang]);
 
+
   // Init Menu
   useEffect(() => {
     const appMenu = [
@@ -71,11 +72,49 @@ function App() {
         // หน่วงเวลา 2.5 วินาที เพื่อแสดงหน้า Loading ก่อนเข้า Dashboard
         const timer = setTimeout(() => {
             setAppReady(true); // บอกว่าพร้อมแล้ว!
-        }, 2500);
+        }, 5500);
 
         return () => clearTimeout(timer);
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    async function fetchProfilePhoto() {
+      if (!isAuthenticated || !activeAccount) return;
+      
+      try {
+        console.log("📷 กำลังพยายามดึงรูปโปรไฟล์...");
+
+        // 1. ขอ Token โดยระบุบัญชีผู้ใช้ให้ชัดเจน (สำคัญมาก!)
+        const tokenResponse = await instance.acquireTokenSilent({
+            ...loginRequest,
+            account: activeAccount, // 👈 ต้องใส่บรรทัดนี้ ไม่งั้น MSAL จะงงว่าขอให้ใคร
+            scopes: ["User.Read"]
+        });
+
+        // 2. ยิง API ขอรูป
+        const response = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
+            headers: { Authorization: `Bearer ${tokenResponse.accessToken}` }
+        });
+
+        if (response.ok) {
+           console.log("test");
+            const blob = await response.blob();
+            const imageUrl = URL.createObjectURL(blob);
+            console.log("✅ ดึงรูปสำเร็จ!");
+            setUserAvatar(imageUrl);
+        } else {
+            console.error("❌ ดึงรูปไม่สำเร็จ Status:", response.status);
+            // ถ้า Status 404 แปลว่า Microsoft บอกว่าไม่มีรูปจริงๆ
+        }
+      } catch (error) {
+        console.error("❌ เกิดข้อผิดพลาดในการดึงรูป:", error);
+        // ถ้าเจอ Error นี้ ให้ลองกด Logout แล้ว Login ใหม่ดูครับ
+      }
+    }
+
+    fetchProfilePhoto();
+  }, [isAuthenticated, instance, activeAccount]);
 
   // --- Functions ---
   const handleLogin = () => {
@@ -209,7 +248,7 @@ function App() {
       user={{ 
         name: userName, 
         role: userRole, 
-        avatar: "" 
+        avatar: userAvatar
       }}
       isSidebarCollapsed={isSidebarCollapsed}
       toggleSidebar={() => setSidebarCollapsed(!isSidebarCollapsed)}

@@ -12,7 +12,13 @@ export const msalConfig = {
     }
 };
 
-// สิทธิ์ที่เราจะขอจาก User
+// 1. สำหรับ Login และดึงรูปโปรไฟล์ (Graph API)
 export const loginRequest = {
+    scopes: ["User.Read"]
+};
+
+// 2. สำหรับดึงกราฟ Power BI (Power BI API)
+// ⭐ เพิ่มตัวนี้เข้ามาใหม่
+export const powerBIRequest = {
     scopes: ["https://analysis.windows.net/powerbi/api/Report.Read.All"]
 };
