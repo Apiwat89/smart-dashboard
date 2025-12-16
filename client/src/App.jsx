@@ -1,316 +1,249 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
+import { models } from 'powerbi-client'; 
+
+// Auth
+import { useMsal, useIsAuthenticated } from "@azure/msal-react";
+import { loginRequest } from "./authConfig";
+
+// Layouts & Widgets
 import DashboardLayout from './components/Layout/DashboardLayout';
-import LoadingScreen from './components/Layout/LoadingScreen';
-import VisualFactory from './components/Widgets/VisualFactory';
+import LoadingScreen from './components/Layout/LoadingScreen'; // ✅ ต้องมั่นใจว่า import เข้ามาแล้ว
+import RealPowerBIEmbed from './components/Widgets/RealPowerBIEmbed'; 
 import ResultBox from './components/Widgets/ResultBox';
-import MockPowerBIEmbed from './components/Widgets/MockPowerBIEmbed'; // แบบที่ 2
-import IframeWidget from './components/Widgets/IframeWidget';       // แบบที่ 3
-import { dashboardService } from './api/apiClient';
 import LoginPage from './components/Layout/LoginPage';
 
-function App() {
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState(null);
-  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [user, setUser] = useState(null);
-  
-  // Navigation States ✨
-  const [menuList, setMenuList] = useState([]);
-  const [activePageId, setActivePageId] = useState(null);
+// API
+import { dashboardService } from './api/apiClient';
 
-  // AI & Chat States
+function App() {
+  // Auth State
+  const { instance, accounts } = useMsal();
+  const isAuthenticated = useIsAuthenticated();
+
+  // ⭐ เพิ่ม State สำหรับเช็คว่า App พร้อมทำงานหรือยัง (Loading State)
+  const [isAppReady, setAppReady] = useState(false);
+
+  // App State
+  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [menuList, setMenuList] = useState([]);
+  const [activePageId, setActivePageId] = useState("page_overview");
+
+  // AI State
   const [lang, setLang] = useState('TH');
   const [aiState, setAiState] = useState({ status: 'idle', message: '', isVisible: false });
   const [isProcessing, setProcessing] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [question, setQuestion] = useState("");
   
-  // Summary States
-  const [summary, setSummary] = useState("");
+  // Data State
+  const [currentReportData, setCurrentReportData] = useState(null);
+  const [summary, setSummary] = useState("รอข้อมูลจาก Power BI...");
   const [isSummaryLoading, setSummaryLoading] = useState(false);
   const [isSummaryExpanded, setSummaryExpanded] = useState(false);
 
   // Refs
-  const widgetRefs = useRef({});
   const scrollRef = useRef(null); 
-  const timeoutRef = useRef(null); 
   const talkTimerRef = useRef(null);
-  const powerBIContainerRef = useRef(null); 
   const powerBIReportRef = useRef(null);    
+  const langRef = useRef(lang);
+  const summarizedPageRef = useRef(null);
 
-// 1. Initial Load (Data + Menu)
-useEffect(() => {
-  // 1.1 โหลดข้อมูลกราฟ (Internal Data)
-  dashboardService.getData().then(res => {
-    if (res) { 
-        setData(res); 
-        setLoading(false); 
-    }
-  });
+  const activeAccount = accounts[0];
+  const userName = activeAccount?.name || "Admin User";
+  const userRole = activeAccount?.idTokenClaims?.roles?.[0] || "Administrator";
 
-  // 1.2 ✨ จำลองเมนูที่ได้จาก API (มีครบ 3 รูปแบบ)
-  const mockMenu = [
-    { 
-      id: "overview", 
-      title: "Internal", 
-      type: "internal", 
-      icon: "LayoutDashboard" 
-    },
-    { 
-      id: "sales_pbi", 
-      title: "Power BI SDK", 
-      type: "powerbi", 
-      icon: "BarChart" 
-    },
-    { 
-      id: "external_web", 
-      title: "Iframe", 
-      type: "iframe", 
-      icon: "Globe",
-      url: "https://playground.powerbi.com/sampleReportEmbed" // ใส่ URL จริงตรงนี้
-    }
-  ];
-    setMenuList(mockMenu);
-    setActivePageId(mockMenu[0].id); // เปิดมาเข้าหน้าแรก
+  useEffect(() => { langRef.current = lang; }, [lang]);
+
+  // Init Menu
+  useEffect(() => {
+    const appMenu = [
+      { id: "page_overview", title: "สถิติน้ำท่วม 1", type: "powerbi_page", icon: "LayoutDashboard", pageName: "798ca254819667030432" },
+      { id: "page_details", title: "สถิติน้ำท่วม 2", type: "powerbi_page", icon: "Map", pageName: "5b3cc48690823dd3da6d" },
+      { id: "page_analysis", title: "สถิติน้ำท่วม 3", type: "powerbi_page", icon: "BarChart", pageName: "e93c812d89901cad35c2" }
+    ];
+    setMenuList(appMenu);
   }, []);
 
-  // 2. Scroll Detection Logic 
+  // ⭐ Logic: เมื่อ Login ผ่านแล้ว (isAuthenticated = true) ให้เริ่มโหลด
   useEffect(() => {
-    const scrollContainer = scrollRef.current;
-    if (!scrollContainer) return;
+    if (isAuthenticated) {
+        // หน่วงเวลา 2.5 วินาที เพื่อแสดงหน้า Loading ก่อนเข้า Dashboard
+        const timer = setTimeout(() => {
+            setAppReady(true); // บอกว่าพร้อมแล้ว!
+        }, 2500);
 
-    const handleScroll = () => {
-      // ทุกครั้งที่ขยับ ให้ล้างตัวจับเวลาเก่าทิ้ง (ยังไม่วิเคราะห์)
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      
-      // ตั้งเวลาใหม่: ถ้าหยุดนิ่งครบ x วินาที ให้เริ่มวิเคราะห์ (analyzeView)
-      timeoutRef.current = setTimeout(() => {
-        analyzeView(); 
-      }, 1500);
-    };
+        return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated]);
 
-    scrollContainer.addEventListener('scroll', handleScroll);
-    return () => {
-        scrollContainer.removeEventListener('scroll', handleScroll);
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, [data]); // ใส่ dependency เป็น data เพื่อให้มั่นใจว่ามีข้อมูลแล้วค่อยจับ
+  // --- Functions ---
+  const handleLogin = () => {
+    instance.loginPopup({
+        ...loginRequest,
+        prompt: "select_account"
+    }).catch(e => console.error(e));
+  };
 
-  // Timer Logic (Character)
+  const handleLogout = () => {
+    instance.logoutPopup({
+        postLogoutRedirectUri: "/",
+        mainWindowRedirectUri: "/"
+    });
+  };
+
+  const handleAiSpeak = (message, isError = false) => {
+      if (talkTimerRef.current) clearTimeout(talkTimerRef.current);
+      setAiState({ status: 'talking', message: message, isVisible: true });
+      setCountdown(isError ? 10 : 100);
+  };
+
+  const handleAsk = async (e) => {
+    e.preventDefault();
+    if(!question.trim()) return;
+    
+    setProcessing(true); 
+    setAiState({ status: 'thinking', message: '', isVisible: false });
+    
+    try {
+        const contextData = currentReportData || "ข้อมูลกราฟยังไม่โหลด";
+        const res = await dashboardService.chat(question, contextData, langRef.current); 
+        setQuestion(""); 
+        handleAiSpeak(res.message);
+    } catch (error) {
+        handleAiSpeak("ขออภัย ระบบขัดข้อง", true);
+    } finally {
+        setProcessing(false);
+    }
+  };
+
+  const handlePowerBIClick = (event) => {
+    if (event.detail && event.detail.dataPoints && event.detail.dataPoints.length > 0) {
+        const dp = event.detail.dataPoints[0];
+        const category = dp.identity[0]?.equals || "Unknown";
+        const value = dp.values[0]?.formattedValue || "N/A";
+        const chartTitle = event.detail.visual.title || "กราฟ"; 
+
+        if(!isProcessing) {
+             setProcessing(true);
+             setAiState({ status: 'thinking', message: '', isVisible: false });
+             
+             dashboardService.getReaction({ name: category, uv: value }, chartTitle, langRef.current)
+                .then(res => {
+                    handleAiSpeak(res.message);
+                    setProcessing(false);
+                });
+        }
+    }
+  };
+
+  const handleReportRendered = async () => {
+    if (!powerBIReportRef.current) return;
+    const currentPage = menuList.find(p => p.id === activePageId);
+    if (summarizedPageRef.current === activePageId) return;
+
+    setSummaryLoading(true);
+    setSummary("กำลังอ่านข้อมูล...");
+
+    try {
+        const activePage = (await powerBIReportRef.current.getPages()).find(p => p.isActive);
+        if (!activePage) return;
+
+        const visuals = await activePage.getVisuals();
+        let allDataText = `ข้อมูลหน้า ${activePage.displayName}:\n`;
+
+        for (const visual of visuals) {
+            if (visual.title && visual.type !== 'image' && visual.type !== 'textbox') {
+                try {
+                    const result = await visual.exportData(models.ExportDataType.Summarized);
+                    allDataText += `\n- ${visual.title}:\n${result.data}\n`;
+                } catch (e) { /* ignore */ }
+            }
+        }
+        
+        setCurrentReportData(allDataText);
+        summarizedPageRef.current = activePageId; 
+
+        const aiRes = await dashboardService.chat("ช่วยสรุป Executive Summary จากข้อมูลนี้", allDataText, langRef.current);
+
+        setSummary(aiRes.message);
+        setSummaryExpanded(true);
+    } catch (err) {
+        setSummary("อ่านข้อมูลไม่ได้");
+    } finally {
+        setSummaryLoading(false);
+    }
+  };
+
+  const handleManualRefresh = () => {
+      summarizedPageRef.current = null;
+      handleReportRendered();
+  };
+
   useEffect(() => {
     let t;
     if (aiState.isVisible && countdown > 0) t = setInterval(() => setCountdown(c => c - 1), 1000);
     else if (countdown === 0) setAiState(p => ({ ...p, isVisible: false, status: 'idle' }));
     return () => clearInterval(t);
   }, [aiState.isVisible, countdown]);
-  
-  // Handlers ...
-  const handleSpeechEnd = () => {
-    setAiState(prev => ({ ...prev, status: 'idle' })); // สั่งให้หยุดขยับปาก
-  };
 
-  const updateAi = (res) => {
-    if (talkTimerRef.current) clearTimeout(talkTimerRef.current);
-    setAiState({ status: 'talking', message: res.message, isVisible: true });
-    setCountdown(res.isError ? 10 : 100);
-    setProcessing(false);
-  };
 
-  const handleChartClick = async (point, context) => {
-     if(isProcessing) return;
-     setProcessing(true); 
-     setAiState({ status: 'thinking', message: '', isVisible: false });
-     const res = await dashboardService.getReaction(point, context, lang);
-     updateAi(res);
-  };
-
-  const handleAsk = async (e) => {
-    e.preventDefault();
-    if(!question.trim()) return;
-    setProcessing(true); 
-    setAiState({ status: 'thinking', message: '', isVisible: false });
-    const res = await dashboardService.chat(question, data, lang);
-    setQuestion(""); 
-    updateAi(res);
-  };
-
-// ✨✨ Logic คำนวณกราฟในจอ (อัปเดตให้รองรับ Power BI) ✨✨
-const analyzeView = async (currentData = data, currentLang = lang) => {
-  if (!currentData || !scrollRef.current) return;
-
-  const container = scrollRef.current.getBoundingClientRect();
-  const threshold = 100;
-  
-  // 1. เช็คกราฟปกติ (Recharts)
-  const visibleWidgets = currentData.widgets
-    .filter(w => ['area', 'bar', 'line', 'doughnut', 'radar', 'radial', 'composed'].includes(w.type))
-    .filter(w => {
-       const el = widgetRefs.current[w.id];
-       if (!el) return false;
-       const rect = el.getBoundingClientRect();
-       return (rect.top < container.bottom - threshold && rect.bottom > container.top + threshold);
-    })
-    .map(w => ({ title: w.title, data: w.data }));
-
-  let allVisibleData = [...visibleWidgets];
-
-  // 2. เช็คกราฟ Power BI (เพิ่มใหม่)
-  if (powerBIContainerRef.current) {
-      const pbiRect = powerBIContainerRef.current.getBoundingClientRect();
-      // ดูว่ากล่อง Power BI เข้ามาในจอหรือยัง
-      const isPbiVisible = (pbiRect.top < container.bottom - threshold && pbiRect.bottom > container.top + threshold);
-
-      // ถ้าเห็น + มี object report ให้ดึงข้อมูลออกมา 
-      if (isPbiVisible && powerBIReportRef.current) {
-          try {
-              const pages = await powerBIReportRef.current.getPages();
-              if(pages && pages.length > 0) {
-                  const visuals = await pages[0].getVisuals();
-                  for (const v of visuals) {
-                      // จำลองการ Export Data
-                      const exportRes = await v.exportData();
-                      allVisibleData.push({
-                          title: `PowerBI: ${v.title}`, 
-                          data: exportRes.data          
-                      });
-                  }
-              }
-          } catch (e) {
-              console.error("Error extracting PowerBI data", e);
-          }
-      }
+  // 🔴 1. ถ้ายังไม่ Login -> โชว์หน้า Login
+  if (!isAuthenticated) {
+    return (
+        // ส่งฟังก์ชัน handleLogin เข้าไป
+        <LoginPage onLogin={handleLogin} />
+    );
   }
 
-  // ส่งข้อมูลทั้งหมดไปสรุป
-  if (allVisibleData.length > 0) {
-    setSummaryLoading(true);
-    const text = await dashboardService.getSummary(allVisibleData, currentLang);
-    if(text) setSummary(text.message);
-    setSummaryLoading(false);
- }
-};
-
-  const handlePowerBIClick = (event) => {
-    // แกะข้อมูลตามสูตร SDK ของจริง
-    const data = event.detail.dataPoints[0];
-    const regionName = data.identity[0].equals;
-    const value = data.values[0].formattedValue;
-
-    // เรียก API น้องส้มจี๊ด
-    handleChartClick({ 
-      name: `PowerBI: ${regionName}`, 
-      uv: value 
-    });
-  };
-
-  // ✨ ฟังก์ชันเลือกเนื้อหาที่จะแสดงตรงกลาง
-  const renderContent = () => {
-    const currentPage = menuList.find(p => p.id === activePageId);
-    if (!currentPage) return null;
-
-    // --- แบบที่ 1: Internal (Recharts) --- (อันนี้เหมือนเดิม ไม่ต้องแก้)
-    if (currentPage.type === 'internal') {
-      return (
-        <div className="fade-in">
-          <h2 style={{ marginBottom: '20px' }}>{currentPage.title}</h2>
-          {/* KPI */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '20px' }}>
-              {data && data.widgets.filter(w => w.type === 'kpi').map(w => (
-                  <VisualFactory key={w.id} widget={w} onChartClick={() => {}} />
-              ))}
-          </div>
-          {/* Charts */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-              {data && data.widgets.filter(w => w.type !== 'kpi').map(w => (
-                  <div key={w.id} ref={el => widgetRefs.current[w.id] = el} style={{ height: '280px' }}>
-                      <VisualFactory widget={w} onChartClick={handleChartClick} />
-                  </div>
-              ))}
-          </div>
-        </div>
-      );
-    }
-
-    // --- แบบที่ 2: Power BI SDK --- (✨ แก้ตรง style height)
-    if (currentPage.type === 'powerbi') {
-      return (
-        <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <h2 style={{ marginBottom: '15px' }}>📊 {currentPage.title}</h2>
-            {/* เปลี่ยนจาก minHeight 600px เป็น height: 'calc(100vh - 180px)' เพื่อให้ยืดเต็มจอ */}
-            <div ref={powerBIContainerRef} style={{ flex: 1, height: 'calc(100vh - 180px)', minHeight: '600px' }}>
-              <MockPowerBIEmbed 
-                  eventHandlers={new Map([['dataSelected', handlePowerBIClick]])}
-                  getEmbeddedComponent={(report) => { powerBIReportRef.current = report; }}
-              />
-            </div>
-        </div>
-      );
-    }
-
-    // --- แบบที่ 3: Iframe --- (✨ แก้ตรง style height)
-    if (currentPage.type === 'iframe') {
-      return (
-        <div className="fade-in" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <h2 style={{ marginBottom: '15px' }}>🌐 {currentPage.title}</h2>
-            {/* สั่งให้สูงเต็มจอ ลบ Header/Padding ออกนิดหน่อย (180px) */}
-            <div style={{ flex: 1, height: 'calc(100vh - 180px)', minHeight: '600px' }}>
-              <IframeWidget url={currentPage.url} title={currentPage.title} />
-            </div>
-        </div>
-      );
-    }
-  };
-
-  if (loading) return <LoadingScreen />;
-  if (!user) {
-    return <LoginPage onLogin={(userData) => setUser(userData)} />;
+  // ⭐ 2. ถ้า Login แล้ว แต่ App ยังไม่ Ready (อยู่ในช่วงหน่วงเวลา) -> โชว์ Loading
+  if (!isAppReady) {
+      return <LoadingScreen />;
   }
+
+  // 🟢 3. ถ้า Login แล้ว และ App Ready -> โชว์ Dashboard
+  const currentPage = menuList.find(p => p.id === activePageId);
 
   return (
     <DashboardLayout
-      user={user} // ใส่ ? กัน error กรณี data ยังไม่มา
+      user={{ 
+        name: userName, 
+        role: userRole, 
+        avatar: "" 
+      }}
       isSidebarCollapsed={isSidebarCollapsed}
       toggleSidebar={() => setSidebarCollapsed(!isSidebarCollapsed)}
       scrollRef={scrollRef} 
-      
       summaryWidget={
         <div className={`ai-summary-wrapper ${isSummaryExpanded ? 'expanded' : 'collapsed'}`}>
-            <ResultBox 
-                text={summary} 
-                isExpanded={isSummaryExpanded} 
-                toggleExpand={() => setSummaryExpanded(!isSummaryExpanded)}
-                isLoading={isSummaryLoading}
-                onRefresh={() => analyzeView()} 
-            />
+            <ResultBox text={summary} isExpanded={isSummaryExpanded} toggleExpand={() => setSummaryExpanded(!isSummaryExpanded)} isLoading={isSummaryLoading} onRefresh={handleManualRefresh} />
         </div>
       } 
-
       rightPanelProps={{
         aiState, countdown, 
-        closeAi: () => {
-           setAiState(prev => ({ ...prev, isVisible: false, status: 'idle' }));
-           if (talkTimerRef.current) clearTimeout(talkTimerRef.current);
-        },
+        closeAi: () => setAiState(prev => ({ ...prev, isVisible: false, status: 'idle' })),
         userQuestion: question, setUserQuestion: setQuestion, handleAsk,
         currentLang: lang, setCurrentLang: setLang, isProcessing,
-        onSpeechEnd: handleSpeechEnd,
+        onSpeechEnd: () => setAiState(prev => ({ ...prev, status: 'idle' })),
       }}
-      
-      // ✨ Props สำหรับเมนู (ถูกต้องแล้ว)
       menuItems={menuList}
       activePageId={activePageId}
       onMenuClick={(id) => setActivePageId(id)}
+      onLogout={handleLogout}
     >
-        
-        {/* ✅✅✅ แก้ตรงนี้: เหลือแค่บรรทัดนี้บรรทัดเดียวพอครับ ✅✅✅ */}
-        {renderContent()}
-
-        {/* ❌ ลบโค้ดด้านล่างนี้ทิ้งทั้งหมด (Charts Area, VisualFactory loop, Power BI Test) 
-           เพราะเราย้าย logic ไปอยู่ใน renderContent() หมดแล้วครับ
-           ไม่งั้นมันจะโชว์ซ้ำซ้อน
-        */}
-
+        <div className="fade-in" style={{ height: '100%', width: '100%' }}>
+            <h2 style={{ marginBottom: '10px' }}>📊 {currentPage ? currentPage.title : "Smart Dashboard"}</h2>
+            
+            <div className="powerbi-container-wrapper" style={{ height: '80vh', width: '100%', background: '#fff', borderRadius: '8px' }}>
+               <RealPowerBIEmbed 
+                  key={activePageId} 
+                  targetPageName={currentPage?.pageName} 
+                  eventHandlers={new Map([['dataSelected', handlePowerBIClick]])}
+                  getEmbeddedComponent={(report) => { powerBIReportRef.current = report; }}
+                  onReportRendered={handleReportRendered} 
+               />
+            </div>
+        </div>
     </DashboardLayout>
   );
 }

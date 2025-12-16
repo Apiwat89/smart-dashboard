@@ -86,62 +86,131 @@ body {
 .bottom-spacer { height: 120px; }
 
 /* =========================================
-   3. SIDEBAR COMPONENT
+   3. SIDEBAR COMPONENT (CLEANED)
    ========================================= */
-.sidebar {
-  grid-area: sidebar;
-  background: white;
-  padding: 20px;
-  border-right: 1px solid #eee;
-  display: flex; flex-direction: column; gap: 10px;
-  transition: all var(--transition-speed);
-  z-index: 20;
-  overflow: hidden;
-}
-
-.brand-wrapper {
-  display: flex; align-items: center; gap: 15px; 
-  height: 50px; margin-bottom: 10px;
-  overflow: hidden; justify-content: space-between;
-}
-
-.brand-icon {
-  min-width: 40px; height: 40px; 
-  background: var(--primary-green); color: white; 
-  border-radius: 12px; display: flex; 
-  align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem;
-}
-
-.brand-text {
-  font-size: 1.2rem; font-weight: bold; white-space: nowrap;
-  opacity: 1; transition: opacity 0.2s;
-}
-
-/* Sidebar Collapsed State */
-.sidebar.collapsed .brand-wrapper { justify-content: center; }
-.sidebar.collapsed .brand-text, 
-.sidebar.collapsed .menu-text { display: none; }
-
-.toggle-btn {
-  background: none; border: 1px solid #eee; padding: 5px; 
-  border-radius: 8px; cursor: pointer; display: flex; 
-  align-items: center; justify-content: center; color: var(--text-light);
-  min-width: 32px; min-height: 32px; transition: 0.2s;
-}
-.toggle-btn:hover { background: #f8f9fa; color: var(--primary-green); border: 1px solid var(--primary-green);;}
-
-.sidebar-nav {
-  display: flex; flex-direction: column; gap: 5px;
-}
-
-.menu-item {
-  display: flex; align-items: center; gap: 15px; padding: 12px; 
-  color: var(--text-light); cursor: pointer; border-radius: 12px; 
-  transition: 0.2s; white-space: nowrap;
-}
-.menu-item:hover { background: #f8f9fa; color: var(--primary-green); }
-.menu-item.active { background: #e6f7f3; color: var(--primary-green); font-weight: 600; }
-.menu-item.active .menu-text { color: var(--primary-green); }
+   .sidebar {
+    /* ใช้ Grid Area เพื่อให้ตรงกับ Layout หลักด้านบน */
+    grid-area: sidebar;
+    background: white;
+    border-right: 1px solid #f1f5f9;
+    
+    /* จัด Layout เป็นแนวตั้ง เพื่อดันปุ่ม Logout ลงล่าง */
+    display: flex;
+    flex-direction: column;
+    
+    height: 100%;
+    overflow: hidden;
+    z-index: 50;
+    transition: all 0.3s ease; /* Animation ความกว้างจะถูกคุมโดย Grid Container */
+  }
+  
+  /* --- ส่วนหัว (Header: Logo + Toggle) --- */
+  .sidebar-header {
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* กางออกซ้าย-ขวา */
+    padding: 0 20px;
+    border-bottom: 1px solid #f8fafc;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  
+  .logo {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: var(--primary-green);
+  }
+  
+  .sidebar-header button {
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    color: #94a3b8;
+    border-radius: 8px;
+    padding: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+    font-size: 1.2rem;
+  }
+  .sidebar-header button:hover {
+    border-color: var(--primary-green);
+    color: var(--primary-green);
+    background: #f0fdf4;
+  }
+  
+  /* --- พื้นที่เมนู (Menu Area) --- */
+  .sidebar-menu {
+    flex: 1; /* ⭐ พระเอก: ยืดพื้นที่ส่วนนี้ให้เต็ม เพื่อดันปุ่ม Logout ลงล่างสุด */
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  
+  /* --- ปุ่มเมนู (Menu Item) --- */
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    color: #64748b;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    position: relative;
+  }
+  
+  .menu-item:hover {
+    background-color: #f0fdf4;
+    color: var(--primary-green);
+    transform: translateX(4px);
+  }
+  
+  .menu-item.active {
+    background: linear-gradient(135deg, var(--primary-green) 0%, #059669 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  }
+  
+  .menu-item svg {
+    min-width: 20px;
+    min-height: 20px;
+  }
+  
+  /* --- จัดการตอนพับ Sidebar (Collapsed State) --- */
+  
+  /* ซ่อนข้อความต่างๆ เมื่อพับ */
+  .sidebar.collapsed .logo,
+  .sidebar.collapsed .menu-item span,
+  .sidebar.collapsed .brand-text {
+    display: none;
+  }
+  
+  /* ซ่อนข้อความในปุ่ม Logout (เนื่องจากเป็น inline style ต้องใช้ !important ช่วย หรือ CSS นี้จะทำงานถ้าเอา style ออก) */
+  .sidebar.collapsed button span {
+    display: none;
+  }
+  
+  /* จัดกึ่งกลาง Header ตอนพับ */
+  .sidebar.collapsed .sidebar-header {
+    justify-content: center;
+    padding: 0;
+  }
+  
+  /* จัดกึ่งกลางไอคอนเมนู */
+  .sidebar.collapsed .menu-item {
+    justify-content: center;
+    padding: 12px;
+  }
 
 /* =========================================
    4. HEADER COMPONENT
@@ -609,3 +678,211 @@ body {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* 1. บังคับกล่องที่หุ้ม iframe ให้สูงเต็มพื้นที่ */
+.report-style-class {
+  display: block;
+  height: 100% !important; /* สำคัญ */
+  width: 100% !important;
+  min-height: 100%;       /* กันเหนียว */
+}
+
+/* 2. สั่ง iframe (ตัวกราฟ) ให้ยืดเต็ม 100% ของกล่องหุ้ม */
+.report-style-class iframe {
+  height: 100% !important;
+  width: 100% !important;
+  border: none !important;
+  position: absolute; /* ไม้ตาย: ลอยตัวเพื่อให้ยืดสุดขอบ */
+  top: 0;
+  left: 0;
+}
+
+/* 3. ทำให้กล่องแม่เป็นฐานยึด (เพื่อให้ position: absolute ทำงาน) */
+.powerbi-container-wrapper {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* =========================================
+   LOGIN PAGE STYLES
+   ========================================= */
+   .login-container {
+    width: 100vw;
+    height: 100vh;
+    background-color: #f0fdf4; /* พื้นหลังสีเขียวอ่อนมาก */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    font-family: 'Poppins', sans-serif;
+  }
+  
+  /* Background Abstract Shapes */
+  .shape {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    z-index: 0;
+  }
+  .shape-1 {
+    width: 400px; height: 400px;
+    background: rgba(0, 196, 159, 0.15);
+    top: -100px; right: -100px;
+    animation: float 6s infinite ease-in-out;
+  }
+  .shape-2 {
+    width: 300px; height: 300px;
+    background: rgba(5, 150, 105, 0.1);
+    bottom: -50px; left: -50px;
+    animation: float 8s infinite ease-in-out reverse;
+  }
+  
+  /* Card */
+  .login-card {
+    width: 900px;
+    height: 550px;
+    background: white;
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+    display: flex;
+    overflow: hidden;
+    z-index: 1;
+    border: 1px solid white;
+  }
+  
+  /* Left Side: Visual */
+  .login-visual {
+    flex: 1.2;
+    background: linear-gradient(135deg, #00c49f 0%, #059669 100%);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 60px;
+    color: white;
+  }
+  
+  .visual-content {
+    position: relative;
+    z-index: 2;
+  }
+  
+  .logo-badge {
+    width: 60px; height: 60px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 25px;
+    backdrop-filter: blur(10px);
+  }
+  
+  .login-visual h1 {
+    font-size: 2.1rem;
+    margin: 0 0 15px 0;
+    line-height: 1.2;
+  }
+  
+  .login-visual p {
+    font-size: 1rem;
+    opacity: 0.9;
+    font-weight: 300;
+    line-height: 1.6;
+    margin-bottom: 40px;
+  }
+  
+  .feature-list {
+    display: flex; flex-direction: column; gap: 15px;
+  }
+  .feature-item {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.1);
+    padding: 10px 15px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    width: fit-content;
+  }
+  
+  .visual-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    z-index: 1;
+  }
+  
+  /* Right Side: Action */
+  .login-action {
+    flex: 1;
+    padding: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .login-header h2 {
+    font-size: 1.8rem;
+    color: #2d3436;
+    margin-bottom: 10px;
+  }
+  .login-header p {
+    color: #a4b0be;
+    font-size: 0.95rem;
+    margin-bottom: 40px;
+  }
+  
+  .ms-login-btn {
+    background: white;
+    border: 1px solid #e0e0e0;
+    padding: 12px 24px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+    max-width: 300px;
+    justify-content: center;
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: 600;
+    color: #5e5e5e;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  }
+  
+  .ms-login-btn:hover {
+    background: #f8f9fa;
+    border-color: #d1d1d1;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+  
+  .ms-logo {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .login-footer {
+    margin-top: auto;
+    font-size: 0.8rem;
+    color: #b2bec3;
+  }
+  .login-footer strong { color: var(--primary-green); }
+  .version { display: block; margin-top: 5px; font-size: 0.75rem; opacity: 0.7; }
+  
+  /* Responsive Mobile */
+  @media (max-width: 900px) {
+    .login-card {
+      flex-direction: column;
+      width: 90%;
+      height: auto;
+      max-height: 90vh;
+    }
+    .login-visual { padding: 40px; flex: 0.8; text-align: center; align-items: center; }
+    .logo-badge { margin: 0 auto 20px auto; }
+    .feature-list { display: none; } /* ซ่อน feature list ในมือถือ */
+    .login-action { padding: 40px 20px; }
+  }

@@ -3,6 +3,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import RightPanel from './RightPanel';
 import Footer from './Footer';
+// import { LogOut } from 'lucide-react'; // ❌ เอาออก (ไปใช้ใน Sidebar แทน)
 
 const DashboardLayout = ({ 
   children, 
@@ -13,7 +14,8 @@ const DashboardLayout = ({
   scrollRef,
   menuItems,
   activePageId,
-  onMenuClick
+  onMenuClick,
+  onLogout // ✅ รับมาแล้ว
 }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
@@ -21,10 +23,16 @@ const DashboardLayout = ({
         className={`app-container ${isSidebarCollapsed ? 'sidebar-closed' : ''}`}
         style={{ flex: 1, height: 'auto', minHeight: 0 }} 
       >
-        <Sidebar isCollapsed={isSidebarCollapsed} toggle={toggleSidebar} 
-        menuItems={menuItems}
-        activePageId={activePageId}
-        onMenuClick={onMenuClick} />
+        {/* ✅ ส่ง onLogout ต่อไปให้ Sidebar */}
+        <Sidebar 
+            isCollapsed={isSidebarCollapsed} 
+            toggle={toggleSidebar} 
+            menuItems={menuItems}
+            activePageId={activePageId}
+            onMenuClick={onMenuClick}
+            onLogout={onLogout} 
+        />
+
         <Header user={user} />
 
         <main className="main-content">
