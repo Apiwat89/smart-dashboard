@@ -98,17 +98,15 @@ function App() {
         });
 
         if (response.ok) {
-           console.log("test");
             const blob = await response.blob();
             const imageUrl = URL.createObjectURL(blob);
-            console.log("✅ ดึงรูปสำเร็จ!");
             setUserAvatar(imageUrl);
         } else {
-            console.error("❌ ดึงรูปไม่สำเร็จ Status:", response.status);
+            console.error(response.status);
             // ถ้า Status 404 แปลว่า Microsoft บอกว่าไม่มีรูปจริงๆ
         }
       } catch (error) {
-        console.error("❌ เกิดข้อผิดพลาดในการดึงรูป:", error);
+        console.error(error);
         // ถ้าเจอ Error นี้ ให้ลองกด Logout แล้ว Login ใหม่ดูครับ
       }
     }
