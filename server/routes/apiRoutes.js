@@ -38,32 +38,39 @@ router.post('/summarize-view', async (req, res) => {
     const langInstruction = getLangInstruction(lang);
 
     const prompt = `
-        Role: Senior Data Analyst & Power BI Expert
-        Task: Analyze the provided Power BI visual data to generate an Executive Summary.
-        Data Provided: ${JSON.stringify(visibleCharts)}
-        Language Output: ${langInstruction}
+        Role: Senior Data Analyst & Power BI Consultant
 
-        Guidelines for Power BI Analysis:
-        1. Connect the Dots: Don't just list data from each chart. Look for relationships across different visuals (e.g., "While Sales dropped (Chart A), Customer Satisfaction rose (Chart B)").
-        2. Identify Outliers: Point out significant highs, lows, or anomalies.
-        3. Business Impact: Explain *what* the data means for the business/situation, not just *what* the numbers are.
+        Objective:
+        Analyze the provided Power BI visuals and generate an executive-level summary for decision makers.
 
-        Your Response Format (Plain Text):
-        [1. Executive Summary]
-        (Overall trend and most important finding in 2-3 sentences)
-        
-        [2. Key Insights]
-        - (Insight 1: connecting data points)
-        - (Insight 2: significant outlier)
-        - (Insight 3: interesting trend)
+        Input Data (Visible Charts Only):
+        ${JSON.stringify(visibleCharts)}
 
-        [3. Recommendation]
-        (One actionable step based on the data)
+        Language Instruction:
+        ${langInstruction}
+
+        Analysis Rules:
+        1. Cross-visual Insight: Connect relationships between charts (cause–effect, contrast, or confirmation).
+        2. Highlight Extremes: Identify unusual spikes, drops, or standout values.
+        3. Business Meaning: Explain implications, risks, or opportunities — not raw numbers only.
+        4. Be concise, factual, and decision-oriented.
+
+        Response Structure (Plain Text Only):
+        [Executive Summary]
+        - 2–3 sentences summarizing the overall trend and key takeaway.
+
+        [Key Insights]
+        - Insight 1 (relationship across charts)
+        - Insight 2 (outlier or anomaly)
+        - Insight 3 (notable pattern or trend)
+
+        [Recommendation]
+        - One clear, actionable recommendation based on the data.
 
         Constraints:
-        - Use plain text only.
-        - Use "-" for bullet points.
-        - No Markdown symbols like **, ##.
+        - Plain text only
+        - Use "-" for bullet points
+        - No markdown, no emojis
     `;
 
     const reply = await generateAIResponse(prompt, "You are a professional Data Analyst.");
@@ -79,32 +86,54 @@ router.post('/character-reaction', async (req, res) => {
     if (pointData) {
         // กรณี: คลิกที่จุด (Drill-down / Filtering)
         prompt = `
-            Role: Somjeed (Mascot) — cheerful, smart, and data-savvy.
-            User Clicked: "${pointData.name}" with value ${pointData.uv}
-            Chart Context: ${JSON.stringify(contextData)}
-            Language Output: ${langInstruction}
-
-            Your Task:
-            1. Analyze Relative Performance: Compare the clicked value (${pointData.uv}) against the rest of the data. Is it the highest? Lowest? Above average?
-            2. React Accordingly: - If High/Good: Be excited and congratulate.
-               - If Low/Bad: Be encouraging or curious.
-               - If Average: Be acknowledging.
-            3. Keep it short (max 2 sentences).
-            4. No emojis, No Markdown.
-        `;
+            Role: Somjeed — a cheerful, insightful Power BI mascot.
+            
+            User Interaction:
+            Clicked Item: "${pointData.name}"
+            Value: ${pointData.uv}
+            
+            Chart Context:
+            ${JSON.stringify(contextData)}
+            
+            Language Instruction:
+            ${langInstruction}
+            
+            Tasks:
+            1. Compare the clicked value with the rest of the dataset (highest, lowest, above/below average).
+            2. React appropriately:
+            - High / Best: Excited and positive
+            - Low / Worst: Curious or encouraging
+            - Average: Neutral but insightful
+            3. Explain briefly WHY it stands out.
+            
+            Constraints:
+            - Maximum 2 sentences
+            - Plain text only
+            - No emojis, no markdown
+        `;        
     } else {
         // กรณี: ดูภาพรวม (Overview)
         prompt = `
-            Role: Somjeed (Mascot) — cheerful, smart, and data-savvy.
-            User Clicked: Entire Chart (Overview)
-            Chart Context: ${JSON.stringify(contextData)}
-            Language Output: ${langInstruction}
+            Role: Somjeed — a cheerful, insightful Power BI mascot.
 
-            Your Task:
-            1. Scan the data for the most striking trend (e.g., a sudden spike or a consistent drop).
-            2. Summarize that one key trend in a fun, storytelling way.
-            3. Example: "Wow! Look at that spike in [Month], it's way higher than the rest!"
-            4. Max 3 sentences. No emojis, No Markdown.
+            User Interaction:
+            Overview of the entire chart
+
+            Chart Context:
+            ${JSON.stringify(contextData)}
+
+            Language Instruction:
+            ${langInstruction}
+
+            Tasks:
+            1. Identify ONE most noticeable trend (spike, drop, steady growth, or decline).
+            2. Describe it in a friendly, storytelling style.
+            3. Focus on insight, not numbers.
+
+            Constraints:
+            - Maximum 3 sentences
+            - Plain text only
+            - No emojis, no markdown
         `;
     }
     
@@ -118,17 +147,31 @@ router.post('/ask-dashboard', async (req, res) => {
     const langInstruction = getLangInstruction(lang);
 
     const prompt = `
-        Role: Somjeed (Mascot) - Your personal Power BI Assistant.
-        Context Data (Raw Power BI Export): ${JSON.stringify(allData)}
-        User Question: "${question}"
-        Language Output: ${langInstruction}
+        Role: Somjeed — your Power BI dashboard assistant.
 
-        Your Task:
-        1. Data Lookup: Search the provided "Context Data" strictly to answer the question.
-        2. Interpretation: If the data shows categories (e.g., Provinces, Months) and values, summarize them. Don't list every single row unless asked.
-        3. Honesty: If the answer is NOT in the "Context Data", say "I can't find that information in the current dashboard view." Do not hallucinate numbers.
-        4. Tone: Cheerful, helpful, but accurate with numbers.
-        5. Format: Plain text, use "-" for lists.
+        Context Data (Only source of truth):
+        ${JSON.stringify(allData)}
+
+        User Question:
+        "${question}"
+
+        Language Instruction:
+        ${langInstruction}
+
+        Rules:
+        1. Answer ONLY using the provided Context Data.
+        2. Summarize data by category or trend when possible.
+        3. Do NOT invent numbers or insights.
+        4. If the answer is not found, respond exactly:
+        "I can't find that information in the current dashboard view."
+
+        Tone:
+        Cheerful, clear, and accurate.
+
+        Output Format:
+        - Plain text
+        - Use "-" for lists
+        - No markdown, no emojis
     `;
 
     const reply = await generateAIResponse(prompt, "You are a helpful AI Dashboard Assistant.");

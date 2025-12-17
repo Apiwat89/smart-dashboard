@@ -1,1013 +1,618 @@
 /* =========================================
-   1. GLOBAL VARIABLES & RESET
+   1. GLOBAL VARIABLES & THEMES (ส่วนนี้ต้องเพิ่มเพื่อให้เปลี่ยนสีได้)
    ========================================= */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
+   @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
 
-:root {
-  --primary-green: #00c49f;
-  --bg-gray: #f5f7fa;
-  --text-dark: #2d3436;
-  --text-light: #a4b0be;
-  --sidebar-width: 240px;
-  --sidebar-collapsed-width: 80px;
-  --right-panel-width: 340px;
-  --header-height: 70px;
-  --transition-speed: 0.3s;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: 'Poppins', sans-serif;
-  background-color: var(--bg-gray);
-  color: var(--text-dark);
-  overflow: hidden; /* ซ่อน Scrollbar ของ Browser */
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d1d8e0; border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: #b2bec3; }
-
-/* =========================================
-   2. MAIN LAYOUT SYSTEM
-   ========================================= */
-/* Container หลักของหน้าเว็บ */
-.app-container {
-  display: grid;
-  width: 100vw;
-  height: 100vh;
-  grid-template-columns: var(--sidebar-width) 1fr var(--right-panel-width);
-  grid-template-rows: var(--header-height) 1fr;
-  grid-template-areas: 
-    "sidebar header header"
-    "sidebar main right";
-  transition: grid-template-columns var(--transition-speed) ease;
-  overflow: hidden;
-}
-
-/* Modifier: เมื่อพับ Sidebar */
-.app-container.sidebar-closed {
-  grid-template-columns: var(--sidebar-collapsed-width) 1fr var(--right-panel-width);
-}
-
-/* พื้นที่ตรงกลาง (Main Content) */
-.main-content {
-  grid-area: main;
-  background-color: var(--bg-gray);
-  position: relative; /* สำคัญ! เพื่อให้ AI Summary ลอยเทียบกับกล่องนี้ */
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-/* พื้นที่ Scroll (กราฟ + Footer อยู่ในนี้) */
-.content-scroll-area {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px 30px;
-  scroll-behavior: smooth;
-  position: relative;
-}
-
-/* กล่องวาง Widget */
-.widgets-container {
-  min-height: 80vh; /* ดัน Footer ลงไปถ้ายืด */
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-/* พื้นที่ว่างกันชนด้านล่าง */
-.bottom-spacer { height: 120px; }
-
-/* =========================================
-   3. SIDEBAR COMPONENT (CLEANED)
-   ========================================= */
+   /* ☀️ ธีมสว่าง (ค่าสีเดิมของคุณ) */
+   :root {
+     --primary-green: #00c49f;
+     
+     /* Backgrounds */
+     --bg-main: #f5f7fa;      /* เดิม #f5f7fa */
+     --bg-card: #ffffff;      /* เดิม white */
+     --bg-hover: #f8fafc;     /* เดิม #f8fafc */
+     --bg-input: #f8f9fa;     /* เดิม #f8f9fa */
+     --bg-stage: #e6f7f3;     /* พื้นหลังน้องส้มจี๊ด */
+     
+     /* Text */
+     --text-main: #2d3436;    /* เดิม #2d3436 */
+     --text-muted: #64748b;   /* เดิม #64748b */
+     --text-light: #a4b0be;   /* เดิม #a4b0be */
+     
+     /* Borders & Shadows */
+     --border-color: #f1f5f9; /* เดิม #f1f5f9 */
+     --shadow-sm: 0 2px 10px rgba(0,0,0,0.02);
+     --shadow-md: 0 5px 20px rgba(0,0,0,0.05);
+   
+     /* Layout vars (คงเดิม) */
+     --sidebar-width: 240px;
+     --sidebar-collapsed-width: 80px;
+     --right-panel-width: 340px;
+     --header-height: 70px;
+     --transition-speed: 0.3s;
+   }
+   
+   /* 🌙 ธีมมืด (Dark Mode Override) */
+   [data-theme='dark'] {
+     --bg-main: #0f172a;      /* สีพื้นหลังมืด */
+     --bg-card: #1e293b;      /* สีการ์ดเทาเข้ม */
+     --bg-hover: #334155;     
+     --bg-input: #334155;
+     --bg-stage: #0f172a;
+     
+     --text-main: #f1f5f9;    /* ตัวหนังสือขาว */
+     --text-muted: #94a3b8;   
+     --text-light: #64748b;
+     
+     --border-color: #334155; /* เส้นขอบสีเข้ม */
+     --shadow-sm: 0 4px 12px rgba(0,0,0,0.3);
+     --shadow-md: 0 8px 24px rgba(0,0,0,0.4);
+   }
+   
+   /* Base Styles */
+   * { box-sizing: border-box; }
+   
+   body {
+     margin: 0;
+     font-family: 'Poppins', sans-serif;
+     background-color: var(--bg-main); /* ✅ แก้ */
+     color: var(--text-main);          /* ✅ แก้ */
+     overflow: hidden;
+     transition: background-color 0.3s ease, color 0.3s ease;
+   }
+   
+   /* Custom Scrollbar */
+   ::-webkit-scrollbar { width: 6px; height: 6px; }
+   ::-webkit-scrollbar-track { background: transparent; }
+   ::-webkit-scrollbar-thumb { background: #d1d8e0; border-radius: 10px; }
+   ::-webkit-scrollbar-thumb:hover { background: #b2bec3; }
+   
+   /* =========================================
+      2. MAIN LAYOUT SYSTEM
+      ========================================= */
+   .app-container {
+     display: grid;
+     width: 100vw;
+     height: 100vh;
+     grid-template-columns: var(--sidebar-width) 1fr var(--right-panel-width);
+     grid-template-rows: var(--header-height) 1fr;
+     grid-template-areas: 
+       "sidebar header header"
+       "sidebar main right";
+     transition: grid-template-columns var(--transition-speed) ease;
+     overflow: hidden;
+   }
+   
+   .app-container.sidebar-closed {
+     grid-template-columns: var(--sidebar-collapsed-width) 1fr var(--right-panel-width);
+   }
+   
+   .main-content {
+     grid-area: main;
+     background-color: var(--bg-main); /* ✅ แก้จาก bg-gray */
+     position: relative; 
+     overflow: hidden;
+     display: flex;
+     flex-direction: column;
+   }
+   
+   .content-scroll-area {
+     flex: 1;
+     overflow-y: auto;
+     padding: 20px 30px;
+     scroll-behavior: smooth;
+     position: relative;
+   }
+   
+   .widgets-container {
+     min-height: 80vh; 
+     display: flex;
+     flex-direction: column;
+     gap: 20px;
+   }
+   
+   .bottom-spacer { height: 120px; }
+   
+   /* =========================================
+      3. SIDEBAR COMPONENT
+      ========================================= */
    .sidebar {
-    /* ใช้ Grid Area เพื่อให้ตรงกับ Layout หลักด้านบน */
-    grid-area: sidebar;
-    background: white;
-    border-right: 1px solid #f1f5f9;
-    
-    /* จัด Layout เป็นแนวตั้ง เพื่อดันปุ่ม Logout ลงล่าง */
-    display: flex;
-    flex-direction: column;
-    
-    height: 100%;
-    overflow: hidden;
-    z-index: 50;
-    transition: all 0.3s ease; /* Animation ความกว้างจะถูกคุมโดย Grid Container */
-  }
-  
-  /* --- ส่วนหัว (Header: Logo + Toggle) --- */
-  .sidebar-header {
-    height: var(--header-height);
-    display: flex;
-    align-items: center;
-    justify-content: space-between; /* กางออกซ้าย-ขวา */
-    padding: 0 20px;
-    border-bottom: 1px solid #f8fafc;
-    flex-shrink: 0;
-    white-space: nowrap;
-  }
-  
-  .logo {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 700;
-    font-size: 1.25rem;
-    color: var(--primary-green);
-  }
-  
-  .sidebar-header button {
-    background: transparent;
-    border: 1px solid #e2e8f0;
-    color: #94a3b8;
-    border-radius: 8px;
-    padding: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: 0.2s;
-    font-size: 1.2rem;
-  }
-  .sidebar-header button:hover {
-    border-color: var(--primary-green);
-    color: var(--primary-green);
-    background: #f0fdf4;
-  }
-  
-  /* --- พื้นที่เมนู (Menu Area) --- */
-  .sidebar-menu {
-    flex: 1; /* ⭐ พระเอก: ยืดพื้นที่ส่วนนี้ให้เต็ม เพื่อดันปุ่ม Logout ลงล่างสุด */
-    padding: 16px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
-  
-  /* --- ปุ่มเมนู (Menu Item) --- */
-  .menu-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    border-radius: 12px;
-    color: #64748b;
-    font-size: 0.95rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    position: relative;
-  }
-  
-  .menu-item:hover {
-    background-color: #f0fdf4;
-    color: var(--primary-green);
-    transform: translateX(4px);
-  }
-  
-  .menu-item.active {
-    background: linear-gradient(135deg, var(--primary-green) 0%, #059669 100%);
-    color: white;
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
-  }
-  
-  .menu-item svg {
-    min-width: 20px;
-    min-height: 20px;
-  }
-  
-  /* --- จัดการตอนพับ Sidebar (Collapsed State) --- */
-  
-  /* ซ่อนข้อความต่างๆ เมื่อพับ */
-  .sidebar.collapsed .logo,
-  .sidebar.collapsed .menu-item span,
-  .sidebar.collapsed .brand-text {
-    display: none;
-  }
-  
-  /* ซ่อนข้อความในปุ่ม Logout (เนื่องจากเป็น inline style ต้องใช้ !important ช่วย หรือ CSS นี้จะทำงานถ้าเอา style ออก) */
-  .sidebar.collapsed button span {
-    display: none;
-  }
-  
-  /* จัดกึ่งกลาง Header ตอนพับ */
-  .sidebar.collapsed .sidebar-header {
-    justify-content: center;
-    padding: 0;
-  }
-  
-  /* จัดกึ่งกลางไอคอนเมนู */
-  .sidebar.collapsed .menu-item {
-    justify-content: center;
-    padding: 12px;
-  }
-
-/* =========================================
-   4. HEADER COMPONENT
-   ========================================= */
-.header {
-  grid-area: header;
-  background: white; border-bottom: 1px solid #eee;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 30px; z-index: 10;
-}
-
-.search-bar {
-  background: #f8f9fa; padding: 8px 15px; border-radius: 20px; 
-  display: flex; align-items: center; gap: 10px; width: 300px; border: 1px solid transparent;
-}
-.search-bar:focus-within { border-color: var(--primary-green); background: white; }
-.search-bar input {
-  background: transparent; outline: none; border: none; flex: 1; font-size: 0.9rem; color: #333333;
-}
-
-.user-profile {
-  display: flex; align-items: center; gap: 15px; font-weight: 500; font-size: 0.9rem;
-}
-.avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid #f0f0f0; }
-
-/* =========================================
-   5. WIDGETS (Cards & Charts)
-   ========================================= */
-.stat-card {
-  background: white; padding: 20px; border-radius: 16px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-  display: flex; align-items: center; gap: 15px;
-  transition: transform 0.2s, box-shadow 0.2s;
-  height: 100%;
-}
-.stat-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-
-.chart-card {
-  background: white; border-radius: 20px; padding: 20px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-  transition: transform 0.2s, box-shadow 0.2s;
-  height: 100%; 
-  display: flex; 
-  flex-direction: column;
-  min-height: 0; 
-}
-.chart-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.05); }
-
-/* =========================================
-   6. AI SUMMARY BOX (Floating & Smooth Scroll)
-   ========================================= */
-.fixed-bottom-summary {
-  /* position: absolute; bottom: 0; left: 0; right: 0; */
-  padding: 0 30px 15px 30px;
-  z-index: 30; pointer-events: none;
-}
-
-/* --- Wrapper หลัก (ควบคุม Animation ความสูง) --- */
-.ai-summary-wrapper {
-  background: white; 
-  border-radius: 16px 16px 16px 16px;
-  box-shadow: 0 -5px 30px rgba(0,0,0,0.08);
-  border: 1px solid #f0f0f0;
-  pointer-events: auto;
-  
-  /* FIX: ใช้ Flex เพื่อคุมลูกข้างใน */
-  display: flex;
-  flex-direction: column;
-  
-  /* Animation */
-  overflow: hidden; 
-  transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* สถานะพับ: สูงเท่า Header */
-.ai-summary-wrapper.collapsed { 
-  max-height: 56px; 
-}
-
-/* สถานะขยาย: สูงได้มากสุด 500px (หรือจะใช้ vh ก็ได้) */
-.ai-summary-wrapper.expanded { 
-  max-height: 500px; 
-}
-
-/* --- Container ข้างใน (เพื่อให้ Flex ทำงานถูกต้อง) --- */
-.result-box-container {
-  /* FIX: สั่งให้ยืดเต็มพ่อแม่ แต่ห้ามเกิน */
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0; /* สำคัญ! ถ้าไม่มีบรรทัดนี้ Scrollbar จะไม่ขึ้น */
-}
-
-/* --- Header (ส่วนหัวข้อ) --- */
-.result-header {
-  height: 56px; 
-  padding: 0 20px; 
-  display: flex; 
-  align-items: center; justify-content: space-between;
-  cursor: pointer; 
-  border-bottom: 1px solid #fcfcfc;
-  background: white;
-  
-  /* สำคัญ: ห้ามหดตัวเมื่อพื้นที่น้อยลง */
-  flex-shrink: 0; 
-}
-.result-header:hover { background: #fafafa; }
-
-.header-left, .header-right { display: flex; align-items: center; gap: 10px; }
-.header-title { font-weight: 600; font-size: 0.95rem; }
-.icon-sparkle { color: var(--primary-green); }
-
-.icon-btn {
-  background: transparent; border: none; cursor: pointer; 
-  padding: 8px; border-radius: 8px; color: #a4b0be; transition: 0.2s;
-  display: flex; align-items: center; justify-content: center;
-}
-.icon-btn:hover { background: #f0f0f0; color: var(--primary-green); }
-
-/* --- Content Wrapper (ส่วนเนื้อหาที่ Scroll ได้) --- */
-.result-content-wrapper {
-  background: #fff;
-  padding: 15px;      /* ระยะห่างจากขอบกล่องใหญ่ */
-  border-top: 1px solid #f2f2f2;
-
-  /* Key Logic: ยืดเต็มพื้นที่ + Scroll */
-  flex: 1;            /* ยืดเต็มพื้นที่ที่เหลือจาก Header */
-  overflow-y: auto;   /* Scroll แนวตั้งถ้าเนื้อหายาว */
-  min-height: 0;      /* ป้องกัน Flexbox ดันทะลุ */
-}
-
-/* Scrollbar แต่งสวย */
-.result-content-wrapper::-webkit-scrollbar { width: 4px; }
-.result-content-wrapper::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 4px; }
-
-/* --- Text Styling (จัดตัวหนังสือ) --- */
-.result-text { 
-  font-size: 0.95rem; 
-  line-height: 1.7; 
-  color: #444; 
-  
-  /* พื้นหลังสีเขียวอ่อนตามที่คุณใส่มา */
-  background-color: rgba(0, 196, 159, 0.08); 
-  padding: 20px;       /* ระยะห่างข้อความจากขอบสีเขียว */
-  border-radius: 12px;
-  
-  /* จัด Justify */
-  text-align: justify; 
-  text-justify: inter-word;
-  word-break: break-word;
-  white-space: pre-line;
-}
-
-/* Loading Animation */
-.loading-state { display: flex; align-items: center; gap: 10px; color: #888; font-size: 0.9rem; padding: 10px; }
-.typing-indicator span {
-  display: inline-block; width: 6px; height: 6px; 
-  background: var(--primary-green); border-radius: 50%;
-  animation: blink 1.4s infinite both;
-}
-.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
-.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-
-/* =========================================
-   7. RIGHT PANEL (Character & Chat)
-   ========================================= */
-.right-panel {
-  grid-area: right; background: white; 
-  padding: 25px; display: flex; flex-direction: column; 
-  border-left: 1px solid #eee;
-  overflow: hidden;
-}
-
-.char-stage {
-  flex: 1; position: relative; border-radius: 24px; 
-  background: #e6f7f3; overflow: hidden; margin-bottom: 20px;
-  box-shadow: inset 0 0 20px rgba(0,196,159,0.1);
-}
-
-/* Bubble */
-.char-floating-bubble {
-  position: absolute; top: 30%; left: 50%; transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.98); 
-  padding: 15px 20px; border-radius: 20px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.1); 
-  width: 85%; max-width: 280px;
-  max-height: 55%; 
-  animation: popUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-  display: flex; flex-direction: column;
-}
-.char-floating-bubble::after {
-  content: ''; position: absolute; top: -8px; left: 50%; margin-left: -8px;
-  border-width: 8px; border-style: solid; 
-  border-color: transparent transparent rgba(255, 255, 255, 0.98) transparent;
-}
-
-.bubble-content {
-  font-size: 0.95rem; color: #333; line-height: 1.5; 
-  max-height: 100%; overflow-y: auto; padding-right: 5px;
-  text-align: center;
-}
-.cursor-blink { animation: blink 1s infinite; border-right: 2px solid #333; margin-left: 2px; }
-
-.bubble-timer {
-  margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f0f0;
-  display: flex; justify-content: space-between; align-items: center;
-  font-size: 0.75rem; color: #999;
-}
-
-.bubble-close-btn {
-  background: #f5f5f5; border: none; border-radius: 50%; 
-  width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: #888; transition: 0.2s;
-}
-.bubble-close-btn:hover { background: #ff7675; color: white; }
-
-/* Chat Input */
-.control-panel { display: flex; flex-direction: column; gap: 15px; }
-.ask-input-wrapper {
-  display: flex; gap: 10px; background: #f8f9fa; padding: 10px 15px; 
-  border-radius: 16px; border: 1px solid #eee; transition: 0.2s;
-}
-.ask-input-wrapper:focus-within { border-color: var(--primary-green); background: white; }
-.ask-input-wrapper input {
-  flex: 1; border: none; background: transparent; outline: none; font-size: 0.9rem; color: #333333;
-}
-.ask-input-wrapper button {
-  background: var(--primary-green); border: none; width: 32px; height: 32px;
-  border-radius: 10px; color: white; cursor: pointer; 
-  display: flex; align-items: center; justify-content: center; transition: 0.2s;
-}
-.ask-input-wrapper button:disabled { background: #ddd; cursor: not-allowed; }
-.ask-input-wrapper button:hover:not(:disabled) { transform: scale(1.1); }
-
-.lang-switcher-row {
-  display: flex; justify-content: center; align-items: center; gap: 8px; 
-  padding-top: 15px; border-top: 1px solid #f0f0f0;
-}
-.lang-btn {
-  background: white; border: 1px solid #eee; padding: 6px 14px; 
-  border-radius: 20px; font-size: 0.75rem; color: #888; cursor: pointer; transition: 0.2s;
-}
-.lang-btn.active { background: #2d3436; color: white; border-color: #2d3436; }
-.lang-btn:hover:not(.active) { border-color: #ccc; color: #555; }
-
-/* =========================================
-   8. FOOTER
-   ========================================= */
-.dashboard-footer {
-  padding: 10px 10px;
-  border-top: 1px solid #e0e0e0;
-  color: #a4b0be;
-  font-size: 0.85rem;
-  width: 100%;
-}
-.footer-content {
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  flex-wrap: wrap; 
-  gap: 15px;
-}
-
-.footer-left {
-  flex: 2;     
-  text-align: left;
-  min-width: 200px; 
-}
-
-.footer-links {
-  flex: 3;           /* กินพื้นที่ 3 ส่วน */
-  display: flex;
-  justify-content: center; /* จัดลิ้งค์ให้อยู่กึ่งกลางกล่อง */
-  align-items: center;
-  gap: 15px;
-  flex-wrap: wrap;   /* ถ้าจอเล็กให้ปัดลงมา */
-  margin-left: -280px;
-}
-.footer-links a { text-decoration: none; color: #888; transition: 0.2s; }
-.footer-links a:hover { color: var(--primary-green); }
-
-.footer-right {
-  flex: 1;           /* กินพื้นที่ 1 ส่วน */
-  display: flex;
-  justify-content: flex-end; /* ดันเนื้อหาไปชิดขวาสุด */
-}
-
-.footer-right-vs {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.version-tag {
-  background: #f0f0f0; 
-  padding: 2px 8px; 
-  border-radius: 4px; 
-  font-size: 0.75rem; 
-  color: #666;
-  margin-right: 15px;
-}
-.social-icons {
-  display: flex;
-}
-
-.footer-bottom {
-  text-align: center;
-}
-
-/* =========================================
-   9. LOADING SCREEN & ANIMATIONS
-   ========================================= */
-   .loading-container {
-    position: fixed;
-    inset: 0;
-    background: #f8fafc; /* พื้นหลังสีขาวเทาๆ สะอาดตา */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    overflow: hidden;
-    font-family: 'Poppins', sans-serif;
-  }
-  
-  /* --- Background Blobs (ลูกบอลสีฟุ้งๆ ข้างหลัง) --- */
-  .blob {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(60px);
-    opacity: 0.6;
-    animation: floatBlob 8s infinite ease-in-out;
-  }
-  .blob-1 { width: 300px; height: 300px; background: #00c49f33; top: -50px; left: -50px; }
-  .blob-2 { width: 250px; height: 250px; background: #0078d433; bottom: -50px; right: -50px; animation-delay: -2s; }
-  .blob-3 { width: 150px; height: 150px; background: #ffce0033; top: 40%; left: 60%; animation-delay: -4s; }
-  
-  @keyframes floatBlob {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(20px, -20px) scale(1.1); }
-  }
-  
-  /* --- Content Wrapper --- */
-  .loading-content {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    z-index: 10;
-  }
-  
-  /* --- Logo & Rings --- */
-  .logo-wrapper {
-    position: relative;
-    width: 120px;
-    height: 120px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 30px;
-  }
-  
-  .icon-box {
-    width: 80px; height: 80px;
-    background: linear-gradient(135deg, #00c49f 0%, #059669 100%);
-    border-radius: 24px;
-    display: flex; justify-content: center; align-items: center;
-    box-shadow: 0 10px 30px rgba(0, 196, 159, 0.4);
-    z-index: 5;
-    animation: floatLogo 3s ease-in-out infinite;
-  }
-  
-  .spin-ring {
-    position: absolute;
-    border-radius: 50%;
-    border: 2px solid transparent;
-  }
-  
-  .ring-1 {
-    width: 100%; height: 100%;
-    border-top-color: #00c49f;
-    border-left-color: #00c49f;
-    opacity: 0.5;
-    animation: spin 2s linear infinite;
-  }
-  
-  .ring-2 {
-    width: 140%; height: 140%;
-    border-bottom-color: #0078d4;
-    border-right-color: #0078d4;
-    opacity: 0.3;
-    animation: spin 3s linear infinite reverse;
-  }
-  
-  /* ไอคอนจิ๋วลอยรอบๆ */
-  .orbit-icon {
-    position: absolute;
-    color: #64748b;
-    background: white;
-    padding: 5px;
-    border-radius: 50%;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    animation: orbit 4s linear infinite;
-  }
-  .orbit-1 { top: -20px; animation-delay: 0s; }
-  .orbit-2 { bottom: -10px; right: -20px; animation-delay: -1.3s; }
-  .orbit-3 { bottom: -10px; left: -20px; animation-delay: -2.6s; }
-  
-  /* --- Text --- */
-  .loading-title {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: #2d3436;
-    margin: 0;
-    letter-spacing: 1px;
-  }
-  
-  .loading-status {
-    height: 30px; /* Fix height กันกระตุก */
-    margin-top: 5px;
-    display: flex; justify-content: center; align-items: center;
-  }
-  
-  .status-text {
-    font-size: 0.9rem;
-    color: #64748b;
-    font-weight: 500;
-    animation: fadeInOut 0.6s ease-in-out; /* ข้อความกระพริบเปลี่ยน */
-  }
-  
-  /* --- Progress Bar --- */
-  .progress-bar-wrapper {
-    width: 200px;
-    height: 6px;
-    background: #e2e8f0;
-    border-radius: 10px;
-    margin-top: 20px;
-    overflow: hidden;
-    position: relative;
-  }
-  
-  .progress-bar-fill {
-    width: 50%;
-    height: 100%;
-    background: linear-gradient(90deg, #00c49f, #0078d4);
-    border-radius: 10px;
-    position: absolute;
-    left: 0;
-    animation: loadingSlide 1.5s infinite ease-in-out;
-  }
-  
-  /* --- Keyframes Animations --- */
-  @keyframes spin { 100% { transform: rotate(360deg); } }
-  @keyframes floatLogo { 0%,100% {transform:translateY(0)} 50% {transform:translateY(-10px)} }
-  @keyframes orbit {
-      0% { transform: rotate(0deg) translateX(60px) rotate(0deg); }
-      100% { transform: rotate(360deg) translateX(60px) rotate(-360deg); }
-  }
-  @keyframes loadingSlide {
-    0% { left: -100%; }
-    100% { left: 100%; }
-  }
-  @keyframes fadeInOut {
-    0% { opacity: 0; transform: translateY(5px); }
-    50% { opacity: 1; transform: translateY(0); }
-    100% { opacity: 1; }
-  }
-  
-  /* Pulse Icon Effect */
-  .pulse-icon { animation: pulseIcon 2s infinite; }
-  @keyframes pulseIcon {
-      0% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.1); opacity: 0.8; }
-      100% { transform: scale(1); opacity: 1; }
-  }
-
-/* =========================================
-   10. MEDIA QUERIES
-   ========================================= */
-@media (max-width: 1200px) {
-  :root { --right-panel-width: 280px; }
-  .char-floating-bubble { top: 15%; width: 90%; }
-}
-
-@media (max-width: 992px) {
-  .app-container {
-    grid-template-columns: var(--sidebar-collapsed-width) 1fr 0px;
-    grid-template-areas: "sidebar header header" "sidebar main main";
-  }
-  .right-panel { display: none; }
-  .sidebar { width: var(--sidebar-collapsed-width); }
-  .brand-text, .menu-text { display: none; }
-  .brand-wrapper { justify-content: center; }
-  .menu-item { justify-content: center; }
-}
-
-/* --- Sidebar Styles --- */
-.sidebar {
-  width: 260px;
-  background: #ffffff;
-  border-right: 1px solid #f1f5f9;
-  display: flex;
-  flex-direction: column;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  height: 100%;
-  box-shadow: 4px 0 24px rgba(0,0,0,0.02);
-  z-index: 50;
-}
-
-.sidebar.collapsed {
-  width: 80px;
-}
-
-.sidebar-header {
-  height: 70px;
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-  border-bottom: 1px solid #f8fafc;
-}
-
-.sidebar-nav {
-  padding: 16px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px; /* ระยะห่างระหว่างปุ่ม */
-  flex: 1;
-  overflow-y: auto;
-}
-
-/* --- ✨ ตกแต่งปุ่มเมนู (Nav Item) --- */
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border: none;
-  background: transparent;
-  color: #64748b; /* สีเทาเข้มแบบสุภาพ */
-  font-size: 0.95rem;
-  font-weight: 500;
-  border-radius: 12px; /* ขอบมน */
-  cursor: pointer;
-  transition: all 0.2s ease;
-  width: 100%;
-  text-align: left;
-  position: relative;
-  overflow: hidden;
-}
-
-/* ตอนเอาเมาส์ชี้ (Hover) */
-.nav-item:hover {
-  background-color: #f0fdf4; /* สีเขียวอ่อนมากๆ */
-  color: #059669; /* ตัวหนังสือสีเขียวเข้ม */
-  transform: translateX(4px); /* ขยับขวานิดนึงให้ดูมีมิติ */
-}
-
-/* ตอนกดเลือกอยู่ (Active) */
-.nav-item.active {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%); /* ไล่เฉดสีเขียว */
-  color: white; /* ตัวหนังสือสีขาว */
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); /* เงาสีเขียวฟุ้งๆ */
-}
-
-/* จัดการไอคอนให้ตรงกลาง */
-.nav-item svg {
-  min-width: 20px;
-  min-height: 20px;
-}
-
-/* ปุ่มยุบเมนูด้านล่าง */
-.sidebar-footer {
-  padding: 16px;
-  border-top: 1px solid #f1f5f9;
-  color: #94a3b8;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: 0.2s;
-  text-align: center;
-}
-.sidebar-footer:hover {
-  color: #10b981;
-  background: #f8fafc;
-}
-
-/* Animation Fade In */
-.fade-in {
-  animation: fadeIn 0.4s ease-in-out;
-}
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* 1. บังคับกล่องที่หุ้ม iframe ให้สูงเต็มพื้นที่ */
-.report-style-class {
-  display: block;
-  height: 100% !important; /* สำคัญ */
-  width: 100% !important;
-  min-height: 100%;       /* กันเหนียว */
-}
-
-/* 2. สั่ง iframe (ตัวกราฟ) ให้ยืดเต็ม 100% ของกล่องหุ้ม */
-.report-style-class iframe {
-  height: 100% !important;
-  width: 100% !important;
-  border: none !important;
-  position: absolute; /* ไม้ตาย: ลอยตัวเพื่อให้ยืดสุดขอบ */
-  top: 0;
-  left: 0;
-}
-
-/* 3. ทำให้กล่องแม่เป็นฐานยึด (เพื่อให้ position: absolute ทำงาน) */
-.powerbi-container-wrapper {
-  position: relative;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-}
-
-/* =========================================
-   LOGIN PAGE STYLES
-   ========================================= */
-   .login-container {
-    width: 100vw;
-    height: 100vh;
-    background-color: #f0fdf4; /* พื้นหลังสีเขียวอ่อนมาก */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-    font-family: 'Poppins', sans-serif;
-  }
-  
-  /* Background Abstract Shapes */
-  .shape {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    z-index: 0;
-  }
-  .shape-1 {
-    width: 400px; height: 400px;
-    background: rgba(0, 196, 159, 0.15);
-    top: -100px; right: -100px;
-    animation: float 6s infinite ease-in-out;
-  }
-  .shape-2 {
-    width: 300px; height: 300px;
-    background: rgba(5, 150, 105, 0.1);
-    bottom: -50px; left: -50px;
-    animation: float 8s infinite ease-in-out reverse;
-  }
-  
-  /* Card */
-  .login-card {
-    width: 900px;
-    height: 550px;
-    background: white;
-    border-radius: 24px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
-    display: flex;
-    overflow: hidden;
-    z-index: 1;
-    border: 1px solid white;
-  }
-  
-  /* Left Side: Visual */
-  .login-visual {
-    flex: 1.2;
-    background: linear-gradient(135deg, #00c49f 0%, #059669 100%);
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 60px;
-    color: white;
-  }
-  
-  .visual-content {
-    position: relative;
-    z-index: 2;
-  }
-  
-  .logo-badge {
-    width: 60px; height: 60px;
-    background: rgba(255,255,255,0.2);
-    border-radius: 16px;
-    display: flex; align-items: center; justify-content: center;
-    margin-bottom: 25px;
-    backdrop-filter: blur(10px);
-  }
-  
-  .login-visual h1 {
-    font-size: 2.1rem;
-    margin: 0 0 15px 0;
-    line-height: 1.2;
-  }
-  
-  .login-visual p {
-    font-size: 1rem;
-    opacity: 0.9;
-    font-weight: 300;
-    line-height: 1.6;
-    margin-bottom: 40px;
-  }
-  
-  .feature-list {
-    display: flex; flex-direction: column; gap: 15px;
-  }
-  .feature-item {
-    display: flex; align-items: center; gap: 10px;
-    background: rgba(255,255,255,0.1);
-    padding: 10px 15px;
-    border-radius: 12px;
-    font-size: 0.9rem;
-    width: fit-content;
-  }
-  
-  .visual-overlay {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    z-index: 1;
-  }
-  
-  /* Right Side: Action */
-  .login-action {
-    flex: 1;
-    padding: 60px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-  }
-  
-  .login-header h2 {
-    font-size: 1.8rem;
-    color: #2d3436;
-    margin-bottom: 10px;
-  }
-  .login-header p {
-    color: #a4b0be;
-    font-size: 0.95rem;
-    margin-bottom: 40px;
-  }
-  
-  .ms-login-btn {
-    background: white;
-    border: 1px solid #e0e0e0;
-    padding: 12px 24px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    width: 100%;
-    max-width: 300px;
-    justify-content: center;
-    font-family: 'Segoe UI', sans-serif;
-    font-weight: 600;
-    color: #5e5e5e;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-  }
-  
-  .ms-login-btn:hover {
-    background: #f8f9fa;
-    border-color: #d1d1d1;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  }
-  
-  .ms-logo {
-    width: 20px;
-    height: 20px;
-  }
-  
-  .login-footer {
-    margin-top: auto;
-    font-size: 0.8rem;
-    color: #b2bec3;
-  }
-  .login-footer strong { color: var(--primary-green); }
-  .version { display: block; margin-top: 5px; font-size: 0.75rem; opacity: 0.7; }
-  
-  /* Responsive Mobile */
-  @media (max-width: 900px) {
-    .login-card {
+      grid-area: sidebar;
+      background: var(--bg-card);      /* ✅ แก้: white -> var */
+      border-right: 1px solid var(--border-color); /* ✅ แก้: hex -> var */
+      display: flex;
       flex-direction: column;
-      width: 90%;
-      height: auto;
-      max-height: 90vh;
+      height: 100%;
+      overflow: hidden;
+      z-index: 50;
+      transition: all 0.3s ease;
     }
-    .login-visual { padding: 40px; flex: 0.8; text-align: center; align-items: center; }
-    .logo-badge { margin: 0 auto 20px auto; }
-    .feature-list { display: none; } /* ซ่อน feature list ในมือถือ */
-    .login-action { padding: 40px 20px; }
-  }
+    
+    .sidebar-header {
+      height: var(--header-height);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border-color); /* ✅ แก้ */
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    
+    .logo {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--primary-green);
+    }
+    
+    .sidebar-header button {
+      background: transparent;
+      border: 1px solid var(--border-color); /* ✅ แก้ */
+      color: var(--text-muted);              /* ✅ แก้ */
+      border-radius: 8px;
+      padding: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: 0.2s;
+      font-size: 1.2rem;
+    }
+    .sidebar-header button:hover {
+      border-color: var(--primary-green);
+      color: var(--primary-green);
+      background: rgba(0, 196, 159, 0.1);
+    }
+    
+    .sidebar-menu {
+      flex: 1; 
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+    
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      color: var(--text-muted); /* ✅ แก้ */
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      position: relative;
+    }
+    
+    .menu-item:hover {
+      background-color: var(--bg-hover); /* ✅ แก้ */
+      color: var(--primary-green);
+      transform: translateX(4px);
+    }
+    
+    .menu-item.active {
+      background: linear-gradient(135deg, var(--primary-green) 0%, #059669 100%);
+      color: white;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+    }
+    
+    .menu-item svg {
+      min-width: 20px;
+      min-height: 20px;
+    }
+    
+    /* --- จัดการตอนพับ Sidebar (Collapsed State) --- */
+    .sidebar.collapsed .logo,
+    .sidebar.collapsed .menu-item span { display: none; }
+    .sidebar.collapsed button span { display: none; }
+    .sidebar.collapsed .sidebar-header { justify-content: center; padding: 0; }
+    .sidebar.collapsed .menu-item { justify-content: center; padding: 12px; }
+   
+   /* =========================================
+      4. HEADER COMPONENT
+      ========================================= */
+   .header {
+     grid-area: header;
+     background: var(--bg-card); /* ✅ แก้ */
+     border-bottom: 1px solid var(--border-color); /* ✅ แก้ */
+     display: flex; align-items: center; justify-content: space-between;
+     padding: 0 30px; z-index: 10;
+     color: var(--text-main); /* ✅ แก้ */
+   }
+   
+   .search-bar {
+     background: var(--bg-input); /* ✅ แก้ */
+     padding: 8px 15px; border-radius: 20px; 
+     display: flex; align-items: center; gap: 10px; width: 300px; 
+     border: 1px solid transparent;
+   }
+   .search-bar:focus-within { border-color: var(--primary-green); background: var(--bg-card); }
+   .search-bar input {
+     background: transparent; outline: none; border: none; flex: 1; font-size: 0.9rem; 
+     color: var(--text-main); /* ✅ แก้ */
+   }
+   
+   .user-profile {
+     display: flex; align-items: center; gap: 15px; font-weight: 500; font-size: 0.9rem;
+   }
+   .avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border-color); }
+   
+   /* =========================================
+      5. WIDGETS (Cards & Charts)
+      ========================================= */
+   .stat-card {
+     background: var(--bg-card); /* ✅ แก้ */
+     padding: 20px; border-radius: 16px;
+     box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+     display: flex; align-items: center; gap: 15px;
+     transition: transform 0.2s, box-shadow 0.2s;
+     height: 100%;
+     color: var(--text-main); /* ✅ แก้ */
+   }
+   .stat-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+   
+   .chart-card {
+     background: var(--bg-card); /* ✅ แก้ */
+     border-radius: 20px; padding: 20px;
+     box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+     transition: transform 0.2s, box-shadow 0.2s;
+     height: 100%; 
+     display: flex; 
+     flex-direction: column;
+     min-height: 0; 
+     color: var(--text-main); /* ✅ แก้ */
+   }
+   .chart-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.05); }
+   
+   /* =========================================
+      6. AI SUMMARY BOX (Floating & Smooth Scroll)
+      ========================================= */
+   .fixed-bottom-summary {
+     padding: 0 30px 15px 30px;
+     z-index: 0; pointer-events: none;
+   }
+   
+   .ai-summary-wrapper {
+     background: var(--bg-card); /* ✅ แก้ */
+     border-radius: 16px 16px 16px 16px;
+     box-shadow: 0 -5px 30px rgba(0,0,0,0.08);
+     border: 1px solid var(--border-color); /* ✅ แก้ */
+     pointer-events: auto;
+     display: flex;
+     flex-direction: column;
+     overflow: hidden; 
+     transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+   }
+   
+   .ai-summary-wrapper.collapsed { max-height: 56px; }
+   .ai-summary-wrapper.expanded { max-height: 500px; }
+   
+   .result-box-container {
+     flex: 1;
+     display: flex;
+     flex-direction: column;
+     min-height: 0; 
+   }
+   
+   .result-header {
+     height: 56px; 
+     padding: 0 20px; 
+     display: flex; 
+     align-items: center; justify-content: space-between;
+     cursor: pointer; 
+     border-bottom: 1px solid var(--border-color); /* ✅ แก้ */
+     background: var(--bg-card); /* ✅ แก้ */
+     flex-shrink: 0; 
+     color: var(--text-main); /* ✅ แก้ */
+   }
+   .result-header:hover { background: var(--bg-hover); }
+   
+   .header-left, .header-right { display: flex; align-items: center; gap: 10px; }
+   .header-title { font-weight: 600; font-size: 0.95rem;}
+   .icon-sparkle { color: var(--primary-green); }
+   
+   .icon-btn {
+     background: transparent; border: none; cursor: pointer; 
+     padding: 8px; border-radius: 8px; color: var(--text-light); /* ✅ แก้ */
+     transition: 0.2s;
+     display: flex; align-items: center; justify-content: center;
+   }
+   .icon-btn:hover { background: var(--bg-hover); color: var(--primary-green); }
+   
+   .result-content-wrapper {
+     background: var(--bg-card); /* ✅ แก้ */
+     padding: 15px; flex: 1; overflow-y: auto; min-height: 0;
+     color: var(--text-main); /* ✅ แก้ */
+   }
+   
+   .result-content-wrapper::-webkit-scrollbar { width: 4px; }
+   .result-content-wrapper::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 4px; }
+   
+   .result-text { 
+     font-size: 0.95rem; 
+     line-height: 1.7; 
+     color: var(--text-main); /* ✅ แก้ */
+     background-color: rgba(0, 196, 159, 0.08); 
+     padding: 20px; border-radius: 12px;
+     text-align: justify; 
+     word-break: break-word;
+     white-space: pre-line;
+   }
+   
+   .loading-state {
+     display: flex; align-items: center; gap: 10px; padding: 20px;
+     color: var(--text-muted); /* ✅ แก้ */
+     font-size: 0.95rem; font-weight: 500;
+   }
+   
+   .typing-indicator { display: flex; align-items: center; gap: 5px; }
+   .typing-indicator span {
+     display: block; width: 8px; height: 8px;
+     background-color: var(--primary-green);
+     border-radius: 50%;
+     animation: typingBlink 1.4s infinite ease-in-out both;
+   }
+   .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+   .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+   .typing-indicator span:nth-child(3) { animation-delay: 0s; }
+   @keyframes typingBlink {
+     0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+     40% { transform: scale(1); opacity: 1; }
+   }
+   
+   /* =========================================
+      7. RIGHT PANEL (Character & Chat)
+      ========================================= */
+   .right-panel {
+     grid-area: right; 
+     background: var(--bg-card); /* ✅ แก้ */
+     padding: 25px; display: flex; flex-direction: column; 
+     border-left: 1px solid var(--border-color); /* ✅ แก้ */
+     overflow: hidden;
+   }
+   
+   .char-stage {
+     flex: 1; position: relative; border-radius: 24px; 
+     background: var(--bg-stage); /* ✅ แก้ (เพื่อให้พื้นหลังน้องส้มจี๊ดมืดลงตาม) */
+     overflow: hidden; margin-bottom: 20px;
+     box-shadow: inset 0 0 20px rgba(0,196,159,0.1);
+   }
+   
+   .char-floating-bubble {
+     position: absolute; top: 30%; left: 50%; transform: translateX(-50%);
+     background: var(--bg-card); /* ✅ แก้ */
+     padding: 15px 20px; border-radius: 20px;
+     box-shadow: 0 8px 25px rgba(0,0,0,0.1); 
+     width: 85%; max-width: 280px;
+     max-height: 55%; 
+     animation: popUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+     display: flex; flex-direction: column;
+     border: 1px solid var(--border-color); /* ✅ แก้ */
+   }
+   .char-floating-bubble::after {
+     content: ''; position: absolute; top: -8px; left: 50%; margin-left: -8px;
+     border-width: 8px; border-style: solid; 
+     border-color: transparent transparent var(--bg-card) transparent; /* ✅ แก้ */
+   }
+   
+   .bubble-content {
+     font-size: 0.95rem; 
+     color: var(--text-main); /* ✅ แก้ */
+     line-height: 1.5; 
+     max-height: 100%; overflow-y: auto; padding-right: 5px;
+     text-align: center;
+   }
+   .cursor-blink { animation: blink 1s infinite; border-right: 2px solid var(--text-main); margin-left: 2px; }
+   
+   .bubble-timer {
+     margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border-color);
+     display: flex; justify-content: space-between; align-items: center;
+     font-size: 0.75rem; color: var(--text-muted);
+   }
+   
+   .bubble-close-btn {
+     background: #f5f5f5; border: none; border-radius: 50%; 
+     width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
+     cursor: pointer; color: #888; transition: 0.2s;
+   }
+   .bubble-close-btn:hover { background: #ff7675; color: white; }
+   
+   .control-panel { display: flex; flex-direction: column; gap: 15px; }
+   .ask-input-wrapper {
+     display: flex; gap: 10px; 
+     background: var(--bg-input); /* ✅ แก้ */
+     padding: 10px 15px; 
+     border-radius: 16px; border: 1px solid var(--border-color); /* ✅ แก้ */
+     transition: 0.2s;
+   }
+   .ask-input-wrapper:focus-within { border-color: var(--primary-green); background: var(--bg-card); }
+   .ask-input-wrapper input {
+     flex: 1; border: none; background: transparent; outline: none; font-size: 0.9rem; 
+     color: var(--text-main); /* ✅ แก้ */
+   }
+   .ask-input-wrapper button {
+     background: var(--primary-green); border: none; width: 32px; height: 32px;
+     border-radius: 10px; color: white; cursor: pointer; 
+     display: flex; align-items: center; justify-content: center; transition: 0.2s;
+   }
+   .ask-input-wrapper button:disabled { background: #ddd; cursor: not-allowed; }
+   .ask-input-wrapper button:hover:not(:disabled) { transform: scale(1.1); }
+   
+   .lang-switcher-row {
+     display: flex; justify-content: center; align-items: center; gap: 8px; 
+     padding-top: 15px; border-top: 1px solid var(--border-color); /* ✅ แก้ */
+   }
+   .lang-btn {
+     background: var(--bg-card); /* ✅ แก้ */
+     border: 1px solid var(--border-color); /* ✅ แก้ */
+     padding: 6px 14px; 
+     border-radius: 20px; font-size: 0.75rem; 
+     color: var(--text-muted); /* ✅ แก้ */
+     cursor: pointer; transition: 0.2s;
+   }
+   .lang-btn.active { background: #2e3435; color: white; border-color: #2d3436; }
+   .lang-btn:hover:not(.active) { border-color: #ccc; color: var(--text-main); }
+   
+   /* =========================================
+      8. FOOTER
+      ========================================= */
+   .dashboard-footer {
+     padding: 10px 10px;
+     border-top: 1px solid var(--border-color); /* ✅ แก้ */
+     color: var(--text-light); /* ✅ แก้ */
+     font-size: 0.85rem;
+     width: 100%;
+     background-color: var(--bg-card); /* ✅ แก้ */
+   }
+   .footer-content {
+     display: flex; justify-content: space-between; align-items: center; 
+     flex-wrap: wrap; gap: 15px;
+   }
+   
+   .footer-left { flex: 2; text-align: left; min-width: 200px; }
+   .footer-links {
+     flex: 3; display: flex; justify-content: center; 
+     align-items: center; gap: 15px; flex-wrap: wrap; margin-left: -280px;
+   }
+   .footer-links a { text-decoration: none; color: #888; transition: 0.2s; }
+   .footer-links a:hover { color: var(--primary-green); }
+   
+   .footer-right { flex: 1; display: flex; justify-content: flex-end; }
+   .footer-right-vs { display: flex; align-items: center; gap: 15px; }
+   
+   .version-tag {
+     background: var(--bg-input); /* ✅ แก้ */
+     padding: 2px 8px; border-radius: 4px; 
+     font-size: 0.75rem; color: #666; margin-right: 15px;
+     color: var(--text-muted);
+   }
+   .social-icons { display: flex; }
+   .footer-bottom { text-align: center; }
+   
+   /* =========================================
+      9. LOADING SCREEN & ANIMATIONS
+      ========================================= */
+   .loading-container {
+      position: fixed; inset: 0;
+      background: var(--bg-main); /* ✅ แก้ */
+      display: flex; justify-content: center; align-items: center;
+      z-index: 9999; overflow: hidden; font-family: 'Poppins', sans-serif;
+   }
+   /* ... (Animation ส่วน Blobs และ Logo คงเดิม ไม่ต้องแก้สีมาก) ... */
+   .blob { position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.6; animation: floatBlob 8s infinite ease-in-out; }
+   .blob-1 { width: 300px; height: 300px; background: #00c49f33; top: -50px; left: -50px; }
+   .blob-2 { width: 250px; height: 250px; background: #0078d433; bottom: -50px; right: -50px; animation-delay: -2s; }
+   .blob-3 { width: 150px; height: 150px; background: #ffce0033; top: 40%; left: 60%; animation-delay: -4s; }
+   @keyframes floatBlob { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(20px, -20px) scale(1.1); } }
+   
+   .loading-content { position: relative; display: flex; flex-direction: column; align-items: center; z-index: 10; }
+   .logo-wrapper { position: relative; width: 120px; height: 120px; display: flex; justify-content: center; align-items: center; margin-bottom: 30px; }
+   .icon-box {
+     width: 80px; height: 80px;
+     background: linear-gradient(135deg, #00c49f 0%, #059669 100%);
+     border-radius: 24px; display: flex; justify-content: center; align-items: center;
+     box-shadow: 0 10px 30px rgba(0, 196, 159, 0.4); z-index: 5;
+     animation: floatLogo 3s ease-in-out infinite;
+   }
+   .spin-ring { position: absolute; border-radius: 50%; border: 2px solid transparent; }
+   .ring-1 { width: 100%; height: 100%; border-top-color: #00c49f; border-left-color: #00c49f; opacity: 0.5; animation: spin 2s linear infinite; }
+   .ring-2 { width: 140%; height: 140%; border-bottom-color: #0078d4; border-right-color: #0078d4; opacity: 0.3; animation: spin 3s linear infinite reverse; }
+   
+   .orbit-icon {
+     position: absolute; color: #64748b; background: white; padding: 5px; border-radius: 50%;
+     box-shadow: 0 4px 10px rgba(0,0,0,0.1); animation: orbit 4s linear infinite;
+   }
+   .orbit-1 { top: -20px; animation-delay: 0s; }
+   .orbit-2 { bottom: -10px; right: -20px; animation-delay: -1.3s; }
+   .orbit-3 { bottom: -10px; left: -20px; animation-delay: -2.6s; }
+   
+   .loading-title {
+     font-size: 1.5rem; font-weight: 700; color: var(--text-main); /* ✅ แก้ */
+     margin: 0; letter-spacing: 1px;
+   }
+   .loading-status { height: 30px; margin-top: 5px; display: flex; justify-content: center; align-items: center; }
+   .status-text { font-size: 0.9rem; color: var(--text-muted); font-weight: 500; animation: fadeInOut 0.6s ease-in-out; }
+   
+   .progress-bar-wrapper {
+     width: 200px; height: 6px; background: #e2e8f0; border-radius: 10px;
+     margin-top: 20px; overflow: hidden; position: relative;
+   }
+   .progress-bar-fill {
+     width: 50%; height: 100%; background: linear-gradient(90deg, #00c49f, #0078d4);
+     border-radius: 10px; position: absolute; left: 0; animation: loadingSlide 1.5s infinite ease-in-out;
+   }
+   
+   @keyframes spin { 100% { transform: rotate(360deg); } }
+   @keyframes floatLogo { 0%,100% {transform:translateY(0)} 50% {transform:translateY(-10px)} }
+   @keyframes orbit { 0% { transform: rotate(0deg) translateX(60px) rotate(0deg); } 100% { transform: rotate(360deg) translateX(60px) rotate(-360deg); } }
+   @keyframes loadingSlide { 0% { left: -100%; } 100% { left: 100%; } }
+   @keyframes fadeInOut { 0% { opacity: 0; transform: translateY(5px); } 50% { opacity: 1; transform: translateY(0); } 100% { opacity: 1; } }
+   .pulse-icon { animation: pulseIcon 2s infinite; }
+   @keyframes pulseIcon { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } 100% { transform: scale(1); opacity: 1; } }
+   
+   /* =========================================
+      10. MEDIA QUERIES & POWERBI
+      ========================================= */
+   @media (max-width: 1200px) {
+     :root { --right-panel-width: 280px; }
+     .char-floating-bubble { top: 15%; width: 90%; }
+   }
+   @media (max-width: 992px) {
+     .app-container {
+       grid-template-columns: var(--sidebar-collapsed-width) 1fr 0px;
+       grid-template-areas: "sidebar header header" "sidebar main main";
+     }
+     .right-panel { display: none; }
+     .sidebar { width: var(--sidebar-collapsed-width); }
+     .brand-text, .menu-text { display: none; }
+     .brand-wrapper { justify-content: center; }
+     .menu-item { justify-content: center; }
+   }
+   
+   .report-style-class { display: block; height: 100% !important; width: 100% !important; min-height: 100%; }
+   .report-style-class iframe { height: 100% !important; width: 100% !important; border: none !important; position: absolute; top: 0; left: 0; }
+   .powerbi-container-wrapper {
+     position: relative; height: 100%; width: 100%; overflow: hidden;
+     background: white; /* Power BI พื้นหลังขาวเสมอ */
+     border-radius: 12px;
+   }
+   
+   /* =========================================
+      LOGIN PAGE STYLES
+      ========================================= */
+   /* ... (Login Page ใช้สีตายตัวได้ เพราะเป็นหน้าแยก) ... */
+   .login-container { width: 100vw; height: 100vh; background-color: #f0fdf4; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; font-family: 'Poppins', sans-serif; }
+   .shape { position: absolute; border-radius: 50%; filter: blur(80px); z-index: 0; }
+   .shape-1 { width: 400px; height: 400px; background: rgba(0, 196, 159, 0.15); top: -100px; right: -100px; animation: float 6s infinite ease-in-out; }
+   .shape-2 { width: 300px; height: 300px; background: rgba(5, 150, 105, 0.1); bottom: -50px; left: -50px; animation: float 8s infinite ease-in-out reverse; }
+   .login-card { width: 900px; height: 550px; background: white; border-radius: 24px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08); display: flex; overflow: hidden; z-index: 1; border: 1px solid white; }
+   .login-visual { flex: 1.2; background: linear-gradient(135deg, #00c49f 0%, #059669 100%); position: relative; display: flex; flex-direction: column; justify-content: center; padding: 60px; color: white; }
+   .visual-content { position: relative; z-index: 2; }
+   .logo-badge { width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 25px; backdrop-filter: blur(10px); }
+   .login-visual h1 { font-size: 2.1rem; margin: 0 0 15px 0; line-height: 1.2; }
+   .login-visual p { font-size: 1rem; opacity: 0.9; font-weight: 300; line-height: 1.6; margin-bottom: 40px; }
+   .feature-list { display: flex; flex-direction: column; gap: 15px; }
+   .feature-item { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.1); padding: 10px 15px; border-radius: 12px; font-size: 0.9rem; width: fit-content; }
+   .visual-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); z-index: 1; }
+   .login-action { flex: 1; padding: 60px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+   .login-header h2 { font-size: 1.8rem; color: #2d3436; margin-bottom: 10px; }
+   .login-header p { color: #a4b0be; font-size: 0.95rem; margin-bottom: 40px; }
+   .ms-login-btn { background: white; border: 1px solid #e0e0e0; padding: 12px 24px; border-radius: 8px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s ease; width: 100%; max-width: 300px; justify-content: center; font-family: 'Segoe UI', sans-serif; font-weight: 600; color: #5e5e5e; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+   .ms-login-btn:hover { background: #f8f9fa; border-color: #d1d1d1; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+   .ms-logo { width: 20px; height: 20px; }
+   .login-footer { margin-top: auto; font-size: 0.8rem; color: #b2bec3; }
+   .login-footer strong { color: var(--primary-green); }
+   .version { display: block; margin-top: 5px; font-size: 0.75rem; opacity: 0.7; }
+   @media (max-width: 900px) {
+     .login-card { flex-direction: column; width: 90%; height: auto; max-height: 90vh; }
+     .login-visual { padding: 40px; flex: 0.8; text-align: center; align-items: center; }
+     .logo-badge { margin: 0 auto 20px auto; }
+     .feature-list { display: none; }
+     .login-action { padding: 40px 20px; }
+   }

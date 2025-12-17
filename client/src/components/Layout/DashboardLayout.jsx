@@ -3,7 +3,6 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import RightPanel from './RightPanel';
 import Footer from './Footer';
-// import { LogOut } from 'lucide-react'; // ❌ เอาออก (ไปใช้ใน Sidebar แทน)
 
 const DashboardLayout = ({ 
   children, 
@@ -15,7 +14,10 @@ const DashboardLayout = ({
   menuItems,
   activePageId,
   onMenuClick,
-  onLogout // ✅ รับมาแล้ว
+  onLogout,
+  pageTitle,
+  notifications,
+  theme, toggleTheme
 }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
@@ -33,7 +35,13 @@ const DashboardLayout = ({
             onLogout={onLogout} 
         />
 
-        <Header user={user} />
+        <Header 
+            user={user} 
+            title={pageTitle} 
+            notifications={notifications}
+            theme={theme}             // 👈 ส่งต่อ
+            toggleTheme={toggleTheme} // 👈 ส่งต่อ
+        />
 
         <main className="main-content">
           <div className="content-scroll-area" ref={scrollRef}>

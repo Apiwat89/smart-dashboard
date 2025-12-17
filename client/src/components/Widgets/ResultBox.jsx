@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, Copy, RefreshCw, ChevronUp, ChevronDown, Loader2, Check } from 'lucide-react';
+import { color } from 'framer-motion';
 
 const ResultBox = ({ text, isExpanded, toggleExpand, isLoading, onRefresh }) => {
   const [isCopied, setIsCopied] = useState(false);
@@ -44,7 +45,7 @@ const ResultBox = ({ text, isExpanded, toggleExpand, isLoading, onRefresh }) => 
       <div className="result-header" onClick={toggleExpand}>
         <div className="header-left">
            {isLoading ? <Loader2 size={18} className="icon-sparkle spin-anim" /> : <Sparkles size={18} className="icon-sparkle" />}
-           <span className="header-title" style={{ color: isLoading ? '#00c49f' : '#2d3436' }}>
+           <span className="header-title" style={{ color: isLoading}}>
               {isLoading ? "Analyzing Data..." : "AI Summary"}
            </span>
         </div>
