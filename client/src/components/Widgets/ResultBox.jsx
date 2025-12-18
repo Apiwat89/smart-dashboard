@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Sparkles, Copy, RefreshCw, ChevronUp, ChevronDown, Loader2, Check } from 'lucide-react';
+import { Sparkles, Copy, RefreshCw, ChevronUp, ChevronDown, Loader2, Check, Clock, PauseCircle} from 'lucide-react';
 import { color } from 'framer-motion';
 
-const ResultBox = ({ text, isExpanded, toggleExpand, isLoading, onRefresh }) => {
+const ResultBox = ({ text, isExpanded, toggleExpand, isLoading, onRefresh, autoCloseTimer, isHovering}) => {
   const [isCopied, setIsCopied] = useState(false);
 
   // ฟังก์ชันจัดรูปแบบข้อความ
@@ -48,6 +48,34 @@ const ResultBox = ({ text, isExpanded, toggleExpand, isLoading, onRefresh }) => 
            <span className="header-title" style={{ color: isLoading}}>
               {isLoading ? "Analyzing Data..." : "AI Summary"}
            </span>
+           {isExpanded && autoCloseTimer > 0 && (
+             <div style={{ 
+                 display: 'flex', alignItems: 'center', gap: '4px',
+                 fontSize: '0.75rem', fontWeight: '600',
+                 marginLeft: '10px', padding: '2px 10px', borderRadius: '12px',
+                 transition: 'all 0.3s ease',
+                 
+                 // 🎨 เปลี่ยนสีตามสถานะ
+                 // ถ้าเมาส์ชี้ (Hover) -> สีเขียว (ปลอดภัย)
+                 // ถ้าปกติ -> สีแดง (เตือน)
+                 background: isHovering ? '#e6fffa' : '#fff0f0', 
+                 color: isHovering ? '#00c49f' : '#ff6b6b',
+                 border: `1px solid ${isHovering ? '#00c49f' : '#ff6b6b'}`
+             }}>
+                {/* เปลี่ยนไอคอนและข้อความ */}
+                {isHovering ? (
+                    <>
+                        <PauseCircle size={12} />
+                        <span>หยุดนับเวลา</span>
+                    </>
+                ) : (
+                    <>
+                        <Clock size={12} className="pulse-animation" /> {/* ใส่ animation เต้นๆ ให้ดูเร่งรีบ */}
+                        <span>จะปิดใน {autoCloseTimer}s</span>
+                    </>
+                )}
+             </div>
+           )}
         </div>
         
         <div className="header-right">

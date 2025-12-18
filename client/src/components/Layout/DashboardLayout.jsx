@@ -3,6 +3,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import RightPanel from './RightPanel';
 import Footer from './Footer';
+import NewsTicker from '../Widgets/NewsTicker';
 
 const DashboardLayout = ({ 
   children, 
@@ -17,7 +18,12 @@ const DashboardLayout = ({
   onLogout,
   pageTitle,
   notifications,
-  theme, toggleTheme
+  theme, toggleTheme,
+  // ⭐ รับ props เพิ่ม
+  isPlaying, togglePlay, autoPlayCountdown,
+  newsText,      // ⭐ รับข้อความข่าวเข้ามา
+  newsType,       // ⭐ รับประเภทข่าว (alert/info)
+  onCapture, isCapturing
 }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
@@ -25,7 +31,6 @@ const DashboardLayout = ({
         className={`app-container ${isSidebarCollapsed ? 'sidebar-closed' : ''}`}
         style={{ flex: 1, height: 'auto', minHeight: 0 }} 
       >
-        {/* ✅ ส่ง onLogout ต่อไปให้ Sidebar */}
         <Sidebar 
             isCollapsed={isSidebarCollapsed} 
             toggle={toggleSidebar} 
@@ -35,12 +40,18 @@ const DashboardLayout = ({
             onLogout={onLogout} 
         />
 
+        {/* ⭐ ส่งต่อให้ Header */}
         <Header 
             user={user} 
             title={pageTitle} 
             notifications={notifications}
-            theme={theme}             // 👈 ส่งต่อ
-            toggleTheme={toggleTheme} // 👈 ส่งต่อ
+            theme={theme}
+            toggleTheme={toggleTheme}
+            isPlaying={isPlaying}     // 👈 ส่งไป
+            togglePlay={togglePlay}   // 👈 ส่งไป
+            autoPlayCountdown={autoPlayCountdown}
+            onCapture={onCapture}     // 👈 ส่งต่อ
+            isCapturing={isCapturing} // 👈 ส่งต่อ
         />
 
         <main className="main-content">
@@ -61,9 +72,10 @@ const DashboardLayout = ({
 
         <RightPanel {...rightPanelProps} />
       </div>
-
+      
       <div style={{ flexShrink: 0, zIndex: 100, background: 'white'}}>
-         <Footer />
+         <NewsTicker text={newsText} type={newsType} />
+         {/* <Footer /> */}
       </div>
     </div>
   );

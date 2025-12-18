@@ -57,13 +57,13 @@ const NotificationDropdown = ({ notifications, onClose }) => {
                        
                        {/* เนื้อหา */}
                        <div style={{ flex: 1 }}>
-                           <div style={{ fontSize: '0.85rem', color: '#333', fontWeight: 600, marginBottom: '2px', color:"var(--text-muted)"}}>
+                           <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: '2px', color: "var(--text-muted)"}}>
                                {notif.title}
                            </div>
-                           <div style={{ fontSize: '0.8rem', color: '#64748b', lineHeight: '1.4', color:"var(--text-muted)" }}>
+                           <div style={{ fontSize: '0.8rem', lineHeight: '1.4', color:"var(--text-muted)" }}>
                                {notif.message}
                            </div>
-                           <div style={{ fontSize: '0.7rem', color: '#cbd5e1', marginTop: '6px', textAlign: 'right' }}>
+                           <div style={{ fontSize: '0.7rem', marginTop: '6px', textAlign: 'right' }}>
                                {notif.time}
                            </div>
                        </div>

@@ -41,8 +41,7 @@ const RightPanel = ({
                  <button 
                    key={lang} 
                    className={`lang-btn ${currentLang === lang ? 'active' : ''}`} 
-                   onClick={() => setCurrentLang(lang)}
-                 >
+                   onClick={() => setCurrentLang(lang)} >
                    {lang}
                  </button>
              ))}
