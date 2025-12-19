@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:3000', // ส่งไปที่ Backend
+        target: 'https://smart-dashboard-7382.onrender.com', // ส่งไปที่ Backend
         changeOrigin: true,
         secure: false
       },
