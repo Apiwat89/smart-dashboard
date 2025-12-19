@@ -1,35 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PowerBIEmbed } from 'powerbi-client-react';
 import { models } from 'powerbi-client';
-
-// 1. ✅ เพิ่ม InteractionRequiredAuthError เพื่อดักจับ Error
 import { useMsal } from "@azure/msal-react"; 
-import { InteractionRequiredAuthError } from "@azure/msal-browser"; 
 import { powerBIRequest } from "../../authConfig";
 
 const RealPowerBIEmbed = ({ eventHandlers, getEmbeddedComponent, onReportRendered, targetPageName }) => {
   const { instance, accounts } = useMsal(); 
   const [embedConfig, setEmbedConfig] = useState(null);
   
+  // ใช้ Ref ภายในช่วยจับอีกแรง
   const reportRef = useRef(null);
 
   useEffect(() => {
     const fetchToken = async () => {
-      const activeAccount = accounts[0];
-      if (!activeAccount) return;
-
-      const request = {
+      try {
+        const response = await instance.acquireTokenSilent({
           ...powerBIRequest,
-          account: activeAccount
-      };
+          account: accounts[0]
+        });
 
-      // ฟังก์ชันช่วยตั้งค่า Config (จะได้ไม่ต้องเขียนซ้ำ 2 รอบ)
-      const setupConfig = (token) => {
-         setEmbedConfig({
-          type: 'report',
-          id: "8ea65247-20ec-48bb-b405-2d9d6eb9cc63", // Report ID ของคุณ
+        setEmbedConfig({
+          type: 'report', // ✅ ต้องเป็น report เท่านั้น
+          id: "8ea65247-20ec-48bb-b405-2d9d6eb9cc63", 
           embedUrl: "https://app.powerbi.com/reportEmbed",
-          accessToken: token,
+          accessToken: response.accessToken,
           tokenType: models.TokenType.Aad,
           pageName: targetPageName || undefined,
           settings: {
@@ -37,26 +31,8 @@ const RealPowerBIEmbed = ({ eventHandlers, getEmbeddedComponent, onReportRendere
             background: models.BackgroundType.Transparent
           }
         });
-      };
-
-      try {
-        // 2. 🤫 ลองขอ Token แบบเงียบๆ ก่อน
-        const response = await instance.acquireTokenSilent(request);
-        setupConfig(response.accessToken);
-
       } catch (err) {
-        // 3. 🚨 ถ้า Error เพราะต้องกด Accept (Consent) -> ให้เด้ง Popup
-        if (err instanceof InteractionRequiredAuthError) {
-           console.warn("Silent token failed, trying popup...");
-           try {
-             const popupResponse = await instance.acquireTokenPopup(request);
-             setupConfig(popupResponse.accessToken); // ถ้ากด Accept ผ่าน ก็โหลดกราฟต่อ
-           } catch (popupErr) {
-             console.error("Popup failed:", popupErr);
-           }
-        } else {
-           console.error("Login Error:", err);
-        }
+        console.error("Login Error:", err);
       }
     };
 
@@ -75,10 +51,12 @@ const RealPowerBIEmbed = ({ eventHandlers, getEmbeddedComponent, onReportRendere
           eventHandlers={mergedHandlers}
           cssClassName={"report-style-class"}
           
+          // ⭐⭐⭐ จุดสำคัญที่สุด: บังคับจับยัดใส่มือ App.jsx ⭐⭐⭐
           getEmbeddedComponent={(embedObject) => {
-             // console.log("🟢 Power BI Object Loaded:", embedObject);
+             console.log("🟢 Power BI Object Loaded:", embedObject); // เช็คใน Console ดูว่าขึ้นไหม
              reportRef.current = embedObject;
              
+             // ส่งกลับไปที่ App.jsx ทันทีที่ได้ของ
              if (getEmbeddedComponent) {
                  getEmbeddedComponent(embedObject);
              }
