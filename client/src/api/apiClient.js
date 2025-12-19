@@ -1,10 +1,14 @@
 import axios from 'axios';
 
-const BASE_URL = "https://smart-dashboard-7382.onrender.com";
+// จากโค้ด Vite ของคุณ คือลิงก์นี้ครับ:
+const BASE_URL = 'https://smart-dashboard-7382.onrender.com';
 
 const client = axios.create({
-  baseURL: BASE_URL,
-  timeout: 20000,
+  baseURL: `${BASE_URL}/api`, // มันจะยิงไปที่ .../api/...
+  timeout: 30000, // เพิ่มเวลาเผื่อ Server ปลุกตื่น (Render ฟรีจะหลับถ้าไม่มีคนใช้)
+  headers: {
+    'Content-Type': 'application/json',
+  }
 });
 
 // Helper: Error Message
@@ -16,30 +20,45 @@ const getErrorMsg = (lang) => {
 };
 
 export const dashboardService = {
-  getData: async () => {
+  // 1. ดึงข้อมูลกราฟ (อาจไม่ต้องใช้ Token ถ้าเปิด Public)
+  getData: async (token) => {
     try {
-      const res = await client.get('/dashboard-data');
+      const res = await client.get('/dashboard-data', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
       return res.data;
     } catch (e) { console.error(e); return null; }
   },
 
-  getSummary: async (charts, lang) => {
+  // 2. สรุปข้อมูล
+  getSummary: async (charts, lang, token) => {
     try {
-      const res = await client.post('/summarize-view', { visibleCharts: charts, lang });
+      const res = await client.post('/summarize-view', 
+        { visibleCharts: charts, lang },
+        { headers: { Authorization: `Bearer ${token}` } } // แนบ Token
+      );
       return { message: res.data.message, isError: false };
     } catch (e) { return { message: getErrorMsg(lang), isError: true }; }
   },
 
-  getReaction: async (point, context, lang) => {
+  // 3. ปฏิกิริยาตัวละคร
+  getReaction: async (point, context, lang, token) => {
     try {
-      const res = await client.post('/character-reaction', { pointData: point, contextData: context, lang });
+      const res = await client.post('/character-reaction', 
+        { pointData: point, contextData: context, lang },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       return { message: res.data.message, isError: false };
     } catch (e) { return { message: getErrorMsg(lang), isError: true }; }
   },
 
-  chat: async (question, allData, lang) => {
+  // 4. ถามตอบ AI
+  chat: async (question, allData, lang, token) => {
     try {
-      const res = await client.post('/ask-dashboard', { question, allData, lang });
+      const res = await client.post('/ask-dashboard', 
+        { question, allData, lang },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       return { message: res.data.message, isError: false };
     } catch (e) { return { message: getErrorMsg(lang), isError: true }; }
   }
