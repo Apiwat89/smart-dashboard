@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+const BASE_URL = "https://smart-dashboard-7382.onrender.com";
+
 const client = axios.create({
-  baseURL: '/api',
+  baseURL: BASE_URL,
   timeout: 20000,
 });
 
