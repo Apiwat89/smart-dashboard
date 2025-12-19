@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Bell, Moon, Sun, Play, Pause, Timer} from 'lucide-react'; // ⭐ Import Play/Pause เพิ่ม
 import NotificationDropdown from '../Widgets/NotificationDropdown'; 
-import CaptureButton from '../Widgets/CaptureButton';
 
 const formatTime = (seconds) => {
    if (seconds < 60) return `${seconds}s`; // ถ้าน้อยกว่า 60 วิ ให้โชว์ "15s" ปกติ
@@ -76,9 +75,6 @@ const Header = ({ user, title, lastUpdated, notifications = [], theme, toggleThe
                   {isPlaying ? <Pause size={14} fill="white" /> : <Play size={14} style={{ marginLeft: '2px' }} />}
                </button>
            </div>
-
-           {/* ปุ่ม Capture */}
-           <CaptureButton onCapture={onCapture} isCapturing={isCapturing} />
         
            {/* ปุ่ม Theme */}
            <button 

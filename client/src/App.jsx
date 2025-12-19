@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './App.css';
 import { models } from 'powerbi-client';
-import html2canvas from 'html2canvas';
 
 // Auth
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
@@ -62,97 +61,6 @@ function App() {
   };
   // ------------------------------------------------------------------------------------
 
-  const [isCapturing, setIsCapturing] = useState(false);
-
-  const handleScreenshot = async () => {
-    setIsCapturing(true);
-    try {
-        console.log("🚀 STARTING FORCED CAPTURE...");
-        let pbiImage = null;
-
-        // ---------------------------------------------------------
-        // ⭐ ไม้ตาย: ค้นหากราฟจาก Global Variable (window.powerbi)
-        // ---------------------------------------------------------
-        let report = null;
-
-        // 1. ลองหาจาก window.powerbi (ที่เราฝัง Script ไปใน index.html)
-        if (window.powerbi && window.powerbi.embeds && window.powerbi.embeds.length > 0) {
-            console.log("✅ เจอกราฟจาก Global Window! (ตัวจริงเสียงจริง)");
-            report = window.powerbi.embeds[0]; // หยิบตัวแรกมาเลย
-        } 
-        
-        // 2. ถ้าไม่เจอ ลองหาจาก Ref เดิม (เผื่อฟลุ๊ค)
-        if (!report && powerBIReportRef.current) {
-            report = powerBIReportRef.current;
-        }
-
-        // ---------------------------------------------------------
-        // 📸 สั่งถ่ายรูป
-        // ---------------------------------------------------------
-        if (report) {
-            try {
-                // เช็คอีกทีว่าเป็นตัวใหม่หรือยัง
-                if (typeof report.captureSnapshot === 'function') {
-                    console.log("📸 เจอคำสั่ง captureSnapshot แล้ว! กำลังถ่าย...");
-                    const snapshot = await report.captureSnapshot();
-                    pbiImage = snapshot.data;
-                    console.log("✨ ได้รูปกราฟมาแล้ว!");
-                } else {
-                    console.warn("⛔ กราฟตัวนี้ยังเป็นเวอร์ชันเก่า (ไม่มี snapshot)");
-                    console.log("Available methods:", Object.keys(Object.getPrototypeOf(report)));
-                    
-                    // ไม้ตายก้นหีบ: สั่ง Print แทน (ถ้า User ยอมรับได้)
-                    // if (report.print) report.print();
-                }
-            } catch (e) {
-                console.error("❌ Snapshot Error:", e);
-            }
-        } else {
-            alert("❌ ไม่พบกราฟในหน้านี้ (กรุณารอให้กราฟโหลดเสร็จสมบูรณ์ก่อน)");
-        }
-
-        // ---------------------------------------------------------
-        // 🎨 แปะรูปและแคปหน้าจอ (เหมือนเดิม)
-        // ---------------------------------------------------------
-        let overlayImg = null;
-        if (pbiImage) {
-            const wrapper = document.querySelector('.powerbi-container-wrapper');
-            if (wrapper) {
-                overlayImg = document.createElement('img');
-                overlayImg.src = pbiImage;
-                Object.assign(overlayImg.style, {
-                    position: 'absolute', top: '0', left: '0', 
-                    width: '100%', height: '100%', zIndex: '9999', 
-                    objectFit: 'contain', backgroundColor: 'white'
-                });
-                wrapper.appendChild(overlayImg);
-            }
-        }
-
-        const element = document.querySelector('.app-container');
-        if (element) {
-            const canvas = await html2canvas(element, {
-                scale: 2, useCORS: true, backgroundColor: '#f5f7fa',
-                ignoreElements: (node) => node.classList.contains('ticker-container')
-            });
-
-            if (overlayImg) overlayImg.remove();
-            
-            const image = canvas.toDataURL("image/png");
-            const link = document.createElement('a');
-            link.href = image;
-            link.download = `Dashboard_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.png`;
-            link.click();
-        }
-
-    } catch (err) {
-        console.error("🔥 Error:", err);
-        alert("เกิดข้อผิดพลาด: " + err.message);
-    } finally {
-        setIsCapturing(false);
-    }
-  };
-
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
 
   // Auth State
@@ -199,8 +107,36 @@ function App() {
   const summarizedPageRef = useRef(null);
 
   const activeAccount = accounts[0];
-  const userName = activeAccount?.name || "Admin User";
-  const userRole = activeAccount?.idTokenClaims?.roles?.[0] || "Administrator";
+  const userInfo = useMemo(() => {
+    // 1. กัน Error กรณีไม่มีข้อมูล
+    if (!activeAccount) return { name: "Guest", displayRole: "Guest" };
+
+    const name = activeAccount.name || "User";
+
+    // ⭐⭐⭐ จุดเปลี่ยนสำคัญ: ใช้สูตร Generic (อัตโนมัติ) ⭐⭐⭐
+    // ดึง Role ทั้งหมดที่ Azure ส่งมา (ส่งมาเป็น Array List)
+    const rolesFromAzure = activeAccount.idTokenClaims?.roles || [];
+
+    let finalDisplayRole = "";
+
+    if (rolesFromAzure.length > 0) {
+        // ✅ ถ้ามี Role: จับทุกอันมาต่อกันด้วยเครื่องหมาย " | "
+        // เช่น Azure ส่งมา ["Viewer", "ChiangMai_Admin"]
+        // ผลลัพธ์จะเป็น: "Viewer | ChiangMai_Admin"
+        finalDisplayRole = rolesFromAzure.join(" | ");
+    } else {
+        // ❌ ถ้าไม่มี Role อะไรเลย: ให้ตั้งเป็นค่า Default
+        finalDisplayRole = "General User"; 
+    }
+
+    console.log("✅ User Role Detected:", finalDisplayRole);
+
+    return {
+        name: name,
+        displayRole: finalDisplayRole // ส่งค่านี้ออกไปแสดงผล
+    };
+
+  }, [activeAccount]);
 
   useEffect(() => { langRef.current = lang; }, [lang]);
 
@@ -438,7 +374,11 @@ function App() {
 
   return (
     <DashboardLayout
-      user={{ name: userName, role: userRole, avatar: userAvatar }}
+      user={{ 
+        name: userInfo.name, 
+        role: userInfo.displayRole, 
+        avatar: userAvatar 
+      }}
       isSidebarCollapsed={isSidebarCollapsed}
       toggleSidebar={() => setSidebarCollapsed(!isSidebarCollapsed)}
       scrollRef={scrollRef} 
@@ -489,8 +429,6 @@ function App() {
       toggleTheme={toggleTheme}
       newsText={tickerText} // 👈 ส่งไป
       newsType={tickerType} // 👈 ส่งไป
-      onCapture={handleScreenshot}
-      isCapturing={isCapturing}
     >
         <div className="fade-in" style={{ height: '100%', width: '100%' }}>
             <div className="powerbi-container-wrapper" style={{ height: '80vh', width: '100%', background: '#fff', borderRadius: '8px' }}>

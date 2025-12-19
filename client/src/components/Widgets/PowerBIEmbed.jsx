@@ -21,7 +21,7 @@ const RealPowerBIEmbed = ({ eventHandlers, getEmbeddedComponent, onReportRendere
 
         setEmbedConfig({
           type: 'report', // ✅ ต้องเป็น report เท่านั้น
-          id: "935ea8f7-0352-461b-86cf-1894c5f48160", 
+          id: "8ea65247-20ec-48bb-b405-2d9d6eb9cc63", 
           embedUrl: "https://app.powerbi.com/reportEmbed",
           accessToken: response.accessToken,
           tokenType: models.TokenType.Aad,
