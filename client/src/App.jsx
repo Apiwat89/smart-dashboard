@@ -3,6 +3,7 @@ import './App.css';
 import { models } from 'powerbi-client';
 
 // Auth
+import { InteractionRequiredAuthError } from "@azure/msal-browser";
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { loginRequest } from "./authConfig";
 
@@ -137,6 +138,26 @@ function App() {
     };
 
   }, [activeAccount]);
+
+  useEffect(() => {
+    if (isAuthenticated && accounts.length > 0) {
+      const request = {
+        ...loginRequest,
+        account: accounts[0]
+      };
+
+      // พยายามขอ Token แบบเงียบๆ
+      instance.acquireTokenSilent(request)
+        .catch((error) => {
+          // 🚨 ถ้า Azure บอกว่า "ต้องกดยอมรับก่อนนะ" (InteractionRequiredAuthError)
+          if (error instanceof InteractionRequiredAuthError) {
+             console.warn("Triggering Popup for Consent...");
+             // สั่งเด้งหน้าต่างให้เพื่อนกด Accept
+             instance.acquireTokenPopup(request).catch(e => console.error(e));
+          }
+        });
+    }
+  }, [isAuthenticated, accounts, instance]);
 
   useEffect(() => { langRef.current = lang; }, [lang]);
 
