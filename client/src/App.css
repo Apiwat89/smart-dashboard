@@ -722,3 +722,95 @@
     border-top: 1px solid rgba(255,255,255,0.1);
     box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
   }
+
+  /* --- Access Denied Popup (App.css) --- */
+
+/* ฉากหลังเบลอ */
+.access-denied-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.75); /* สีดำโปร่งแสง */
+  backdrop-filter: blur(8px); /* เบลอฉากหลัง */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+/* กล่องข้อความสีขาว */
+.access-denied-modal {
+  background-color: white;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  max-width: 420px;
+  width: 90%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* ไอคอน */
+.access-denied-icon {
+  font-size: 70px;
+  margin-bottom: 20px;
+  animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+
+/* หัวข้อ */
+.access-denied-title {
+  color: #d13438;
+  margin: 0 0 8px 0;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.access-denied-subtitle {
+  color: #333;
+  margin: 0 0 25px 0;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+/* เนื้อหา */
+.access-denied-text {
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 35px;
+  font-size: 15px;
+}
+
+/* ปุ่ม Logout */
+.access-denied-button {
+  background-color: #d13438;
+  color: white;
+  border: none;
+  padding: 12px 35px;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 15px rgba(209, 52, 56, 0.3);
+}
+
+.access-denied-button:hover {
+  background-color: #a80000;
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 8px 20px rgba(209, 52, 56, 0.4);
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes bounceIn {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(1); }
+}

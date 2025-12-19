@@ -138,6 +138,16 @@ function App() {
 
   }, [activeAccount]);
 
+  const [isUnauthorized, setIsUnauthorized] = useState(false);
+  useEffect(() => {
+    if (isAuthenticated && isAppReady) {
+       // ถ้าเป็น General User (ไม่มี Role) -> ให้เปิด Popup ทันที
+       if (userInfo.displayRole === "General User") {
+          setIsUnauthorized(true);
+       }
+    }
+  }, [isAuthenticated, isAppReady, userInfo]);
+
   useEffect(() => { langRef.current = lang; }, [lang]);
 
   useEffect(() => {
@@ -369,6 +379,28 @@ function App() {
 
   if (!isAuthenticated) return <LoginPage onLogin={handleLogin} />;
   if (!isAppReady) return <LoadingScreen />;
+
+  if (isUnauthorized) {
+    return (
+      <div className="access-denied-overlay">
+        <div className="access-denied-modal">
+          <div className="access-denied-icon">⛔</div>
+          
+          <h2 className="access-denied-title">Access Denied</h2>
+          <h3 className="access-denied-subtitle">การเข้าถึงถูกปฏิเสธ</h3>
+
+          <p className="access-denied-text">
+            บัญชี <strong>{userInfo.name}</strong> ไม่มีสิทธิ์เข้าใช้งานในส่วนนี้ <br/>
+            กรุณาติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์ (Assign Role)
+          </p>
+
+          <button className="access-denied-button" onClick={handleLogout}>
+            ออกจากระบบ (Logout)
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const currentPage = menuList.find(p => p.id === activePageId);
 
