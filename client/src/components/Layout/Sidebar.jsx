@@ -42,29 +42,10 @@ const Sidebar = ({ isCollapsed, toggle, menuItems, activePageId, onMenuClick, on
       </div>
 
       {/* ปุ่ม Logout */}
-      <div style={{ marginTop: 'auto', padding: '10px' }}>
-          <button 
-              onClick={onLogout}
-              style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  width: '100%',
-                  padding: '12px',
-                  background: '#ffebee', 
-                  color: '#d32f2f',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  justifyContent: isCollapsed ? 'center' : 'flex-start' /* จัดกลางเมื่อพับ */
-              }}
-              title="ออกจากระบบ"
-          >
+      <div className="sidebar-footer">
+          <button onClick={onLogout} className="logout-btn" title="ออกจากระบบ">
               <LogOut size={20} />
-              {!isCollapsed && <span>ออกจากระบบ</span>}
+              <span className="logout-text">ออกจากระบบ</span>
           </button>
       </div>
     </aside>

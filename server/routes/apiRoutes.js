@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
+const axios = require('axios');
 const { generateAIResponse } = require('../services/aiService'); 
 
 // Helper Functions
@@ -176,6 +177,24 @@ router.post('/ask-dashboard', async (req, res) => {
 
     const reply = await generateAIResponse(prompt, "You are a helpful AI Dashboard Assistant.");
     res.json({ message: reply });
+});
+
+// 5. Get Speech Token
+router.get('/get-speech-token', async (req, res) => {
+    try {
+        const speechKey = process.env.SPEECH_KEY;
+        const speechRegion = process.env.SPEECH_REGION;
+
+        const tokenResponse = await axios.post(
+            `https://${speechRegion}.api.cognitive.microsoft.com/sts/v1.0/issueToken`, 
+            null, 
+            { headers: { 'Ocp-Apim-Subscription-Key': speechKey, 'Content-Type': 'application/x-www-form-urlencoded' } }
+        );
+        res.json({ token: tokenResponse.data, region: speechRegion });
+    } catch (err) {
+        console.error("❌ Azure STS Error:", err.message);
+        res.status(500).json({ error: "Failed to fetch speech token" });
+    }
 });
 
 module.exports = router;

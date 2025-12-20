@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // จากโค้ด Vite ของคุณ คือลิงก์นี้ครับ:
-const BASE_URL = 'https://smart-dashboard-7382.onrender.com';
+const BASE_URL = "https://smart-dashboard-7382.onrender.com";
 
 const client = axios.create({
   baseURL: `${BASE_URL}/api`, // มันจะยิงไปที่ .../api/...
@@ -61,5 +61,15 @@ export const dashboardService = {
       );
       return { message: res.data.message, isError: false };
     } catch (e) { return { message: getErrorMsg(lang), isError: true }; }
+  },
+
+  getSpeechToken: async () => {
+    try {
+      const res = await client.get('/get-speech-token');
+      return res.data;
+    } catch (e) {
+      console.error("Token fetch failed", e);
+      return null;
+    }
   }
 };

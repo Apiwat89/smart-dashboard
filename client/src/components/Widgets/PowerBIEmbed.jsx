@@ -42,7 +42,7 @@ const RealPowerBIEmbed = ({ eventHandlers, getEmbeddedComponent, onReportRendere
         // ถ้าผ่านฉลุย ก็โหลดกราฟ
         setEmbedConfig({
           type: 'report',
-          id: "8ea65247-20ec-48bb-b405-2d9d6eb9cc63", // Report ID
+          id: '8ea65247-20ec-48bb-b405-2d9d6eb9cc63', // ใส่ Report ID ที่ต้องการแสดง
           embedUrl: "https://app.powerbi.com/reportEmbed",
           accessToken: response.accessToken,
           tokenType: models.TokenType.Aad,
