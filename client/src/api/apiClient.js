@@ -4,8 +4,8 @@ import axios from 'axios';
 const BASE_URL = "https://smart-dashboard-7382.onrender.com";
 
 const client = axios.create({
-  baseURL: `${BASE_URL}/api`, 
-  // baseURL: '/api',
+  // baseURL: `${BASE_URL}/api`, 
+  baseURL: '/api',
   timeout: 30000, // เพิ่มเวลาเผื่อ Server ปลุกตื่น (Render ฟรีจะหลับถ้าไม่มีคนใช้)
   headers: {
     'Content-Type': 'application/json',
@@ -71,6 +71,22 @@ export const dashboardService = {
     } catch (e) {
       console.error("Token fetch failed", e);
       return null;
+    }
+  },
+
+  getNewsTicker: async (allData, pageTitle, lang, token) => {
+    try {
+      const res = await client.post('/generate-ticker', {
+        allData,
+        pageTitle,
+        lang
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return res.data;
+    } catch (e) {
+      console.error("Ticker API Error", e);
+      return { message: "เชื่อมต่อข้อมูลระบบข่าวขัดข้อง..." };
     }
   }
 };

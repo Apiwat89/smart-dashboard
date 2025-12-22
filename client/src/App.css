@@ -860,7 +860,7 @@ body {
   position: absolute;
   white-space: nowrap;
   will-change: transform;
-  animation: ticker-scroll 100s linear infinite;
+  animation: ticker-scroll 150s linear infinite;
   color: var(--text-main);
   font-family: 'Poppins', sans-serif;
   font-size: 0.95rem;

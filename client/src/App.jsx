@@ -17,49 +17,9 @@ import LoginPage from './components/Layout/LoginPage';
 import { dashboardService } from './api/apiClient';
 
 function App() {
-  // --------------------------------------- mock new -------------------------------------
   // State สำหรับข่าวตัววิ่ง
   const [tickerText, setTickerText] = useState("กำลังเชื่อมต่อดาวเทียมสภาพอากาศ...");
   const [tickerType, setTickerType] = useState("info");
-
-  // ⭐ 1. สร้างคลังข้อมูลจำลอง (Mock Data Bank)
-  const mockData = {
-    provinces: ["เชียงใหม่", "เชียงราย", "น่าน", "แพร่", "อุบลราชธานี", "นครสวรรค์", "พระนครศรีอยุธยา", "กรุงเทพมหานคร", "ภูเก็ต"],
-    dams: ["เขื่อนภูมิพล", "เขื่อนสิริกิติ์", "เขื่อนป่าสักชลสิทธิ์", "เขื่อนขุนด่านฯ", "เขื่อนลำตะคอง"],
-    weathers: ["ฝนตกหนัก 🌧️", "ท้องฟ้าโปร่ง ☀️", "มีเมฆมาก ☁️", "พายุฝนฟ้าคะนอง ⛈️"],
-    warnings: ["ระดับน้ำปกติ 🟢", "เฝ้าระวังน้ำล้นตลิ่ง 🟡", "วิกฤตน้ำท่วมฉับพลัน 🔴"]
-  };
-
-  // ⭐ 2. ฟังก์ชันสุ่มข่าว (The Generator)
-  const generateLiveNews = () => {
-    // สุ่มจังหวัด
-    const province = mockData.provinces[Math.floor(Math.random() * mockData.provinces.length)];
-    
-    // สุ่มเขื่อน และสุ่มตัวเลข % น้ำ (60-100%)
-    const dam = mockData.dams[Math.floor(Math.random() * mockData.dams.length)];
-    const waterLevel = (Math.random() * (100 - 60) + 60).toFixed(1); 
-    
-    // สุ่มสถานการณ์
-    const warning = mockData.warnings[Math.floor(Math.random() * mockData.warnings.length)];
-    const weather = mockData.weathers[Math.floor(Math.random() * mockData.weathers.length)];
-    
-    // สร้างประโยคข่าว 3 แบบ แล้วเอามาต่อกัน
-    const news1 = `📍 ${province}: ${weather} (ปริมาณฝนสะสม ${Math.floor(Math.random() * 100)} มม.)`;
-    const news2 = `💧 ${dam}: ปริมาณน้ำกักเก็บ ${waterLevel}% (${warning})`;
-    const news3 = `📢 ประกาศกรมอุตุฯ: คาดการณ์พายุลูกใหม่เข้าไทยในอีก ${Math.floor(Math.random() * 48)} ชม.`;
-
-    const fullNews = `${news1}   |   ${news2}   |   ${news3}`;
-
-    setTickerText(fullNews);
-
-    // ถ้ามีคำว่า "วิกฤต" หรือ "แดง" ให้เปลี่ยนสีแถบเป็น Alert
-    if (fullNews.includes("วิกฤต") || fullNews.includes("🔴")) {
-        setTickerType("alert");
-    } else {
-        setTickerType("info");
-    }
-  };
-  // ------------------------------------------------------------------------------------
 
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
 
@@ -214,18 +174,7 @@ function App() {
     }
     return () => clearTimeout(timer);
   }, [summaryAutoClose, isSummaryExpanded, isHoveringSummary]);
-  
-  useEffect(() => {
-    // เรียกครั้งแรกทันที
-    generateLiveNews();
 
-    const interval = setInterval(() => {
-        generateLiveNews();
-    }, 20000); // เปลี่ยนข่าวทุก 20 วินาที
-
-    return () => clearInterval(interval);
-  }, []);
-  
   // Logic Login / Loading ...
   useEffect(() => {
     if (isAuthenticated) {
@@ -320,7 +269,7 @@ function App() {
     if (!powerBIReportRef.current) return;
     const activePage = menuList.find(p => p.id === activePageId);
     
-    // ป้องกันการสรุปซ้ำถ้าเป็นหน้าเดิมที่เพิ่งสรุปไป
+    // ป้องกันการสรุปซ้ำถ้าเป็นหน้าเดิม
     if (summarizedPageRef.current === activePageId) return;
 
     addNotification('success', 'อัปเดตข้อมูลแล้ว', `โหลดข้อมูลหน้า ${activePage.title} เรียบร้อย`);
@@ -328,7 +277,6 @@ function App() {
     setSummary("กำลังอ่านข้อมูล...");
 
     try {
-        // 1. ดึงหน้าปัจจุบันและ Visuals ทั้งหมด
         const pbiPage = (await powerBIReportRef.current.getPages()).find(p => p.isActive);
         if (!pbiPage) return;
         
@@ -336,84 +284,52 @@ function App() {
         let allDataText = `ข้อมูลหน้า ${activePage.title}:\n`;
         let foundUpdateDate = null;
 
-        // 2. วนลูป Export Data จากทุกกราฟ (ยกเว้นรูปภาพและกล่องข้อความ)
+        // วนลูปดึงข้อมูลจริงจากกราฟ
         for (const visual of visuals) {
             if (visual.title && visual.type !== 'image' && visual.type !== 'textbox') {
                 try {
                     const result = await visual.exportData(models.ExportDataType.Summarized);
                     allDataText += `\n- ${visual.title}:\n${result.data}\n`;
-                    
-                    // เช็คว่ามี Visual ที่ชื่อ LastUpdate ไหม เพื่อเอามาแสดงที่ Header
                     if (visual.title === "LastUpdate") {
                         const lines = result.data.split('\n');
                         if (lines.length >= 2) foundUpdateDate = lines[1].trim();
                     }
-                } catch (e) { 
-                    console.warn(`Cannot export data from visual: ${visual.title}`); 
-                }
+                } catch (e) { console.warn(e); }
             }
         }
         
-        // 3. เก็บข้อมูลดิบไว้ใน State สำหรับ AI Chat
         setCurrentReportData(allDataText);
         summarizedPageRef.current = activePageId; 
-        
         if(foundUpdateDate) setLastUpdated(foundUpdateDate);
         else setLastUpdated(new Date().toLocaleDateString('th-TH') + " (App Time)");
 
         const token = await getToken(); 
 
-        // ⭐ 4. AI สรุป "พาดหัวข่าวตัววิ่ง" (News Ticker) จากข้อมูลจริง
-        const tickerPrompt = `
-            จากข้อมูล Dashboard หน้า ${activePage.title} ต่อไปนี้:
-            ${allDataText}
-            
-            ช่วยสรุปเป็น "พาดหัวข่าวสั้นๆ" 3 หัวข้อ สำหรับแสดงบนแถบตัววิ่ง (Ticker) 
-            - เน้นตัวเลขที่สำคัญหรือสถานการณ์วิกฤต
-            - ใช้รูปแบบ: [สัญลักษณ์] หัวข้อข่าว
-            - คั่นแต่ละข่าวด้วย " | "
-            - ความยาวรวมไม่เกิน 200 ตัวอักษร
-            - ไม่ต้องมี Markdown และไม่ต้องเกริ่นนำ
-        `;
-
-        dashboardService.chat(tickerPrompt, allDataText, langRef.current, token)
+        // ⭐ เรียกใช้ API เพื่อสรุปพาดหัวข่าวตัววิ่งจากข้อมูลจริง
+        dashboardService.getNewsTicker(allDataText, activePage.title, langRef.current, token)
             .then(res => {
                 const liveNews = res.message;
-                setTickerText(liveNews); // แสดงบนแถบ Live Update
+                // ทำซ้ำข้อความเพื่อให้วิ่งได้ต่อเนื่องไม่ขาดตอน
+                const loopedNews = `${liveNews} \u00A0\u00A0\u00A0\u00A0 • \u00A0\u00A0\u00A0\u00A0 `.repeat(5);
+                setTickerText(loopedNews);
 
-                // ตรวจสอบความวิกฤตเพื่อเปลี่ยนสีแถบข่าว
-                if (liveNews.includes("วิกฤต") || liveNews.includes("พายุ") || liveNews.includes("🔴") || liveNews.includes("Warning")) {
+                if (liveNews.includes("วิกฤต") || liveNews.includes("🔴") || liveNews.includes("พายุ")) {
                     setTickerType("alert");
                 } else {
                     setTickerType("info");
                 }
             });
 
-        // ⭐ 5. AI สรุป "Executive Summary" (กล่องส้มจี๊ดสรุป)
+        // สรุป Executive Summary ปกติ
         const aiRes = await dashboardService.chat("ช่วยสรุป Executive Summary จากข้อมูลนี้", allDataText, langRef.current, token);
         setSummary(aiRes.message);
         setSummaryExpanded(true);
         setSummaryAutoClose(20);
 
-        // 6. AI วิเคราะห์หาจุดผิดปกติ (Anomaly Detection) สำหรับ Notification
-        dashboardService.chat(
-            "จากข้อมูลนี้ มีจุดไหนที่ตัวเลขดู 'วิกฤต' หรือ 'น่าเป็นห่วง' ไหม? ขอสั้นๆ 1 ประโยค ถ้าไม่มีให้ตอบว่า 'สถานการณ์ปกติ'", 
-            allDataText, langRef.current, token
-        ).then(res => {
-            if (!res.message.includes("ปกติ")) {
-                addNotification('alert', 'พบสิ่งผิดปกติ!', res.message);
-            } else {
-                addNotification('info', 'AI Insight', 'สถานการณ์โดยรวมปกติดีครับ');
-            }
-        });
-
     } catch (err) { 
-        console.error("Report Processing Error:", err);
-        setSummary("ไม่สามารถอ่านข้อมูลจาก Dashboard ได้"); 
-    } 
-    finally { 
-        setSummaryLoading(false);
-    }
+        console.error("Report Error:", err);
+        setSummary("ไม่สามารถประมวลผลข้อมูลในหน้านี้ได้"); 
+    } finally { setSummaryLoading(false); }
   };
 
   const handleManualRefresh = () => { summarizedPageRef.current = null; handleReportRendered(); };

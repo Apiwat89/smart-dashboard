@@ -201,4 +201,28 @@ router.get('/get-speech-token', async (req, res) => {
     }
 });
 
+router.post('/generate-ticker', async (req, res) => {
+    const { allData, pageTitle, lang } = req.body;
+    const mascotName = getMascotName(lang); // ดึงชื่อส้มจี๊ดตามภาษา
+
+    const prompt = `
+        Role: News Editor for ${mascotName} Dashboard.
+        Source Data (from Page: ${pageTitle}): ${JSON.stringify(allData)}
+        
+        Task:
+        Summarize the data into 3-4 short news headlines for a scrolling ticker.
+        - Focus on key numbers or critical warnings.
+        - Format: [Icon] Headline | [Icon] Headline
+        - Maximum 250 characters total.
+        - NO Markdown, NO intro text.
+    `;
+
+    try {
+        const reply = await generateAIResponse(prompt, "You are a professional News Summarizer.");
+        res.json({ message: reply });
+    } catch (err) {
+        res.status(500).json({ error: "AI failed to generate ticker" });
+    }
+});
+
 module.exports = router;
