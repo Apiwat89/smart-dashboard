@@ -17,7 +17,7 @@ const Sidebar = ({ isCollapsed, toggle, menuItems, activePageId, onMenuClick, on
     <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
       {/* ส่วน Header */}
       <div className="sidebar-header">
-         <div className="logo">Somjeed</div>
+         <div className="logo"><img src="./logo.png" alt="" /></div>
          <button onClick={toggle}>
             <Menu size={24} /> {/* ใช้ไอคอน Menu แทนตัวอักษร ☰ */}
          </button>

@@ -100,7 +100,9 @@ const CharacterZone = ({ status, text, isTextVisible, countdown, onClose, lang, 
         const voiceConfigs = {
             'TH': { lang: 'th-TH', name: 'th-TH-PremwadeeNeural', style: 'cheerful', pitch: '+20%' },
             'EN': { lang: 'en-US', name: 'en-US-AvaNeural', style: 'cheerful', pitch: '+20%' },
-            'JP': { lang: 'ja-JP', name: 'ja-JP-NanamiNeural', style: 'cheerful', pitch: '+5%' }
+            'JP': { lang: 'ja-JP', name: 'ja-JP-NanamiNeural', style: 'cheerful', pitch: '+5%' },
+            'CN': { lang: 'zh-CN', name: 'zh-CN-XiaoxiaoNeural', style: 'cheerful', pitch: '+10%' }, // เสียงจีน
+            'KR': { lang: 'ko-KR', name: 'ko-KR-SunHiNeural', style: 'cheerful', pitch: '+10%' }   // เสียงเกาหลี
         };
         const currentConfig = voiceConfigs[lang] || voiceConfigs['TH'];
 

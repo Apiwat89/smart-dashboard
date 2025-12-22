@@ -154,6 +154,10 @@ body {
   color: var(--primary-green);
 }
 
+.logo img {
+  width: 90%;
+}
+
 .sidebar-header button {
   background: transparent;
   border: 1px solid var(--border-color);
@@ -1013,6 +1017,10 @@ body {
   animation: floatLogo 3s ease-in-out infinite;
 }
 
+.icon-box img {
+  width: 60%;
+}
+
 .spin-ring { position: absolute; border-radius: 50%; border: 2px solid transparent; }
 .ring-1 { width: 100%; height: 100%; border-top-color: #00c49f; border-left-color: #00c49f; opacity: 0.5; animation: spin 2s linear infinite; }
 .ring-2 { width: 140%; height: 140%; border-bottom-color: #0078d4; border-right-color: #0078d4; opacity: 0.3; animation: spin 3s linear infinite reverse; }
@@ -1126,6 +1134,10 @@ body {
   justify-content: center;
   margin-bottom: 25px;
   backdrop-filter: blur(10px);
+}
+
+.logo-badge img {
+  width: 60%;
 }
 
 .login-visual h1 { font-size: 2.1rem; margin: 0 0 15px 0; line-height: 1.2; }

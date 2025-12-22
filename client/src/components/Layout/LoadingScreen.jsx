@@ -33,7 +33,7 @@ const LoadingScreen = () => {
             <div className="spin-ring ring-1"></div>
             <div className="spin-ring ring-2"></div>
             <div className="icon-box">
-                <LayoutDashboard size={48} color="white" className="pulse-icon" />
+                <img src="./logo2.png" alt="" />
             </div>
             
             {/* ไอคอนลอยๆ รอบตัว */}

@@ -14,6 +14,8 @@ const getDashboardData = () => {
 
 const getLangInstruction = (lang) => {
     switch (lang) {
+        case 'CN': return "Respond in Simplified Chinese (Natural, Polite, Professional)."; // เพิ่มจีน
+        case 'KR': return "Respond in Korean (Natural, Polite, Professional)."; // เพิ่มเกาหลี
         case 'EN': return "Respond in English (Natural, Polite, Professional).";
         case 'JP': return "Respond in Japanese (Natural, Polite, Professional).";
         case 'TH': default: return "Respond in Thai (Natural, Polite, Professional).";
@@ -22,6 +24,8 @@ const getLangInstruction = (lang) => {
 
 const getMascotName = (lang) => {
     switch (lang) {
+        case 'CN': return "小橘 (Somjeed)"; // ชื่อจีน
+        case 'KR': return "솜짓 (Somjeed)"; // ชื่อเกาหลี
         case 'EN': return "Somjeed";
         case 'JP': return "ソムジード (Somjeed)";
         case 'TH': 
@@ -46,7 +50,6 @@ router.get('/dashboard-data', (req, res) => {
 router.post('/summarize-view', async (req, res) => {
     const { visibleCharts, lang } = req.body;
     const langInstruction = getLangInstruction(lang);
-    const mascotName = getMascotName(lang);
 
     const prompt = `
         Role: Senior Data Analyst & Power BI Consultant

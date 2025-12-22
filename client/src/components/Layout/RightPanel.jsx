@@ -37,7 +37,7 @@ const RightPanel = ({
           
           <div className="lang-switcher-row">
              <div style={{color:"#666", marginRight:'5px'}}><Globe size={16}/></div>
-             {['TH', 'EN', 'JP'].map(lang => (
+             {['TH', 'EN', 'JP', 'CN', 'KR'].map(lang => (
                  <button 
                    key={lang} 
                    className={`lang-btn ${currentLang === lang ? 'active' : ''}`} 

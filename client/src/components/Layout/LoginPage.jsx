@@ -13,7 +13,7 @@ const LoginPage = ({ onLogin }) => {
         <div className="login-visual">
           <div className="visual-content">
             <div className="logo-badge">
-                <LayoutDashboard size={32} color="white" />
+                <img src="./logo2.png" alt="" />
             </div>
             <h1>Somjeed Dashboard</h1>
             <p>ระบบวิเคราะห์ข้อมูลอัจฉริยะ พร้อมผู้ช่วย AI<br/>ที่จะทำให้การตัดสินใจของคุณง่ายขึ้น</p>
