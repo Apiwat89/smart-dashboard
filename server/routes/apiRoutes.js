@@ -20,6 +20,15 @@ const getLangInstruction = (lang) => {
     }
 };
 
+const getMascotName = (lang) => {
+    switch (lang) {
+        case 'EN': return "Somjeed";
+        case 'JP': return "ソムジード (Somjeed)";
+        case 'TH': 
+        default: return "ส้มจี๊ด";
+    }
+};
+
 // --- Endpoints ---
 
 // 1. Get Dashboard Data (Database)
@@ -37,6 +46,7 @@ router.get('/dashboard-data', (req, res) => {
 router.post('/summarize-view', async (req, res) => {
     const { visibleCharts, lang } = req.body;
     const langInstruction = getLangInstruction(lang);
+    const mascotName = getMascotName(lang);
 
     const prompt = `
         Role: Senior Data Analyst & Power BI Consultant
@@ -82,12 +92,12 @@ router.post('/summarize-view', async (req, res) => {
 router.post('/character-reaction', async (req, res) => {
     const { pointData, contextData, lang } = req.body;
     const langInstruction = getLangInstruction(lang);
+    const mascotName = getMascotName(lang); // ⭐ ดึงชื่อตามภาษา
 
     let prompt = "";
     if (pointData) {
-        // กรณี: คลิกที่จุด (Drill-down / Filtering)
         prompt = `
-            Role: Somjeed — a cheerful, insightful Power BI mascot.
+            Role: ${mascotName} — a cheerful, insightful Power BI mascot. 
             
             User Interaction:
             Clicked Item: "${pointData.name}"
@@ -100,12 +110,10 @@ router.post('/character-reaction', async (req, res) => {
             ${langInstruction}
             
             Tasks:
-            1. Compare the clicked value with the rest of the dataset (highest, lowest, above/below average).
-            2. React appropriately:
-            - High / Best: Excited and positive
-            - Low / Worst: Curious or encouraging
-            - Average: Neutral but insightful
-            3. Explain briefly WHY it stands out.
+            1. Refer to yourself as '${mascotName}' only.
+            2. Compare the clicked value with the rest of the dataset.
+            3. React appropriately (High: Excited, Low: Encouraging, Average: Insightful).
+            4. Explain briefly WHY it stands out.
             
             Constraints:
             - Maximum 2 sentences
@@ -113,9 +121,8 @@ router.post('/character-reaction', async (req, res) => {
             - No emojis, no markdown
         `;        
     } else {
-        // กรณี: ดูภาพรวม (Overview)
         prompt = `
-            Role: Somjeed — a cheerful, insightful Power BI mascot.
+            Role: ${mascotName} — a cheerful, insightful Power BI mascot.
 
             User Interaction:
             Overview of the entire chart
@@ -127,14 +134,13 @@ router.post('/character-reaction', async (req, res) => {
             ${langInstruction}
 
             Tasks:
-            1. Identify ONE most noticeable trend (spike, drop, steady growth, or decline).
-            2. Describe it in a friendly, storytelling style.
-            3. Focus on insight, not numbers.
+            1. Refer to yourself as '${mascotName}' only.
+            2. Identify ONE most noticeable trend.
+            3. Describe it in a friendly style.
 
             Constraints:
             - Maximum 3 sentences
             - Plain text only
-            - No emojis, no markdown
         `;
     }
     
@@ -146,9 +152,10 @@ router.post('/character-reaction', async (req, res) => {
 router.post('/ask-dashboard', async (req, res) => {
     const { question, allData, lang } = req.body;
     const langInstruction = getLangInstruction(lang);
+    const mascotName = getMascotName(lang); // ⭐ ดึงชื่อตามภาษา
 
     const prompt = `
-        Role: Somjeed — your Power BI dashboard assistant.
+        Role: ${mascotName} — your Power BI dashboard assistant.
 
         Context Data (Only source of truth):
         ${JSON.stringify(allData)}
@@ -160,18 +167,12 @@ router.post('/ask-dashboard', async (req, res) => {
         ${langInstruction}
 
         Rules:
-        1. Answer ONLY using the provided Context Data.
-        2. Summarize data by category or trend when possible.
-        3. Do NOT invent numbers or insights.
-        4. If the answer is not found, respond exactly:
-        "I can't find that information in the current dashboard view."
-
-        Tone:
-        Cheerful, clear, and accurate.
+        1. Always use the name '${mascotName}' when referring to yourself.
+        2. Answer ONLY using the provided Context Data.
+        3. Tone: Cheerful, clear, and accurate.
 
         Output Format:
         - Plain text
-        - Use "-" for lists
         - No markdown, no emojis
     `;
 

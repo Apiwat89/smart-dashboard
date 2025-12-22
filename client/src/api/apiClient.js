@@ -1,10 +1,10 @@
 import axios from 'axios';
 
 // จากโค้ด Vite ของคุณ คือลิงก์นี้ครับ:
-const BASE_URL = "https://smart-dashboard-7382.onrender.com";
+// const BASE_URL = "https://smart-dashboard-7382.onrender.com";
 
 const client = axios.create({
-  baseURL: `${BASE_URL}/api`, // มันจะยิงไปที่ .../api/...
+  baseURL: `/api`, // มันจะยิงไปที่ .../api/...
   timeout: 30000, // เพิ่มเวลาเผื่อ Server ปลุกตื่น (Render ฟรีจะหลับถ้าไม่มีคนใช้)
   headers: {
     'Content-Type': 'application/json',

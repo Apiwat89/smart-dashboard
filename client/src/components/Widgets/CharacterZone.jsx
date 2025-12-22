@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Copy, Check } from 'lucide-react'; 
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
-import { dashboardService } from '../../api/apiClient'; // ⭐ เชื่อมต่อกับ Service เพื่อขอ Token
+import { dashboardService } from '../../api/apiClient';
 
 const CharacterZone = ({ status, text, isTextVisible, countdown, onClose, lang, onSpeechEnd }) => {
   const [displayedText, setDisplayedText] = useState("");
@@ -11,30 +11,40 @@ const CharacterZone = ({ status, text, isTextVisible, countdown, onClose, lang, 
   const synthesizerRef = useRef(null);
   const isCancelledRef = useRef(false);
 
-  // ฟังก์ชันหยุดเสียงและล้าง Resource
+  // 🛡️ ฟังก์ชันหยุดเสียงที่บังคับตัดการทำงานทุกระดับ
   const killAudio = () => {
-      isCancelledRef.current = true;
+      isCancelledRef.current = true; // บล็อก Flag ทั้งหมดทันที
+      
       if (synthesizerRef.current) {
-          try { synthesizerRef.current.close(); } catch (e) { console.error(e); }
+          try {
+              // บังคับหยุดการส่งข้อมูลเสียงไปยัง Speaker ทันที
+              synthesizerRef.current.close(); 
+          } catch (e) {
+              // console.log("Synthesizer already cleaned up");
+          }
           synthesizerRef.current = null;
       }
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+      // ล้างเสียงค้างของ Web Speech API (ถ้ามีหลงเหลือ)
+      if (window.speechSynthesis) {
+          window.speechSynthesis.cancel();
+      }
   };
 
   const handleManualClose = () => {
       killAudio(); 
-      if (onClose) onClose(); 
+      if (onClose) onClose();
   };
 
   const handleCopy = () => {
       if (!text) return;
       navigator.clipboard.writeText(text).then(() => {
           setIsCopied(true);
-          setTimeout(() => setIsCopied(false), 2000); 
+          setTimeout(() => setIsCopied(false), 2000);
       });
   };
 
-  // 1. Typewriter Effect
+  // 1. Effect สำหรับพิมพ์ดีด
   useEffect(() => {
     if (isTextVisible && text) {
       let i = 0;
@@ -48,61 +58,78 @@ const CharacterZone = ({ status, text, isTextVisible, countdown, onClose, lang, 
     } 
   }, [text, isTextVisible]);
 
-  // 2. Logic การพูดโดยใช้ Authorization Token จาก Server
+  // 2. Logic การพูด (แก้ไขเพื่อตัดปัญหาเสียงทับซ้อนถาวร)
   useEffect(() => {
+    // 🛑 กฏข้อแรก: ทันทีที่ useEffect รัน (Text เปลี่ยน) ต้องฆ่าเสียงเก่าทิ้งทันที
+    killAudio(); 
+
     if (status !== 'talking') return;
 
+    // เริ่มต้นสถานะใหม่สำหรับข้อความนี้
     isCancelledRef.current = false;
     setShowCloseButton(false);
 
-    // กรณีไม่มีข้อความให้พูด
     if (!isTextVisible || !text) {
         const fakeDuration = 2000;
         const t = setTimeout(() => { 
-            setShowCloseButton(true);
-            if (onSpeechEnd && !isCancelledRef.current) onSpeechEnd(); 
+            if (!isCancelledRef.current) {
+                setShowCloseButton(true);
+                if (onSpeechEnd) onSpeechEnd();
+            }
         }, fakeDuration);
-        return () => clearTimeout(t);
+        return () => {
+            isCancelledRef.current = true;
+            clearTimeout(t);
+        };
     }
 
     const startSpeech = async () => {
-        killAudio();
-        isCancelledRef.current = false;
+        // 🛡️ เช็คก่อนดึง Token
+        if (isCancelledRef.current) return;
 
-        // 🛡️ ขั้นตอนสำคัญ: ขอ Token จาก Server แทนการใส่ Key ในโค้ด
         const authData = await dashboardService.getSpeechToken();
-        if (!authData || !authData.token) {
-            console.error("❌ Could not get Speech Token from Server");
-            setShowCloseButton(true);
+        
+        // 🛡️ เช็คหลังดึง Token (เพราะ Async ใช้เวลา เพื่อนอาจกดย้ำรัวๆ ในช่วงนี้)
+        if (isCancelledRef.current || !authData || !authData.token) {
+            if (!authData) setShowCloseButton(true);
             return;
         }
 
         const voiceConfigs = {
-            'TH': { lang: 'th-TH', name: 'th-TH-PremwadeeNeural', style: 'cheerful', pitch: '+40%' },
+            'TH': { lang: 'th-TH', name: 'th-TH-PremwadeeNeural', style: 'cheerful', pitch: '+20%' },
             'EN': { lang: 'en-US', name: 'en-US-AvaNeural', style: 'cheerful', pitch: '+20%' },
             'JP': { lang: 'ja-JP', name: 'ja-JP-NanamiNeural', style: 'cheerful', pitch: '+5%' }
         };
         const currentConfig = voiceConfigs[lang] || voiceConfigs['TH'];
 
-        // ✨ ใช้ Authorization Token และ Region ที่ได้จาก Server
         const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(authData.token, authData.region);
         speechConfig.speechSynthesisLanguage = currentConfig.lang;
         speechConfig.speechSynthesisVoiceName = currentConfig.name;
+        
         const audioConfig = sdk.AudioConfig.fromDefaultSpeakerOutput();
         const synthesizer = new sdk.SpeechSynthesizer(speechConfig, audioConfig);
+        
+        // 🛡️ ก่อนจะพูดจริง เช็คอีกรอบว่าโดนยกเลิกไปหรือยัง
+        if (isCancelledRef.current) {
+            synthesizer.close();
+            return;
+        }
+        
         synthesizerRef.current = synthesizer;
 
-        const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="${currentConfig.lang}"><voice name="${currentConfig.name}"><mstts:express-as style="${currentConfig.style}" styledegree="2"><prosody rate="+5%" pitch="${currentConfig.pitch}">${text}</prosody></mstts:express-as></voice></speak>`;
+        const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="${currentConfig.lang}"><voice name="${currentConfig.name}"><mstts:express-as style="${currentConfig.style}" styledegree="2"><prosody rate="+5%" pitch="${currentConfig.pitch}">${text}</prosody></mstts:express-as></voice></speak>`;
 
         const startTime = Date.now();
 
         synthesizer.speakSsmlAsync(
             ssml,
             result => {
+                // 🛡️ ป้องกัน Callback จากรอบเก่าทำงานทับรอบใหม่
                 if (isCancelledRef.current) {
                     synthesizer.close();
                     return; 
                 }
+                
                 if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
                     const audioDurationMs = result.audioDuration / 10000;
                     const elapsedTime = Date.now() - startTime;
@@ -117,16 +144,20 @@ const CharacterZone = ({ status, text, isTextVisible, countdown, onClose, lang, 
                         }
                     }, remainingTime);
                 } else {
+                    if (!isCancelledRef.current) {
+                      setShowCloseButton(true);
+                      synthesizer.close();
+                      if (onSpeechEnd) onSpeechEnd();
+                    }
+                }
+            },
+            error => {
+                if (!isCancelledRef.current) {
+                    console.error("Azure Speech Error:", error);
                     setShowCloseButton(true);
                     synthesizer.close();
                     if (onSpeechEnd) onSpeechEnd();
                 }
-            },
-            error => {
-                console.error("Azure Speech Error:", error);
-                setShowCloseButton(true);
-                synthesizer.close();
-                if (onSpeechEnd) onSpeechEnd();
             }
         );
     };
@@ -134,7 +165,7 @@ const CharacterZone = ({ status, text, isTextVisible, countdown, onClose, lang, 
     startSpeech();
 
     return () => killAudio();
-  }, [text, status, isTextVisible, lang]);
+  }, [text, status, isTextVisible, lang]); // 🔄 Dependency 'text' จะทำให้เสียงเก่าดับทันทีที่คำถามใหม่ถูกส่งไป
 
   const getVideoSource = () => {
     const map = { thinking: './assets/char-thinking.mp4', talking: './assets/char-talking.mp4', idle: './assets/char-idle.mp4' };
@@ -171,7 +202,6 @@ const CharacterZone = ({ status, text, isTextVisible, countdown, onClose, lang, 
                         {isCopied ? <Check size={14}/> : <Copy size={14}/>}
                       </div>
                     </button>
-
                     <button 
                       onClick={handleManualClose} 
                       className="bubble-action-btn close-btn" 
@@ -182,7 +212,6 @@ const CharacterZone = ({ status, text, isTextVisible, countdown, onClose, lang, 
                   </>
                 )}
               </div>
-
               <span className={`timer-text ${isCopied ? 'copied' : ''}`}>
                  {isCopied ? "คัดลอกแล้ว!" : `ปิดอัตโนมัติใน ${countdown}s`}
               </span> 
