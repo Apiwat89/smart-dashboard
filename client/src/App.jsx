@@ -319,6 +319,8 @@ function App() {
   const handleReportRendered = async () => {
     if (!powerBIReportRef.current) return;
     const activePage = menuList.find(p => p.id === activePageId);
+    
+    // ป้องกันการสรุปซ้ำถ้าเป็นหน้าเดิมที่เพิ่งสรุปไป
     if (summarizedPageRef.current === activePageId) return;
 
     addNotification('success', 'อัปเดตข้อมูลแล้ว', `โหลดข้อมูลหน้า ${activePage.title} เรียบร้อย`);
@@ -326,46 +328,92 @@ function App() {
     setSummary("กำลังอ่านข้อมูล...");
 
     try {
+        // 1. ดึงหน้าปัจจุบันและ Visuals ทั้งหมด
         const pbiPage = (await powerBIReportRef.current.getPages()).find(p => p.isActive);
         if (!pbiPage) return;
+        
         const visuals = await pbiPage.getVisuals();
-        let allDataText = `ข้อมูลหน้า ${activePage.displayName}:\n`;
+        let allDataText = `ข้อมูลหน้า ${activePage.title}:\n`;
         let foundUpdateDate = null;
 
+        // 2. วนลูป Export Data จากทุกกราฟ (ยกเว้นรูปภาพและกล่องข้อความ)
         for (const visual of visuals) {
             if (visual.title && visual.type !== 'image' && visual.type !== 'textbox') {
                 try {
                     const result = await visual.exportData(models.ExportDataType.Summarized);
                     allDataText += `\n- ${visual.title}:\n${result.data}\n`;
+                    
+                    // เช็คว่ามี Visual ที่ชื่อ LastUpdate ไหม เพื่อเอามาแสดงที่ Header
                     if (visual.title === "LastUpdate") {
                         const lines = result.data.split('\n');
                         if (lines.length >= 2) foundUpdateDate = lines[1].trim();
                     }
-                } catch (e) { /* ignore */ }
+                } catch (e) { 
+                    console.warn(`Cannot export data from visual: ${visual.title}`); 
+                }
             }
         }
         
+        // 3. เก็บข้อมูลดิบไว้ใน State สำหรับ AI Chat
         setCurrentReportData(allDataText);
         summarizedPageRef.current = activePageId; 
+        
         if(foundUpdateDate) setLastUpdated(foundUpdateDate);
         else setLastUpdated(new Date().toLocaleDateString('th-TH') + " (App Time)");
 
         const token = await getToken(); 
+
+        // ⭐ 4. AI สรุป "พาดหัวข่าวตัววิ่ง" (News Ticker) จากข้อมูลจริง
+        const tickerPrompt = `
+            จากข้อมูล Dashboard หน้า ${activePage.title} ต่อไปนี้:
+            ${allDataText}
+            
+            ช่วยสรุปเป็น "พาดหัวข่าวสั้นๆ" 3 หัวข้อ สำหรับแสดงบนแถบตัววิ่ง (Ticker) 
+            - เน้นตัวเลขที่สำคัญหรือสถานการณ์วิกฤต
+            - ใช้รูปแบบ: [สัญลักษณ์] หัวข้อข่าว
+            - คั่นแต่ละข่าวด้วย " | "
+            - ความยาวรวมไม่เกิน 200 ตัวอักษร
+            - ไม่ต้องมี Markdown และไม่ต้องเกริ่นนำ
+        `;
+
+        dashboardService.chat(tickerPrompt, allDataText, langRef.current, token)
+            .then(res => {
+                const liveNews = res.message;
+                setTickerText(liveNews); // แสดงบนแถบ Live Update
+
+                // ตรวจสอบความวิกฤตเพื่อเปลี่ยนสีแถบข่าว
+                if (liveNews.includes("วิกฤต") || liveNews.includes("พายุ") || liveNews.includes("🔴") || liveNews.includes("Warning")) {
+                    setTickerType("alert");
+                } else {
+                    setTickerType("info");
+                }
+            });
+
+        // ⭐ 5. AI สรุป "Executive Summary" (กล่องส้มจี๊ดสรุป)
         const aiRes = await dashboardService.chat("ช่วยสรุป Executive Summary จากข้อมูลนี้", allDataText, langRef.current, token);
         setSummary(aiRes.message);
         setSummaryExpanded(true);
         setSummaryAutoClose(20);
 
+        // 6. AI วิเคราะห์หาจุดผิดปกติ (Anomaly Detection) สำหรับ Notification
         dashboardService.chat(
             "จากข้อมูลนี้ มีจุดไหนที่ตัวเลขดู 'วิกฤต' หรือ 'น่าเป็นห่วง' ไหม? ขอสั้นๆ 1 ประโยค ถ้าไม่มีให้ตอบว่า 'สถานการณ์ปกติ'", 
             allDataText, langRef.current, token
         ).then(res => {
-            if (!res.message.includes("ปกติ")) addNotification('alert', 'พบสิ่งผิดปกติ!', res.message);
-            else addNotification('info', 'AI Insight', 'สถานการณ์โดยรวมปกติดีครับ');
+            if (!res.message.includes("ปกติ")) {
+                addNotification('alert', 'พบสิ่งผิดปกติ!', res.message);
+            } else {
+                addNotification('info', 'AI Insight', 'สถานการณ์โดยรวมปกติดีครับ');
+            }
         });
 
-    } catch (err) { setSummary("อ่านข้อมูลไม่ได้"); } 
-    finally { setSummaryLoading(false); }
+    } catch (err) { 
+        console.error("Report Processing Error:", err);
+        setSummary("ไม่สามารถอ่านข้อมูลจาก Dashboard ได้"); 
+    } 
+    finally { 
+        setSummaryLoading(false);
+    }
   };
 
   const handleManualRefresh = () => { summarizedPageRef.current = null; handleReportRendered(); };
