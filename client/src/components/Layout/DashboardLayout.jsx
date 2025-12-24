@@ -26,10 +26,10 @@ const DashboardLayout = ({
   onCapture, isCapturing
 }) => {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', overflow: 'hidden' }}>
       <div 
         className={`app-container ${isSidebarCollapsed ? 'sidebar-closed' : ''}`}
-        style={{ flex: 1, height: 'auto', minHeight: 0 }} 
+        style={{ flex: 1, minHeight: 0, position: 'relative' }}
       >
         <Sidebar 
             isCollapsed={isSidebarCollapsed} 
@@ -73,7 +73,7 @@ const DashboardLayout = ({
         <RightPanel {...rightPanelProps} />
       </div>
       
-      <div style={{ flexShrink: 0, zIndex: 100, background: 'white'}}>
+      <div style={{ flexShrink: 0, height: '40px', zIndex: 10000, background: 'white' }}>
          <NewsTicker text={newsText} type={newsType} />
          {/* <Footer /> */}
       </div>

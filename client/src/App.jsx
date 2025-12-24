@@ -36,7 +36,7 @@ function App() {
   const [activePageId, setActivePageId] = useState("page_overview");
   const [lastUpdated, setLastUpdated] = useState(""); 
 
-  // ⭐ Auto-Play State (เพิ่มใหม่)
+  // Auto-Play State
   const [isPlaying, setIsPlaying] = useState(false);
   const [autoPlayCountdown, setAutoPlayCountdown] = useState(90);
   const TIMER_DURATION = 90; 
@@ -47,6 +47,9 @@ function App() {
   const [isProcessing, setProcessing] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [question, setQuestion] = useState("");
+
+  // ⭐ เพิ่ม State สำหรับคำถามที่ AI แนะนำ
+  const [suggestedQuestions, setSuggestedQuestions] = useState([]);
   
   // Data State
   const [currentReportData, setCurrentReportData] = useState(null);
@@ -68,40 +71,16 @@ function App() {
 
   const activeAccount = accounts[0];
   const userInfo = useMemo(() => {
-    // 1. กัน Error กรณีไม่มีข้อมูล
     if (!activeAccount) return { name: "Guest", displayRole: "Guest" };
-
     const name = activeAccount.name || "User";
-
-    // ⭐⭐⭐ จุดเปลี่ยนสำคัญ: ใช้สูตร Generic (อัตโนมัติ) ⭐⭐⭐
-    // ดึง Role ทั้งหมดที่ Azure ส่งมา (ส่งมาเป็น Array List)
     const rolesFromAzure = activeAccount.idTokenClaims?.roles || [];
-
-    let finalDisplayRole = "";
-
-    if (rolesFromAzure.length > 0) {
-        // ✅ ถ้ามี Role: จับทุกอันมาต่อกันด้วยเครื่องหมาย " | "
-        // เช่น Azure ส่งมา ["Viewer", "ChiangMai_Admin"]
-        // ผลลัพธ์จะเป็น: "Viewer | ChiangMai_Admin"
-        finalDisplayRole = rolesFromAzure.join(" | ");
-    } else {
-        // ❌ ถ้าไม่มี Role อะไรเลย: ให้ตั้งเป็นค่า Default
-        finalDisplayRole = "General User"; 
-    }
-
-    console.log("✅ User Role Detected:", finalDisplayRole);
-
-    return {
-        name: name,
-        displayRole: finalDisplayRole // ส่งค่านี้ออกไปแสดงผล
-    };
-
+    let finalDisplayRole = rolesFromAzure.length > 0 ? rolesFromAzure.join(" | ") : "General User";
+    return { name: name, displayRole: finalDisplayRole };
   }, [activeAccount]);
 
   const [isUnauthorized, setIsUnauthorized] = useState(false);
   useEffect(() => {
     if (isAuthenticated && isAppReady) {
-       // ถ้าเป็น General User (ไม่มี Role) -> ให้เปิด Popup ทันที
        if (userInfo.displayRole === "General User") {
           setIsUnauthorized(true);
        }
@@ -125,57 +104,44 @@ function App() {
     setMenuList(appMenu);
   }, []);
 
+  // Auto-Play Logic
   useEffect(() => {
     let interval;
     if (isPlaying && menuList.length > 0) {
       interval = setInterval(() => {
-        setAutoPlayCountdown(prev => {
-            // ถ้านับถึง 0 แล้ว ให้ค้างไว้ที่ 0 เพื่อรอ Effect อื่นมาทำงาน
-            if (prev <= 0) return 0; 
-            return prev - 1;
-        });
+        setAutoPlayCountdown(prev => (prev <= 0 ? 0 : prev - 1));
       }, 1000);
     }
     return () => clearInterval(interval);
   }, [isPlaying, menuList]);
+
   useEffect(() => {
     if (isPlaying && autoPlayCountdown === 0) {
-        
-        // สั่งเปลี่ยนหน้า
         setActivePageId((currentId) => {
             let currentIndex = menuList.findIndex(item => item.id === currentId);
-            
-            // 🛡️ กันพลาด: ถ้าหาหน้าปัจจุบันไม่เจอ ให้เริ่มที่หน้าแรก (0)
             if (currentIndex === -1) currentIndex = 0;
-
-            // คำนวณหน้าถัดไป (แบบเรียงลำดับแน่นอน)
             const nextIndex = (currentIndex + 1) % menuList.length;
-            
-            console.log(`Auto-Play: Moving to page index ${nextIndex}`); // เช็คใน Console ได้
             return menuList[nextIndex].id;
         });
-
-        // รีเซ็ตเวลากลับไปเริ่มต้นทันที
         setAutoPlayCountdown(TIMER_DURATION);
     }
   }, [autoPlayCountdown, isPlaying, menuList, TIMER_DURATION]);
 
+  // Summary Auto Close Logic
   useEffect(() => {
     let timer;
-    // เงื่อนไข: ถ้ากล่องเปิดอยู่ + มีเวลาเหลือ + และไม่ได้เอาเมาส์ชี้ไว้
     if (isSummaryExpanded && summaryAutoClose > 0 && !isHoveringSummary) {
       timer = setTimeout(() => {
         setSummaryAutoClose(prev => prev - 1);
       }, 1000);
     } 
     else if (summaryAutoClose === 0 && isSummaryExpanded) {
-      // หมดเวลา -> สั่งพับกล่องทันที
       setSummaryExpanded(false);
     }
     return () => clearTimeout(timer);
   }, [summaryAutoClose, isSummaryExpanded, isHoveringSummary]);
 
-  // Logic Login / Loading ...
+  // Loading Logic
   useEffect(() => {
     if (isAuthenticated) {
         const timer = setTimeout(() => { setAppReady(true); }, 2500); 
@@ -183,6 +149,7 @@ function App() {
     }
   }, [isAuthenticated]);
 
+  // Profile Photo Logic
   useEffect(() => {
     async function fetchProfilePhoto() {
       if (!isAuthenticated || !activeAccount) return;
@@ -202,7 +169,6 @@ function App() {
     fetchProfilePhoto();
   }, [isAuthenticated, instance, activeAccount]);
 
-  // Helper Functions ...
   const toggleTheme = () => setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
 
   const addNotification = (type, title, message) => {
@@ -219,27 +185,54 @@ function App() {
   };
 
   const handleLogin = () => { instance.loginRedirect({ ...loginRequest, prompt: "select_account" }).catch(e => console.error(e)); };
-  
   const handleLogout = () => { instance.logoutRedirect({ postLogoutRedirectUri: "/", account: activeAccount }); };
 
   const handleAiSpeak = (message, isError = false) => {
-      if (talkTimerRef.current) clearTimeout(talkTimerRef.current);
-      setAiState({ status: 'talking', message: message, isVisible: true });
-      setCountdown(isError ? 10 : 100);
-  };
+    // ⭐ ล้าง Timer เดิมทิ้งเพื่อไม่ให้สถานะ idle ไปทับสถานะพูดใหม่
+    if (talkTimerRef.current) {
+        clearTimeout(talkTimerRef.current);
+        talkTimerRef.current = null;
+    }
+    
+    // ตั้งสถานะใหม่
+    setAiState({ status: 'talking', message: message, isVisible: true });
+    setCountdown(isError ? 10 : 100);
+};
 
-  const triggerAiChat = async (textInput) => {
-      if(!textInput || !textInput.trim()) return;
-      setProcessing(true);
-      setAiState({ status: 'thinking', message: '', isVisible: false });
-      try {
-          const token = await getToken(); 
-          const contextData = currentReportData || "ข้อมูลกราฟยังไม่โหลด";
-          const res = await dashboardService.chat(textInput, contextData, langRef.current, token); 
-          handleAiSpeak(res.message);
-      } catch (error) { handleAiSpeak("ขออภัย ระบบขัดข้อง", true); } 
-      finally { setProcessing(false); }
-  };
+// App.jsx
+
+const triggerAiChat = async (textInput) => {
+  if(!textInput || !textInput.trim()) return;
+  
+  // 1. ⭐ เริ่มแสดงสถานะ Loading ในกล่อง Summary
+  setSummaryLoading(true); 
+  setSummary(""); // เคลียร์ข้อความเก่าออกเพื่อให้ขึ้นสถานะ Generating...
+  
+  setProcessing(true);
+  setAiState({ status: 'thinking', message: '', isVisible: false });
+
+  try {
+      const token = await getToken(); 
+      const contextData = currentReportData || "ข้อมูลกราฟยังไม่โหลด";
+      const res = await dashboardService.chat(textInput, contextData, langRef.current, token); 
+      
+      // 2. เมื่อได้คำตอบ: อัปเดตข้อความและสั่งให้ Mascot พูด
+      setSummary(res.message); 
+      handleAiSpeak(res.message);
+      
+      // มั่นใจว่ากล่อง Summary กางออกเพื่อเห็นคำตอบ
+      setSummaryExpanded(true); 
+      setSummaryAutoClose(20); // ตั้งเวลาปิดอัตโนมัติ (ถ้าต้องการ)
+
+  } catch (error) { 
+      setSummary("ขออภัย เกิดข้อผิดพลาดในการดึงข้อมูล");
+      handleAiSpeak("ขออภัย ระบบขัดข้อง", true); 
+  } finally { 
+      // 3. ⭐ ปิดสถานะ Loading
+      setProcessing(false); 
+      setSummaryLoading(false); 
+  }
+};
 
   const handleAsk = async (e) => {
     e.preventDefault();
@@ -252,7 +245,6 @@ function App() {
 
   const handlePowerBIClick = async (event) => {
     if (event.detail && event.detail.dataPoints && event.detail.dataPoints.length > 0 && !isProcessing) {
-        // ... (Logic เดิม) ...
          const dp = event.detail.dataPoints[0];
          const category = dp.identity[0]?.equals || "Unknown";
          const value = dp.values[0]?.formattedValue || "N/A";
@@ -265,11 +257,10 @@ function App() {
     }
   };
 
+  // ⭐ แก้ไข handleReportRendered เพื่อเพิ่ม Suggested Questions
   const handleReportRendered = async () => {
     if (!powerBIReportRef.current) return;
     const activePage = menuList.find(p => p.id === activePageId);
-    
-    // ป้องกันการสรุปซ้ำถ้าเป็นหน้าเดิม
     if (summarizedPageRef.current === activePageId) return;
 
     addNotification('success', 'อัปเดตข้อมูลแล้ว', `โหลดข้อมูลหน้า ${activePage.title} เรียบร้อย`);
@@ -282,49 +273,38 @@ function App() {
         
         const visuals = await pbiPage.getVisuals();
         let allDataText = `ข้อมูลหน้า ${activePage.title}:\n`;
-        let foundUpdateDate = null;
-
-        // วนลูปดึงข้อมูลจริงจากกราฟ
+        
         for (const visual of visuals) {
             if (visual.title && visual.type !== 'image' && visual.type !== 'textbox') {
                 try {
                     const result = await visual.exportData(models.ExportDataType.Summarized);
                     allDataText += `\n- ${visual.title}:\n${result.data}\n`;
-                    if (visual.title === "LastUpdate") {
-                        const lines = result.data.split('\n');
-                        if (lines.length >= 2) foundUpdateDate = lines[1].trim();
-                    }
                 } catch (e) { console.warn(e); }
             }
         }
         
         setCurrentReportData(allDataText);
         summarizedPageRef.current = activePageId; 
-        if(foundUpdateDate) setLastUpdated(foundUpdateDate);
-        else setLastUpdated(new Date().toLocaleDateString('th-TH') + " (App Time)");
 
         const token = await getToken(); 
 
-        // ⭐ เรียกใช้ API เพื่อสรุปพาดหัวข่าวตัววิ่งจากข้อมูลจริง
-        dashboardService.getNewsTicker(allDataText, activePage.title, langRef.current, token)
-            .then(res => {
-                const liveNews = res.message;
-                // ทำซ้ำข้อความเพื่อให้วิ่งได้ต่อเนื่องไม่ขาดตอน
-                const loopedNews = `${liveNews} \u00A0\u00A0\u00A0\u00A0 • \u00A0\u00A0\u00A0\u00A0 `.repeat(5);
-                setTickerText(loopedNews);
-
-                if (liveNews.includes("วิกฤต") || liveNews.includes("🔴") || liveNews.includes("พายุ")) {
-                    setTickerType("alert");
-                } else {
-                    setTickerType("info");
-                }
-            });
-
-        // สรุป Executive Summary ปกติ
+        // 1. สรุป Executive Summary
         const aiRes = await dashboardService.chat("ช่วยสรุป Executive Summary จากข้อมูลนี้", allDataText, langRef.current, token);
-        setSummary(aiRes.message);
+        setSummary(aiRes.message); 
+        handleAiSpeak(aiRes.message);
         setSummaryExpanded(true);
         setSummaryAutoClose(20);
+
+        // 2. ⭐ วิเคราะห์คำถามที่แนะนำ (Suggested Questions)
+        const suggestPrompt = "จากข้อมูลนี้ ช่วยแนะนำ 3 คำถามสำคัญที่ผู้บริหารควรถาม โดยขอเป็นประโยคคำถามสั้นๆ 3 ข้อ แยกบรรทัดกัน";
+        const suggestRes = await dashboardService.chat(suggestPrompt, allDataText, langRef.current, token);
+        
+        // แยกข้อความเป็น Array
+        const questions = suggestRes.message.split('\n')
+                           .map(q => q.replace(/^\d+\.\s*/, '').trim()) // ลบตัวเลข 1. 2. ออก
+                           .filter(q => q.length > 5)
+                           .slice(0, 3);
+        setSuggestedQuestions(questions);
 
     } catch (err) { 
         console.error("Report Error:", err);
@@ -349,18 +329,13 @@ function App() {
       <div className="access-denied-overlay">
         <div className="access-denied-modal">
           <div className="access-denied-icon">⛔</div>
-          
           <h2 className="access-denied-title">Access Denied</h2>
           <h3 className="access-denied-subtitle">การเข้าถึงถูกปฏิเสธ</h3>
-
           <p className="access-denied-text">
             บัญชี <strong>{userInfo.name}</strong> ไม่มีสิทธิ์เข้าใช้งานในส่วนนี้ <br/>
-            กรุณาติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์ (Assign Role)
+            กรุณาติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์
           </p>
-
-          <button className="access-denied-button" onClick={handleLogout}>
-            ออกจากระบบ (Logout)
-          </button>
+          <button className="access-denied-button" onClick={handleLogout}>ออกจากระบบ (Logout)</button>
         </div>
       </div>
     );
@@ -370,11 +345,7 @@ function App() {
 
   return (
     <DashboardLayout
-      user={{ 
-        name: userInfo.name, 
-        role: userInfo.displayRole, 
-        avatar: userAvatar 
-      }}
+      user={{ name: userInfo.name, role: userInfo.displayRole, avatar: userAvatar }}
       isSidebarCollapsed={isSidebarCollapsed}
       toggleSidebar={() => setSidebarCollapsed(!isSidebarCollapsed)}
       scrollRef={scrollRef} 
@@ -382,40 +353,40 @@ function App() {
       pageTitle={currentPage ? currentPage.title : "Smart Dashboard"}
       lastUpdated={lastUpdated}
       notifications={notifications}
-      // ⭐ ส่งสถานะการเล่นและปุ่มกดไปให้ Layout
       isPlaying={isPlaying}
       togglePlay={() => setIsPlaying(!isPlaying)}
       autoPlayCountdown={autoPlayCountdown}
       
-      summaryWidget={
-        <div className={`ai-summary-wrapper ${isSummaryExpanded ? 'expanded' : 'collapsed'}`}
-            onMouseEnter={() => setIsHoveringSummary(true)} // เมาส์เข้า -> หยุดนับ
-            onMouseLeave={() => setIsHoveringSummary(false)} // เมาส์ออก -> นับต่อ
-        >
+      rightPanelProps={{
+        aiState: {
+          ...aiState,
+          // ⭐ บังคับให้เป็น true เมื่อสถานะคือ talking เพื่อให้ CharacterZone ทำงานได้
+          isVisible: aiState.status === 'talking' ? true : aiState.isVisible 
+        },
+        countdown,
+        closeAi: () => setAiState(prev => ({ ...prev, isVisible: false, status: 'idle' })),
+        userQuestion: question, 
+        setUserQuestion: setQuestion, 
+        handleAsk,
+        currentLang: lang, 
+        setCurrentLang: setLang, 
+        isProcessing,
+        onSpeechEnd: () => setAiState(prev => ({ ...prev, status: 'idle' })),
+        // ⭐ ส่งค่าคำถามที่แนะนำและฟังก์ชันจัดการไปให้ RightPanel
+        suggestedQuestions: suggestedQuestions,
+        onSelectQuestion: (q) => triggerAiChat(q),
+        summaryWidget: (
+          <div className="ai-summary-in-panel">
             <ResultBox 
-              text={summary} 
-              isExpanded={isSummaryExpanded} 
-              toggleExpand={() => {
-                // ถ้า "กำลังจะเปิด" (ตอนนี้ปิดอยู่) -> ให้เติมเวลาเข้าไปใหม่ (เช่น 20 วิ)
-                if (!isSummaryExpanded) {
-                    setSummaryAutoClose(20); 
-                }
-                // สลับสถานะ เปิด/ปิด ตามปกติ
-                setSummaryExpanded(!isSummaryExpanded);
-              }}
+              text={aiState.status === 'talking' ? aiState.message : summary} 
+              isExpanded={true} 
               isLoading={isSummaryLoading} 
               onRefresh={handleManualRefresh} 
               autoCloseTimer={summaryAutoClose}
               isHovering={isHoveringSummary}
             />
-        </div>
-      } 
-      rightPanelProps={{
-        aiState, countdown, 
-        closeAi: () => setAiState(prev => ({ ...prev, isVisible: false, status: 'idle' })),
-        userQuestion: question, setUserQuestion: setQuestion, handleAsk,
-        currentLang: lang, setCurrentLang: setLang, isProcessing,
-        onSpeechEnd: () => setAiState(prev => ({ ...prev, status: 'idle' })),
+          </div>
+        )
       }}
       menuItems={menuList}
       activePageId={activePageId}
@@ -423,8 +394,8 @@ function App() {
       onLogout={handleLogout}
       theme={theme}
       toggleTheme={toggleTheme}
-      newsText={tickerText} // 👈 ส่งไป
-      newsType={tickerType} // 👈 ส่งไป
+      newsText={tickerText}
+      newsType={tickerType}
     >
         <div className="fade-in" style={{ height: '100%', width: '100%' }}>
             <div className="powerbi-container-wrapper" style={{ height: '80vh', width: '100%', background: '#fff', borderRadius: '8px' }}>

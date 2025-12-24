@@ -11,17 +11,23 @@ const CharacterZone = ({ status, text, isTextVisible, countdown, onClose, lang, 
   const synthesizerRef = useRef(null);
   const isCancelledRef = useRef(false);
 
-  // 🛡️ ระบบหยุดเสียงเด็ดขาด
+  const [isSpeakingInternal, setIsSpeakingInternal] = useState(false);
+
   const killAudio = () => {
-      isCancelledRef.current = true;
-      if (synthesizerRef.current) {
-          try {
-              synthesizerRef.current.privSynthesizer.stopSpeaking(); 
-              synthesizerRef.current.close(); 
-          } catch (e) {}
-          synthesizerRef.current = null;
-      }
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
+    isCancelledRef.current = true;
+    setIsSpeakingInternal(false); // ปลดสถานะการทำงาน
+
+    if (synthesizerRef.current) {
+        try {
+            // สั่งหยุดทันทีและปิดทรัพยากร
+            synthesizerRef.current.close(); 
+            synthesizerRef.current = null;
+        } catch (e) {
+            console.error("Error closing synthesizer:", e);
+        }
+    }
+    // เคลียร์เสียงของ Browser พื้นฐานด้วย
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
   };
 
   const handleManualClose = () => {
@@ -35,6 +41,12 @@ const CharacterZone = ({ status, text, isTextVisible, countdown, onClose, lang, 
           setIsCopied(true);
           setTimeout(() => setIsCopied(false), 2000);
       });
+  };
+
+  const videoStyle = {
+    width: '100%',
+    height: '100%',
+    position: 'absolute'
   };
 
   // ⚡ 1. ระบบ Video Preloading (โหลดมารอไว้ใน Cache)
@@ -68,32 +80,24 @@ const CharacterZone = ({ status, text, isTextVisible, countdown, onClose, lang, 
   }, [text, isTextVisible]);
 
   // 3. Logic การพูด (แก้ไขเสียงซ้อน)
-  useEffect(() => {
+useEffect(() => {
+    // ทุกครั้งที่ข้อความหรือสถานะเปลี่ยน ให้หยุดเสียงเก่าก่อนทันที
     killAudio(); 
-    if (status !== 'talking') return;
+
+    if (status !== 'talking' || !text) return;
 
     isCancelledRef.current = false;
     setShowCloseButton(false);
 
-    if (!isTextVisible || !text) {
-        const fakeDuration = 2000;
-        const t = setTimeout(() => { 
-            if (!isCancelledRef.current) {
-                setShowCloseButton(true);
-                if (onSpeechEnd) onSpeechEnd();
-            }
-        }, fakeDuration);
-        return () => {
-            isCancelledRef.current = true;
-            clearTimeout(t);
-        };
-    }
-
     const startSpeech = async () => {
+        // หน่วงเวลาเล็กน้อย (100ms) เพื่อให้ทรัพยากรเก่าถูกทำลายทิ้งจริง ๆ
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         if (isCancelledRef.current) return;
+
         const authData = await dashboardService.getSpeechToken();
         if (isCancelledRef.current || !authData || !authData.token) {
-            if (!authData) setShowCloseButton(true);
+            setShowCloseButton(true);
             return;
         }
 
@@ -101,8 +105,8 @@ const CharacterZone = ({ status, text, isTextVisible, countdown, onClose, lang, 
             'TH': { lang: 'th-TH', name: 'th-TH-PremwadeeNeural', style: 'cheerful', pitch: '+20%' },
             'EN': { lang: 'en-US', name: 'en-US-AvaNeural', style: 'cheerful', pitch: '+20%' },
             'JP': { lang: 'ja-JP', name: 'ja-JP-NanamiNeural', style: 'cheerful', pitch: '+5%' },
-            'CN': { lang: 'zh-CN', name: 'zh-CN-XiaoxiaoNeural', style: 'cheerful', pitch: '+10%' }, // เสียงจีน
-            'KR': { lang: 'ko-KR', name: 'ko-KR-SunHiNeural', style: 'cheerful', pitch: '+10%' }   // เสียงเกาหลี
+            'CN': { lang: 'zh-CN', name: 'zh-CN-XiaoxiaoNeural', style: 'cheerful', pitch: '+10%' },
+            'KR': { lang: 'ko-KR', name: 'ko-KR-SunHiNeural', style: 'cheerful', pitch: '+10%' }
         };
         const currentConfig = voiceConfigs[lang] || voiceConfigs['TH'];
 
@@ -112,91 +116,76 @@ const CharacterZone = ({ status, text, isTextVisible, countdown, onClose, lang, 
         
         const audioConfig = sdk.AudioConfig.fromDefaultSpeakerOutput();
         const synthesizer = new sdk.SpeechSynthesizer(speechConfig, audioConfig);
-        if (isCancelledRef.current) { synthesizer.close(); return; }
+        
+        if (isCancelledRef.current) {
+            synthesizer.close();
+            return;
+        }
+        
         synthesizerRef.current = synthesizer;
+        setIsSpeakingInternal(true);
 
         const ssml = `<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="${currentConfig.lang}"><voice name="${currentConfig.name}"><mstts:express-as style="${currentConfig.style}" styledegree="2"><prosody rate="+5%" pitch="${currentConfig.pitch}">${text}</prosody></mstts:express-as></voice></speak>`;
 
         const startTime = Date.now();
-        synthesizer.speakSsmlAsync(ssml, result => {
-            if (isCancelledRef.current) { synthesizer.close(); return; }
-            if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
-                const audioDurationMs = result.audioDuration / 10000;
-                const elapsedTime = Date.now() - startTime;
-                const remainingTime = Math.max(0, audioDurationMs - elapsedTime);
-                setTimeout(() => {
-                    if (!isCancelledRef.current) {
-                        setShowCloseButton(true);
-                        synthesizer.close();
-                        synthesizerRef.current = null;
-                        if (onSpeechEnd) onSpeechEnd();
-                    }
-                }, remainingTime);
-            } else {
-                if (!isCancelledRef.current) {
-                  setShowCloseButton(true);
-                  synthesizer.close();
-                  if (onSpeechEnd) onSpeechEnd();
+        
+        synthesizer.speakSsmlAsync(
+            ssml,
+            result => {
+                if (isCancelledRef.current) {
+                    synthesizer.close();
+                    return;
                 }
-            }
-        }, error => {
-            if (!isCancelledRef.current) {
-                setShowCloseButton(true);
+                
+                if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
+                    const audioDurationMs = result.audioDuration / 10000;
+                    const elapsedTime = Date.now() - startTime;
+                    const remainingTime = Math.max(0, audioDurationMs - elapsedTime);
+
+                    setTimeout(() => {
+                        if (!isCancelledRef.current) {
+                            setShowCloseButton(true);
+                            setIsSpeakingInternal(false);
+                            synthesizer.close();
+                            synthesizerRef.current = null;
+                            if (onSpeechEnd) onSpeechEnd();
+                        }
+                    }, remainingTime);
+                } else {
+                    synthesizer.close();
+                    setIsSpeakingInternal(false);
+                    if (!isCancelledRef.current) setShowCloseButton(true);
+                }
+            },
+            error => {
+                console.error("Speech Error:", error);
                 synthesizer.close();
-                if (onSpeechEnd) onSpeechEnd();
+                setIsSpeakingInternal(false);
+                if (!isCancelledRef.current) setShowCloseButton(true);
             }
-        });
+        );
     };
+
     startSpeech();
+    
+    // Cleanup function เมื่อ Component Unmount หรือ dependencies เปลี่ยน
     return () => killAudio();
-  }, [text, status, isTextVisible, lang]);
+  }, [text, status, lang]);
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', backgroundColor: '#000' }}>
-      {/* ⚡ แสดงวิดีโอแยกตามสถานะเพื่อลดความหน่วงตอนสลับ (Conditional Rendering) */}
-      <video
-        style={{ display: status === 'thinking' ? 'block' : 'none', width: '100%', height: '100%', objectFit: 'cover', position: 'absolute' }}
-        autoPlay loop muted playsInline preload="auto"
-      >
+      {/* แสดงเฉพาะตัววิดีโอ Mascot เท่านั้น */}
+      <video style={{ display: status === 'thinking' ? 'block' : 'none', ...videoStyle }} autoPlay loop muted playsInline>
         <source src="./assets/char-thinking.mp4" type="video/mp4" />
       </video>
-      <video
-        style={{ display: status === 'talking' ? 'block' : 'none', width: '100%', height: '100%', objectFit: 'cover', position: 'absolute' }}
-        autoPlay loop muted playsInline preload="auto"
-      >
+      <video style={{ display: status === 'talking' ? 'block' : 'none', ...videoStyle }} autoPlay loop muted playsInline>
         <source src="./assets/char-talking.mp4" type="video/mp4" />
       </video>
-      <video
-        style={{ display: (status !== 'talking' && status !== 'thinking') ? 'block' : 'none', width: '100%', height: '100%', objectFit: 'cover', position: 'absolute' }}
-        autoPlay loop muted playsInline preload="auto"
-      >
+      <video style={{ display: (status !== 'talking' && status !== 'thinking') ? 'block' : 'none', ...videoStyle }} autoPlay loop muted playsInline>
         <source src="./assets/char-idle.mp4" type="video/mp4" />
       </video>
 
-      {isTextVisible && ( 
-        <div className="char-floating-bubble" style={{ zIndex: 10 }}>
-           <div className="bubble-content">
-              {displayedText}<span className="cursor-blink"> </span>
-           </div>
-           <div className="bubble-timer" style={{ justifyContent: 'space-between', display: 'flex', alignItems: 'center' }}>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {showCloseButton && (
-                  <>
-                    <button onClick={handleCopy} className={`bubble-action-btn copy-btn ${isCopied ? 'active' : ''}`} title="คัดลอกข้อความ">
-                      <div style={{display:'flex'}}>{isCopied ? <Check size={14}/> : <Copy size={14}/>}</div>
-                    </button>
-                    <button onClick={handleManualClose} className="bubble-action-btn close-btn" title="ปิด">
-                      <div style={{display:'flex'}}><X size={14}/></div>
-                    </button>
-                  </>
-                )}
-              </div>
-              <span className={`timer-text ${isCopied ? 'copied' : ''}`}>
-                 {isCopied ? "คัดลอกแล้ว!" : `ปิดอัตโนมัติใน ${countdown}s`}
-              </span> 
-           </div>
-        </div>
-      )}
+      {/* ❌ ลบส่วน isTextVisible && ( <div className="char-floating-bubble"> ... ) ออก */}
     </div>
   );
 };
