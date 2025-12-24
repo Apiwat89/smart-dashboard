@@ -1,69 +1,74 @@
 import axios from 'axios';
 
-// จากโค้ด Vite ของคุณ คือลิงก์นี้ครับ:
 const BASE_URL = "https://smart-dashboard-7382.onrender.com";
 
+// ตั้งค่า Client Instance
 const client = axios.create({
-  // baseURL: `${BASE_URL}/api`, 
-  baseURL: '/api',
-  timeout: 30000, // เพิ่มเวลาเผื่อ Server ปลุกตื่น (Render ฟรีจะหลับถ้าไม่มีคนใช้)
+  baseURL: '/api', // หรือ `${BASE_URL}/api` ตาม Environment
+  timeout: 30000, // เพิ่ม Timeout ป้องกัน Server (Render) หลับ
   headers: {
     'Content-Type': 'application/json',
-  }
+  },
 });
 
-// Helper: Error Message
+// Helper: จัดการข้อความ Error ตามภาษา
 const getErrorMsg = (lang) => {
-    if (lang === 'TH') return "แย่จัง... ระบบมีปัญหาชั่วคราวค่ะ";
-    if (lang === 'JP') return "システムエラーが発生しました。";
-    if (lang === 'EN') return "Oops... System is unavailable.";
-    return "System Error";
+  const messages = {
+    TH: "แย่จัง... ระบบมีปัญหาชั่วคราวค่ะ",
+    JP: "システムエラーが発生しました。",
+    EN: "Oops... System is unavailable.",
+  };
+  return messages[lang] || "System Error";
 };
 
+// Helper: สร้าง Config สำหรับ Request
+const getAuthConfig = (token) => ({
+  headers: token ? { Authorization: `Bearer ${token}` } : {},
+});
+
 export const dashboardService = {
-  // 1. ดึงข้อมูลกราฟ (อาจไม่ต้องใช้ Token ถ้าเปิด Public)
+  // 1. ดึงข้อมูล Dashboard
   getData: async (token) => {
     try {
-      const res = await client.get('/dashboard-data', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
+      const res = await client.get('/dashboard-data', getAuthConfig(token));
       return res.data;
-    } catch (e) { console.error(e); return null; }
+    } catch (e) {
+      console.error("Fetch Data Error:", e);
+      return null;
+    }
   },
 
-  // 2. สรุปข้อมูล
+  // 2. สรุปข้อมูล (Summarize)
   getSummary: async (charts, lang, token) => {
     try {
-      const res = await client.post('/summarize-view', 
-        { visibleCharts: charts, lang },
-        { headers: { Authorization: `Bearer ${token}` } } // แนบ Token
-      );
+      const res = await client.post('/summarize-view', { visibleCharts: charts, lang }, getAuthConfig(token));
       return { message: res.data.message, isError: false };
-    } catch (e) { return { message: getErrorMsg(lang), isError: true }; }
+    } catch (e) {
+      return { message: getErrorMsg(lang), isError: true };
+    }
   },
 
-  // 3. ปฏิกิริยาตัวละคร
+  // 3. ปฏิกิริยาตัวละคร (Reaction)
   getReaction: async (point, context, lang, token) => {
     try {
-      const res = await client.post('/character-reaction', 
-        { pointData: point, contextData: context, lang },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await client.post('/character-reaction', { pointData: point, contextData: context, lang }, getAuthConfig(token));
       return { message: res.data.message, isError: false };
-    } catch (e) { return { message: getErrorMsg(lang), isError: true }; }
+    } catch (e) {
+      return { message: getErrorMsg(lang), isError: true };
+    }
   },
 
-  // 4. ถามตอบ AI
+  // 4. ถาม-ตอบ AI
   chat: async (question, allData, lang, token) => {
     try {
-      const res = await client.post('/ask-dashboard', 
-        { question, allData, lang },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await client.post('/ask-dashboard', { question, allData, lang }, getAuthConfig(token));
       return { message: res.data.message, isError: false };
-    } catch (e) { return { message: getErrorMsg(lang), isError: true }; }
+    } catch (e) {
+      return { message: getErrorMsg(lang), isError: true };
+    }
   },
 
+  // 5. Speech Token
   getSpeechToken: async () => {
     try {
       const res = await client.get('/get-speech-token');
@@ -74,19 +79,14 @@ export const dashboardService = {
     }
   },
 
+  // 6. News Ticker
   getNewsTicker: async (allData, pageTitle, lang, token) => {
     try {
-      const res = await client.post('/generate-ticker', {
-        allData,
-        pageTitle,
-        lang
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await client.post('/generate-ticker', { allData, pageTitle, lang }, getAuthConfig(token));
       return res.data;
     } catch (e) {
       console.error("Ticker API Error", e);
       return { message: "เชื่อมต่อข้อมูลระบบข่าวขัดข้อง..." };
     }
-  }
+  },
 };

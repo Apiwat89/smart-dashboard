@@ -1,52 +1,58 @@
 import React from 'react';
-import { LogOut, LayoutDashboard, Map, BarChart, Menu } from 'lucide-react'; // ⭐ 1. Import ไอคอนที่ต้องใช้
+import { LogOut, LayoutDashboard, Map, BarChart, Menu } from 'lucide-react';
 
-const Sidebar = ({ isCollapsed, toggle, menuItems, activePageId, onMenuClick, onLogout }) => {
+// Icon Mapping Configuration
+const ICON_MAP = {
+  LayoutDashboard: LayoutDashboard,
+  Map: Map,
+  BarChart: BarChart,
+};
 
-  // ⭐ 2. ฟังก์ชันเลือกไอคอนตามชื่อที่ส่งมา
-  const getIcon = (iconName) => {
-      switch(iconName) {
-          case 'LayoutDashboard': return <LayoutDashboard size={20} />;
-          case 'Map': return <Map size={20} />;
-          case 'BarChart': return <BarChart size={20} />;
-          default: return <LayoutDashboard size={20} />;
-      }
-  };
-
+const Sidebar = ({ 
+  isCollapsed, 
+  toggle, 
+  menuItems = [], 
+  activePageId, 
+  onMenuClick, 
+  onLogout 
+}) => {
   return (
     <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
-      {/* ส่วน Header */}
+      {/* Header */}
       <div className="sidebar-header">
-         <div className="logo"><img src="./logo.png" alt="" /></div>
-         <button onClick={toggle}>
-            <Menu size={24} /> {/* ใช้ไอคอน Menu แทนตัวอักษร ☰ */}
-         </button>
+        <div className="logo">
+          <img src="./logo.png" alt="Logo" />
+        </div>
+        <button onClick={toggle}>
+          <Menu size={24} />
+        </button>
       </div>
 
-      {/* เมนูต่างๆ */}
+      {/* Menu Items */}
       <div className="sidebar-menu">
-        {menuItems.map((item) => (
-          <div 
-            key={item.id} 
-            className={`menu-item ${activePageId === item.id ? 'active' : ''}`}
-            onClick={() => onMenuClick(item.id)}
-            title={isCollapsed ? item.title : ""} /* เอาเมาส์ชี้แล้วขึ้นชื่อ */
-          >
-            {/* ⭐ 3. แสดงไอคอนตรงนี้ (มันจะไม่ถูกซ่อนโดย CSS) */}
-            {getIcon(item.icon)}
-            
-            {/* ข้อความ (ตัวนี้จะถูก CSS สั่งซ่อนเมื่อ collapsed) */}
-            <span>{item.title}</span>
-          </div>
-        ))}
+        {menuItems?.map((item) => {
+          // Dynamic Icon Resolution
+          const IconComponent = ICON_MAP[item.icon] || LayoutDashboard;
+          
+          return (
+            <div
+              key={item.id}
+              className={`menu-item ${activePageId === item.id ? 'active' : ''}`}
+              onClick={() => onMenuClick(item.id)}
+            >
+              <IconComponent size={20} />
+              <span>{item.title}</span>
+            </div>
+          );
+        })}
       </div>
 
-      {/* ปุ่ม Logout */}
+      {/* Footer / Logout */}
       <div className="sidebar-footer">
-          <button onClick={onLogout} className="logout-btn" title="ออกจากระบบ">
-              <LogOut size={20} />
-              <span className="logout-text">ออกจากระบบ</span>
-          </button>
+        <button onClick={onLogout} className="logout-btn" title="ออกจากระบบ">
+          <LogOut size={20} />
+          <span className="logout-text">ออกจากระบบ</span>
+        </button>
       </div>
     </aside>
   );

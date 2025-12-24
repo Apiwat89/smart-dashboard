@@ -23,18 +23,25 @@ const DashboardLayout = ({
   isPlaying, togglePlay, autoPlayCountdown,
   newsText,      // ⭐ รับข้อความข่าวเข้ามา
   newsType,       // ⭐ รับประเภทข่าว (alert/info)
-  onCapture, isCapturing
+  onCapture, isCapturing,
+  rightPanelWidth,     // ⭐ รับเพิ่ม
+  onResizerMouseDown,  // ⭐ รับเพิ่ม
 }) => {
   return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', overflow: 'hidden' }}>
-      <div 
-        className={`app-container ${isSidebarCollapsed ? 'sidebar-closed' : ''}`}
-        style={{ flex: 1, minHeight: 0, position: 'relative' }}
-      >
+          <div 
+          className="app-container"
+          style={{ 
+            display: 'grid',
+            // 1fr ตรงกลางคือหัวใจสำคัญที่ทำให้ไม่มีช่องว่าง
+            gridTemplateColumns: `${isSidebarCollapsed ? '72px' : '240px'} 1fr auto ${rightPanelWidth}px`,
+            gridTemplateAreas: '"sidebar header header header" "sidebar main resizer right"',
+          }}
+        >
         <Sidebar 
             isCollapsed={isSidebarCollapsed} 
             toggle={toggleSidebar} 
-            menuItems={menuItems}
+            menuItems={menuItems} // ⭐ เช็คบรรทัดนี้ว่ามีไหม
             activePageId={activePageId}
             onMenuClick={onMenuClick}
             onLogout={onLogout} 
@@ -69,6 +76,12 @@ const DashboardLayout = ({
              </div>
           )}
         </main>
+
+        <div 
+          className="resizer-bar" 
+          onMouseDown={onResizerMouseDown}
+          style={{ gridArea: 'resizer' }}
+        />
 
         <RightPanel {...rightPanelProps} />
       </div>

@@ -1,56 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Zap, Server, BrainCircuit } from 'lucide-react';
+import { Zap, Server, BrainCircuit } from 'lucide-react';
+
+const LOADING_TEXTS = [
+  "กำลังเชื่อมต่อฐานข้อมูล...",
+  "กำลังปลุกน้องส้มจี๊ด...",
+  "กำลังวิเคราะห์กราฟน้ำท่วม...",
+  "เตรียมความพร้อมระบบ AI...",
+  "เข้าสู่ Dashboard..."
+];
 
 const LoadingScreen = () => {
-  // ข้อความที่จะเปลี่ยนไปเรื่อยๆ
-  const loadingTexts = [
-    "กำลังเชื่อมต่อฐานข้อมูล...",
-    "กำลังปลุกน้องส้มจี๊ด...",
-    "กำลังวิเคราะห์กราฟน้ำท่วม...",
-    "เตรียมความพร้อมระบบ AI...",
-    "เข้าสู่ Dashboard..."
-  ];
-
   const [textIndex, setTextIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setTextIndex((prev) => (prev + 1) % loadingTexts.length);
+      setTextIndex((prev) => (prev + 1) % LOADING_TEXTS.length);
     }, 1100);
     return () => clearInterval(interval);
   }, []);
 
   return (
     <div className="loading-container">
-      {/* Background Shapes (ลูกเล่นพื้นหลัง) */}
+      {/* Background Decor */}
       <div className="blob blob-1"></div>
       <div className="blob blob-2"></div>
       <div className="blob blob-3"></div>
 
       <div className="loading-content">
-        {/* ตัวโลโก้หลัก (มีวงแหวนหมุนๆ) */}
+        {/* Main Logo & Rings */}
         <div className="logo-wrapper">
-            <div className="spin-ring ring-1"></div>
-            <div className="spin-ring ring-2"></div>
-            <div className="icon-box">
-                <img src="./logo2.png" alt="" />
-            </div>
-            
-            {/* ไอคอนลอยๆ รอบตัว */}
-            <div className="orbit-icon orbit-1"><Zap size={16} /></div>
-            <div className="orbit-icon orbit-2"><Server size={16} /></div>
-            <div className="orbit-icon orbit-3"><BrainCircuit size={16} /></div>
+          <div className="spin-ring ring-1"></div>
+          <div className="spin-ring ring-2"></div>
+          <div className="icon-box">
+            <img src="./logo2.png" alt="Logo" />
+          </div>
+
+          {/* Orbit Icons */}
+          <div className="orbit-icon orbit-1"><Zap size={16} /></div>
+          <div className="orbit-icon orbit-2"><Server size={16} /></div>
+          <div className="orbit-icon orbit-3"><BrainCircuit size={16} /></div>
         </div>
 
-        {/* Text Animation */}
+        {/* Text & Progress */}
         <h2 className="loading-title">Somjeed Dashboard</h2>
         <div className="loading-status">
-            <span className="status-text key-anim">{loadingTexts[textIndex]}</span>
+          <span className="status-text key-anim">{LOADING_TEXTS[textIndex]}</span>
         </div>
 
-        {/* Loading Bar */}
         <div className="progress-bar-wrapper">
-            <div className="progress-bar-fill"></div>
+          <div className="progress-bar-fill"></div>
         </div>
       </div>
     </div>
