@@ -69,15 +69,25 @@ export const dashboardService = {
   },
 
   // 5. Speech Token
-  getSpeechToken: async () => {
+  speakElevenLabs: async (text) => {
     try {
-      const res = await client.get('/get-speech-token');
-      return res.data;
+      // ระบุ responseType: 'blob' เพื่อรับไฟล์เสียง
+      const res = await client.post('/speak-eleven', { text }, { responseType: 'blob' });
+      return res.data; // ส่งกลับเป็น Blob
     } catch (e) {
-      console.error("Token fetch failed", e);
+      console.error("Speech API Error:", e);
       return null;
     }
   },
+  // getSpeechToken: async () => {
+  //   try {
+  //     const res = await client.get('/get-speech-token');
+  //     return res.data;
+  //   } catch (e) {
+  //     console.error("Token fetch failed", e);
+  //     return null;
+  //   }
+  // },
 
   // 6. News Ticker
   getNewsTicker: async (allData, pageTitle, lang, token) => {
