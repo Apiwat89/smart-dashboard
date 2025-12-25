@@ -13,9 +13,9 @@ const LoginPage = ({ onLogin }) => {
         <div className="login-visual">
           <div className="visual-content">
             <div className="logo-badge">
-              <img src="./logo2.png" alt="Logo" />
+              <img src="./logo.png" alt="Logo" />
             </div>
-            <h1>Somjeed Dashboard</h1>
+            <h1>Insight Aura Dashboard</h1>
             <p>
               ระบบวิเคราะห์ข้อมูลอัจฉริยะ พร้อมผู้ช่วย AI<br />
               ที่จะทำให้การตัดสินใจของคุณง่ายขึ้น
@@ -36,7 +36,7 @@ const LoginPage = ({ onLogin }) => {
         {/* Right Side: Login Action */}
         <div className="login-action">
           <div className="login-header">
-            <h2>Welcome! 👋</h2>
+            <h2>Welcome!</h2>
             <p>กรุณาล็อกอินด้วยบัญชีองค์กรเพื่อเข้าใช้งาน</p>
           </div>
 
@@ -50,7 +50,7 @@ const LoginPage = ({ onLogin }) => {
           </button>
 
           <div className="login-footer">
-            <p>Powered by <strong>Somjeed Team</strong></p>
+            <p>Powered by <strong>Digital HR Team</strong></p>
             <span className="version">v1.0.0 (Beta)</span>
           </div>
         </div>

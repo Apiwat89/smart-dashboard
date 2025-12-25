@@ -73,29 +73,36 @@ const RightPanel = ({
       </div>
 
       {/* 4. Suggested Questions Interaction */}
-      <div className={`chat-interaction-group ${isSuggestOpen ? 'is-open' : ''}`} ref={suggestBoxRef}>
+      <div 
+        className={`chat-interaction-group ${isSuggestOpen ? 'is-open' : ''}`}
+        ref={suggestBoxRef} 
+      >
         <div className="suggested-questions-box">
           <div className="suggest-header">คำถามที่น่าสนใจ ✨</div>
           <div className="questions-list">
             {suggestedQuestions.map((q, idx) => (
-              <button key={idx} className="question-item" onClick={() => onSelectQuestion(q)}>
+              <button 
+                key={idx} 
+                className="question-item"
+                
+                // ⭐⭐⭐ แก้ตรงนี้ครับ: เปลี่ยนให้มันทำ 2 อย่างพร้อมกัน
+                onClick={() => {
+                    onSelectQuestion(q);      // 1. ส่งคำถามไปให้ App.jsx ทำงาน
+                    setIsSuggestOpen(false);  // 2. สั่งปิดกล่อง Popup ตัวเองทันที
+                }}
+                
+              >
                 {q}
               </button>
             ))}
           </div>
         </div>
 
-        <button
+        <button 
           className="ask-trigger-fab-dynamic"
           onClick={() => setIsSuggestOpen(!isSuggestOpen)}
         >
-          {isSuggestOpen ? (
-            <div style={{ alignItems: 'center', justifyContent: 'center', height: '100%', color: 'white' }}>
-              <X size={22} />
-            </div>
-          ) : (
-            <Sparkles size={50} />
-          )}
+          {isSuggestOpen ? <div style={{ alignItems: 'center', justifyContent: 'center', height: '100%', color: 'white' }}> <X size={22} /> </div> : <Sparkles size={50} />}
         </button>
       </div>
     </aside>

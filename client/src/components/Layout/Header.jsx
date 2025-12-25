@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, Moon, Sun, Play, Pause, Timer } from 'lucide-react';
+import { Bell, Moon, Sun, Play, Pause, Timer, TextAlignCenter } from 'lucide-react';
 import NotificationDropdown from '../Widgets/NotificationDropdown';
 
 const formatTime = (seconds) => {
@@ -19,6 +19,7 @@ const Header = ({
   isPlaying,
   togglePlay,
   autoPlayCountdown,
+  isTimerWaiting
 }) => {
   const [showNotif, setShowNotif] = useState(false);
 
@@ -77,6 +78,13 @@ const Header = ({
       border: '1px solid var(--bg-card)',
     },
   };
+  
+  const getTimerColor = () => {
+      if (isTimerWaiting) return '#f59e0b'; // 🟠 สีส้ม: รอ AI (Stuck/Busy)
+      if (isPlaying) return '#00c49f';      // 🟢 สีเขียว: กำลังเดิน (Playing)
+      return '#64748b';                     // ⚪ สีเทา: หยุด (Paused)
+  };
+  const timerColor = getTimerColor();
 
   return (
     <header className="header" style={styles.header}>
@@ -96,7 +104,12 @@ const Header = ({
         <div style={styles.timerBox}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '8px', color: isPlaying ? 'var(--primary-green)' : 'var(--text-muted)', fontWeight: '600', fontSize: '0.85rem' }}>
             <Timer size={16} />
-            <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+              <span style={{ 
+                fontVariantNumeric: 'tabular-nums',
+                lineHeight: 1,
+                position: 'relative',
+                top: '1px' 
+              }}>
               {formatTime(autoPlayCountdown)}
             </span>
           </div>

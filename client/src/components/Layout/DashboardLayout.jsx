@@ -26,6 +26,7 @@ const DashboardLayout = ({
   onCapture, isCapturing,
   rightPanelWidth,     // ⭐ รับเพิ่ม
   onResizerMouseDown,  // ⭐ รับเพิ่ม
+  isTimerWaiting,
 }) => {
   return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', overflow: 'hidden' }}>
@@ -59,6 +60,7 @@ const DashboardLayout = ({
             autoPlayCountdown={autoPlayCountdown}
             onCapture={onCapture}     // 👈 ส่งต่อ
             isCapturing={isCapturing} // 👈 ส่งต่อ
+            isTimerWaiting={isTimerWaiting}
         />
 
         <main className="main-content">

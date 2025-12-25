@@ -1,377 +1,428 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './App.css';
 import { models } from 'powerbi-client';
-
-// Auth
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { loginRequest } from "./authConfig";
-
-// Components
 import DashboardLayout from './components/Layout/DashboardLayout';
 import LoadingScreen from './components/Layout/LoadingScreen';
-import RealPowerBIEmbed from './components/Widgets/PowerBIEmbed';
+import RealPowerBIEmbed from './components/Widgets/PowerBIEmbed'; 
 import ResultBox from './components/Widgets/ResultBox';
 import LoginPage from './components/Layout/LoginPage';
-
-// API
 import { dashboardService } from './api/apiClient';
 
-// Constants
-const TIMER_DURATION = 20;
-const INITIAL_PANEL_WIDTH = 380;
-
 function App() {
-  // --- 1. State Management Grouping ---
-  
-  // UI & Layout State
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
-  const [isAppReady, setAppReady] = useState(false);
-  const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [rightPanelWidth, setRightPanelWidth] = useState(INITIAL_PANEL_WIDTH);
-  const [activePageId, setActivePageId] = useState("page_overview");
-  const [menuList, setMenuList] = useState([]);
-  
-  // Auth & User State
-  const { instance, accounts } = useMsal();
-  const isAuthenticated = useIsAuthenticated();
-  const [userAvatar, setUserAvatar] = useState(null);
-  const [isUnauthorized, setIsUnauthorized] = useState(false);
+    // --- State & Hooks ---
+    const [tickerText, setTickerText] = useState("กำลังเชื่อมต่อดาวเทียมสภาพอากาศ...");
+    const [tickerType, setTickerType] = useState("info");
+    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+    const { instance, accounts } = useMsal();
+    const isAuthenticated = useIsAuthenticated();
+    const [isAppReady, setAppReady] = useState(false);
+    const [userAvatar, setUserAvatar] = useState(null);
+    const [rightPanelWidth, setRightPanelWidth] = useState(340);
+    const isResizing = useRef(false);
+    const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [menuList, setMenuList] = useState([]);
+    const [activePageId, setActivePageId] = useState("page_overview");
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [autoPlayCountdown, setAutoPlayCountdown] = useState(120);
+    const TIMER_DURATION = 120; 
+    const [lang, setLang] = useState('TH');
+    const [aiState, setAiState] = useState({ status: 'idle', message: '', isVisible: false });
+    const [isProcessing, setProcessing] = useState(false);
+    const [countdown, setCountdown] = useState(0);
+    const [question, setQuestion] = useState("");
+    const [suggestedQuestions, setSuggestedQuestions] = useState([]);
+    const [currentReportData, setCurrentReportData] = useState(null);
+    const [summary, setSummary] = useState("รอข้อมูลจาก Power BI...");
+    const [isSummaryLoading, setSummaryLoading] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [isUnauthorized, setIsUnauthorized] = useState(false);
+    const [showStartButton, setShowStartButton] = useState(false);
 
-  // Ticker & Notification State
-  const [tickerText, setTickerText] = useState("กำลังเชื่อมต่อดาวเทียมสภาพอากาศ...");
-  const [tickerType, setTickerType] = useState("info");
-  const [notifications, setNotifications] = useState([]);
+    // Refs
+    const scrollRef = useRef(null); 
+    const talkTimerRef = useRef(null);
+    const powerBIReportRef = useRef(null);    
+    const langRef = useRef(lang);
+    const summarizedPageRef = useRef(null);
 
-  // Auto-Play State
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [autoPlayCountdown, setAutoPlayCountdown] = useState(TIMER_DURATION);
+    const isAiBusy = aiState.status !== 'idle' || isProcessing;
 
-  // AI & Mascot State
-  const [lang, setLang] = useState('TH');
-  const [aiState, setAiState] = useState({ status: 'idle', message: '', isVisible: false });
-  const [isProcessing, setProcessing] = useState(false);
-  const [question, setQuestion] = useState("");
-  const [suggestedQuestions, setSuggestedQuestions] = useState([]);
-  
-  // Data & Summary State
-  const [currentReportData, setCurrentReportData] = useState(null);
-  const [summary, setSummary] = useState("รอข้อมูลจาก Power BI...");
-  const [isSummaryLoading, setSummaryLoading] = useState(false);
+    // --- Logic ---
+    const activeAccount = accounts[0];
+    const userInfo = useMemo(() => {
+        if (!activeAccount) return { name: "Guest", displayRole: "Guest" };
+        const name = activeAccount.name || "User";
+        const rolesFromAzure = activeAccount.idTokenClaims?.roles || [];
+        let finalDisplayRole = rolesFromAzure.length > 0 ? rolesFromAzure.join(" | ") : "General User";
+        return { name: name, displayRole: finalDisplayRole };
+    }, [activeAccount]);
 
-  // Refs
-  const scrollRef = useRef(null);
-  const talkTimerRef = useRef(null);
-  const powerBIReportRef = useRef(null);
-  const langRef = useRef(lang);
-  const summarizedPageRef = useRef(null);
-  const isResizing = useRef(false);
-
-  // --- 2. Computed Values ---
-  const activeAccount = accounts[0];
-  const userInfo = useMemo(() => {
-    if (!activeAccount) return { name: "Guest", displayRole: "Guest" };
-    const roles = activeAccount.idTokenClaims?.roles || [];
-    return { 
-      name: activeAccount.name || "User", 
-      displayRole: roles.length > 0 ? roles.join(" | ") : "General User" 
-    };
-  }, [activeAccount]);
-
-  const currentPage = menuList.find(p => p.id === activePageId);
-
-  // --- 3. Effects ---
-
-  // Initialization & Auth Checks
-  useEffect(() => {
-    if (isAuthenticated && isAppReady && userInfo.displayRole === "General User") {
-      setIsUnauthorized(true);
-    }
-  }, [isAuthenticated, isAppReady, userInfo]);
-
-  useEffect(() => { langRef.current = lang; }, [lang]);
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  // Load Menu
-  useEffect(() => {
-    setMenuList([
-      { id: "page_overview", title: "สถิติน้ำท่วม 1", type: "powerbi_page", icon: "LayoutDashboard", pageName: "798ca254819667030432" },
-      { id: "page_details", title: "สถิติน้ำท่วม 2", type: "powerbi_page", icon: "Map", pageName: "5b3cc48690823dd3da6d" },
-      { id: "page_analysis", title: "สถิติน้ำท่วม 3", type: "powerbi_page", icon: "BarChart", pageName: "e93c812d89901cad35c2" }
-    ]);
-  }, []);
-
-  // Fake Loading Time
-  useEffect(() => {
-    if (isAuthenticated) {
-      const timer = setTimeout(() => setAppReady(true), 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [isAuthenticated]);
-
-  // Fetch Profile Photo
-  useEffect(() => {
-    const fetchPhoto = async () => {
-      if (!isAuthenticated || !activeAccount) return;
-      try {
-        const tokenRes = await instance.acquireTokenSilent({ ...loginRequest, account: activeAccount, scopes: ["User.Read"] });
-        const response = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
-          headers: { Authorization: `Bearer ${tokenRes.accessToken}` }
-        });
-        if (response.ok) {
-          const blob = await response.blob();
-          setUserAvatar(URL.createObjectURL(blob));
+    // --- Effects ---
+    useEffect(() => {
+        if (isAuthenticated && isAppReady && userInfo.displayRole === "General User") {
+            setIsUnauthorized(true);
         }
-      } catch (e) { console.error("Photo fetch error:", e); }
-    };
-    fetchPhoto();
-  }, [isAuthenticated, activeAccount, instance]);
+    }, [isAuthenticated, isAppReady, userInfo]);
 
-  // Auto-Play Logic
-  useEffect(() => {
-    let interval;
-    if (isPlaying && menuList.length > 0) {
-      interval = setInterval(() => setAutoPlayCountdown(prev => (prev <= 0 ? 0 : prev - 1)), 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, menuList]);
+    useEffect(() => { langRef.current = lang; }, [lang]);
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme); 
+    }, [theme]);
 
-  useEffect(() => {
-    if (isPlaying && autoPlayCountdown === 0) {
-      stopAllVoices();
-      setActivePageId(prevId => {
-        const currentIndex = menuList.findIndex(item => item.id === prevId);
-        const nextIndex = (currentIndex + 1) % menuList.length;
-        return menuList[nextIndex].id;
-      });
-      setAutoPlayCountdown(TIMER_DURATION);
-    }
-  }, [autoPlayCountdown, isPlaying, menuList]);
+    useEffect(() => {
+      const appMenu = [
+        { id: "page_overview", title: "สถิติน้ำท่วม 1", type: "powerbi_page", icon: "LayoutDashboard", pageName: "798ca254819667030432" },
+        { id: "page_details", title: "สถิติน้ำท่วม 2", type: "powerbi_page", icon: "Map", pageName: "5b3cc48690823dd3da6d" },
+        { id: "page_analysis", title: "สถิติน้ำท่วม 3", type: "powerbi_page", icon: "BarChart", pageName: "e93c812d89901cad35c2" }
+      ];
+      setMenuList(appMenu);
+    }, []);
 
-  // --- 4. Logic Functions ---
-
-  const getToken = async () => {
-    if (!activeAccount) return null;
-    try {
-      const res = await instance.acquireTokenSilent({ ...loginRequest, account: activeAccount });
-      return res.accessToken;
-    } catch { return null; }
-  };
-
-  const stopAllVoices = () => {
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-    if (talkTimerRef.current) {
-      clearTimeout(talkTimerRef.current);
-      talkTimerRef.current = null;
-    }
-  };
-
-  const handleAiSpeak = (text, isError = false) => {
-    stopAllVoices();
-    setAiState({ status: isError ? 'error' : 'talking', message: text, isVisible: true });
-  };
-
-  const triggerAiChat = async (textInput) => {
-    if (!textInput?.trim()) return;
-    
-    stopAllVoices();
-    setSummaryLoading(true);
-    setSummary("");
-    setProcessing(true);
-    setAiState({ status: 'thinking', message: '', isVisible: true });
-
-    try {
-      const token = await getToken();
-      const res = await dashboardService.chat(textInput, currentReportData || "", langRef.current, token);
-      setSummary(res.message);
-      handleAiSpeak(res.message);
-    } catch (e) {
-      setSummary("เกิดข้อผิดพลาด");
-      handleAiSpeak("ระบบขัดข้อง", true);
-    } finally {
-      setProcessing(false);
-      setSummaryLoading(false);
-    }
-  };
-
-  const handlePowerBIClick = async (event) => {
-    if (isProcessing) return;
-    if (event.detail?.dataPoints?.length > 0) {
-      const dp = event.detail.dataPoints[0];
-      const category = dp.identity[0]?.equals || "Unknown";
-      const value = dp.values[0]?.formattedValue || "N/A";
-      const chartTitle = event.detail.visual.title || "กราฟ";
-
-      setSummaryLoading(true);
-      setSummary("");
-      setProcessing(true);
-      stopAllVoices();
-      setAiState({ status: 'thinking', message: '', isVisible: true });
-
-      try {
-        const token = await getToken();
-        const res = await dashboardService.getReaction({ name: category, uv: value }, chartTitle, langRef.current, token);
-        setSummary(res.message);
-        handleAiSpeak(res.message);
-      } catch (e) {
-        setSummary("Error analyzing selection.");
-        handleAiSpeak("ขออภัยค่ะ ข้อมูลส่วนนี้ขัดข้อง", true);
-      } finally {
-        setProcessing(false);
-        setSummaryLoading(false);
-      }
-    }
-  };
-
-  const handleReportRendered = async () => {
-    if (!powerBIReportRef.current || summarizedPageRef.current === activePageId) return;
-
-    setSummaryLoading(true);
-    setSummary("กำลังอ่านข้อมูล...");
-
-    try {
-      const pages = await powerBIReportRef.current.getPages();
-      const pbiPage = pages.find(p => p.isActive);
-      if (!pbiPage) return;
-
-      const visuals = await pbiPage.getVisuals();
-      let allDataText = `ข้อมูลหน้า ${currentPage?.title}:\n`;
-
-      for (const visual of visuals) {
-        if (visual.title && !['image', 'textbox'].includes(visual.type)) {
-          try {
-            const result = await visual.exportData(models.ExportDataType.Summarized);
-            allDataText += `\n- ${visual.title}:\n${result.data}\n`;
-          } catch (e) { /* Ignore non-exportable visuals */ }
+    useEffect(() => {
+        if (isAuthenticated) {
+            const timer = setTimeout(() => { 
+                setShowStartButton(true); 
+            }, 5500); 
+            return () => clearTimeout(timer);
         }
-      }
+    }, [isAuthenticated]);
 
-      setCurrentReportData(allDataText);
-      summarizedPageRef.current = activePageId;
-      const token = await getToken();
+    useEffect(() => {
+      const fetchProfilePhoto = async () => {
+        if (!isAuthenticated || !activeAccount) return;
+        try {
+          const tokenResponse = await instance.acquireTokenSilent({ ...loginRequest, account: activeAccount, scopes: ["User.Read"] });
+          const response = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
+            headers: { Authorization: `Bearer ${tokenResponse.accessToken}` }
+          });
+          if (response.ok) {
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            setUserAvatar(url);
+          }
+        } catch (error) { console.error("Error fetching profile photo:", error); }
+      };
+      fetchProfilePhoto();
+    }, [isAuthenticated, activeAccount, instance]);
 
-      // Parallel Requests: Summary & Questions
-      const [aiRes, suggestRes] = await Promise.all([
-        dashboardService.chat("ช่วยสรุป Executive Summary", allDataText, langRef.current, token),
-        dashboardService.chat("แนะนำ 3 คำถามสำคัญสั้นๆ แยกบรรทัดกัน", allDataText, langRef.current, token)
-      ]);
+    useEffect(() => {
+        let interval;
+        if (isPlaying && menuList.length > 0) {
+          if (isAiBusy) {
+              // ถ้ายุ่ง ให้หยุดนับ (Reset เวลา)
+              setAutoPlayCountdown(TIMER_DURATION);
+          } else {
+              // ถ้าว่าง ให้นับต่อ
+              interval = setInterval(() => {
+                setAutoPlayCountdown(prev => (prev <= 0 ? 0 : prev - 1));
+              }, 1000);
+          }
+        }
+        return () => clearInterval(interval);
+    }, [isPlaying, menuList, isAiBusy, TIMER_DURATION]);
 
-      setSummary(aiRes.message);
-      handleAiSpeak(aiRes.message);
+    useEffect(() => {
+        if (isPlaying && autoPlayCountdown === 0) {
+            stopAllVoices();
+            setActivePageId((currentId) => {
+                const currentIndex = menuList.findIndex(item => item.id === currentId);
+                const nextIndex = (currentIndex + 1) % menuList.length;
+                return menuList[nextIndex].id;
+            });
+            setAutoPlayCountdown(TIMER_DURATION);
+        }
+    }, [autoPlayCountdown, isPlaying, menuList, TIMER_DURATION]);
 
-      const questions = suggestRes.message.split('\n')
-        .map(q => q.replace(/^\d+\.\s*/, '').trim())
-        .filter(q => q.length > 5)
-        .slice(0, 3);
-      setSuggestedQuestions(questions);
-
-    } catch (err) {
-      setSummary("ไม่สามารถประมวลผลข้อมูลได้");
-    } finally {
-      setSummaryLoading(false);
-    }
-  };
-
-  // Resizing Logic
-  const startResizing = () => {
-    isResizing.current = true;
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", stopResizing);
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  };
-  const handleMouseMove = (e) => {
-    if (!isResizing.current) return;
-    const newWidth = window.innerWidth - e.clientX;
-    if (newWidth > 280 && newWidth < 600) setRightPanelWidth(newWidth);
-  };
-  const stopResizing = () => {
-    isResizing.current = false;
-    document.removeEventListener("mousemove", handleMouseMove);
-    document.removeEventListener("mouseup", stopResizing);
-    document.body.style.cursor = "default";
-    document.body.style.userSelect = "auto";
-  };
-
-  // --- 5. Render Conditions ---
-
-  if (!isAuthenticated) return <LoginPage onLogin={() => instance.loginRedirect(loginRequest)} />;
-  if (!isAppReady) return <LoadingScreen />;
-  if (isUnauthorized) return (
-    <div className="access-denied-overlay">
-      <div className="access-denied-modal">
-        <div className="access-denied-icon">⛔</div>
-        <h2>Access Denied</h2>
-        <p>บัญชี {userInfo.name} ไม่มีสิทธิ์เข้าใช้งาน</p>
-        <button onClick={() => instance.logoutRedirect({ postLogoutRedirectUri: "/", account: activeAccount })}>ออกจากระบบ</button>
-      </div>
-    </div>
-  );
-
-  return (
-    <DashboardLayout
-      menuItems={menuList}
-      activePageId={activePageId}
-      onMenuClick={(id) => {
+    const handleMenuChange = (id) => {
         setActivePageId(id);
         if (isPlaying) setAutoPlayCountdown(TIMER_DURATION);
-      }}
-      rightPanelWidth={rightPanelWidth}
-      onResizerMouseDown={startResizing}
-      user={{ name: userInfo.name, role: userInfo.displayRole, avatar: userAvatar }}
-      isSidebarCollapsed={isSidebarCollapsed}
-      toggleSidebar={() => setSidebarCollapsed(!isSidebarCollapsed)}
-      scrollRef={scrollRef}
-      onSearch={(text) => { setQuestion(text); triggerAiChat(text); }}
-      pageTitle={currentPage ? currentPage.title : "Smart Dashboard"}
-      notifications={notifications}
-      isPlaying={isPlaying}
-      togglePlay={() => setIsPlaying(!isPlaying)}
-      autoPlayCountdown={autoPlayCountdown}
-      theme={theme}
-      toggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
-      newsText={tickerText}
-      newsType={tickerType}
-      rightPanelProps={{
-        aiState: { ...aiState, isVisible: ['talking', 'thinking'].includes(aiState.status) ? true : aiState.isVisible },
-        countdown: 0,
-        closeAi: () => setAiState(p => ({ ...p, isVisible: false, status: 'idle' })),
-        userQuestion: question,
-        setUserQuestion: setQuestion,
-        handleAsk: (e) => { e.preventDefault(); triggerAiChat(question); setQuestion(""); },
-        currentLang: lang,
-        setCurrentLang: setLang,
-        isProcessing,
-        onSpeechEnd: () => setAiState(p => ({ ...p, status: 'idle' })),
-        suggestedQuestions,
-        onSelectQuestion: (q) => { setSummaryLoading(true); setSummary(""); triggerAiChat(q); },
-        summaryWidget: (
-          <div className="ai-summary-in-panel">
-            <ResultBox
-              text={aiState.status === 'talking' ? aiState.message : summary}
-              isLoading={isSummaryLoading}
-              onRefresh={() => { summarizedPageRef.current = null; handleReportRendered(); }}
-            />
-          </div>
-        )
-      }}
-    >
-      <div className="fade-in" style={{ height: '100%', width: '100%' }}>
-        <div className="powerbi-container-wrapper" style={{ height: '80vh', width: '100%', background: '#fff', borderRadius: '8px' }}>
-          <RealPowerBIEmbed
-            key={activePageId}
-            targetPageName={currentPage?.pageName}
-            eventHandlers={new Map([['dataSelected', handlePowerBIClick]])}
-            getEmbeddedComponent={(report) => { powerBIReportRef.current = report; }}
-            onReportRendered={handleReportRendered}
-          />
-        </div>
-      </div>
-    </DashboardLayout>
-  );
+    };
+
+    // --- Handlers ---
+    const startResizing = (e) => {
+        isResizing.current = true;
+        document.addEventListener("mousemove", handleMouseMove);
+        document.addEventListener("mouseup", stopResizing);
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+    };
+    const handleMouseMove = (e) => {
+        if (!isResizing.current) return;
+        const newWidth = window.innerWidth - e.clientX;
+        if (newWidth > 280 && newWidth < 600) setRightPanelWidth(newWidth);
+    };
+    const stopResizing = () => {
+        isResizing.current = false;
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", stopResizing);
+        document.body.style.cursor = "default";
+        document.body.style.userSelect = "auto";
+    };
+
+    const getToken = async () => {
+        if (!activeAccount) return null;
+        try {
+            const response = await instance.acquireTokenSilent({ ...loginRequest, account: activeAccount });
+            return response.accessToken;
+        } catch (error) { return null; }
+    };
+
+    const stopAllVoices = () => {
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        if (talkTimerRef.current) {
+            clearTimeout(talkTimerRef.current);
+            talkTimerRef.current = null;
+        }
+    };
+
+    // 🔥 แก้ไข 1: ฟังก์ชันสั่งพูดเหลือแค่นี้พอ
+    const handleAiSpeak = (text, isError = false) => {
+      stopAllVoices(); 
+      if (isError) {
+          setAiState({ status: 'error', message: text, isVisible: true });
+          return;
+      }
+      setAiState({ status: 'talking', message: text, isVisible: true });
+    };
+
+    const triggerAiChat = async (textInput) => {
+        if(!textInput || !textInput.trim()) return;
+        stopAllVoices();
+        setSummaryLoading(true); 
+        setSummary(""); 
+        setProcessing(true);
+        setAiState({ status: 'thinking', message: '', isVisible: true });
+        try {
+            const token = await getToken(); 
+            const res = await dashboardService.chat(textInput, currentReportData || "", langRef.current, token); 
+            setSummary(res.message); 
+            handleAiSpeak(res.message);
+        } catch (error) { 
+            setSummary("เกิดข้อผิดพลาด");
+            handleAiSpeak("ระบบขัดข้อง", true); 
+        } finally { 
+            setProcessing(false); 
+            setSummaryLoading(false); 
+        }
+    };
+
+    const handlePowerBIClick = async (event) => {
+      if (event.detail && event.detail.dataPoints && event.detail.dataPoints.length > 0 && !isProcessing) {
+          const dp = event.detail.dataPoints[0];
+          const category = dp.identity[0]?.equals || "Unknown";
+          const value = dp.values[0]?.formattedValue || "N/A";
+          const chartTitle = event.detail.visual.title || "กราฟ"; 
+
+          setSummaryLoading(true);
+          setSummary(""); 
+          setProcessing(true);
+          if (window.speechSynthesis) window.speechSynthesis.cancel();
+          setAiState({ status: 'thinking', message: '', isVisible: true });
+
+          try {
+              const token = await getToken(); 
+              const res = await dashboardService.getReaction({ name: category, uv: value }, chartTitle, langRef.current, token);
+              setSummary(res.message); 
+              handleAiSpeak(res.message);
+          } catch (error) {
+              setSummary("ไม่สามารถวิเคราะห์จุดที่เลือกได้");
+              handleAiSpeak("ขออภัยค่ะ ข้อมูลส่วนนี้ขัดข้อง", true);
+          } finally {
+              setProcessing(false);
+              setSummaryLoading(false);
+          }
+      }
+    };
+
+    const handleReportRendered = async () => {
+        if (!powerBIReportRef.current) return;
+        const activePage = menuList.find(p => p.id === activePageId);
+        if (summarizedPageRef.current === activePageId) return;
+
+        // 🔥 แก้ไข 2: สั่งใบ้กิน + ทำท่าคิด ทันทีที่เริ่มเปลี่ยนหน้า เพื่อแก้เสียงซ้อน
+        setAiState(prev => ({ ...prev, status: 'thinking', message: '' }));
+        stopAllVoices();
+
+        setSummaryLoading(true);
+        setSummary("กำลังอ่านข้อมูล...");
+
+        try {
+            const pages = await powerBIReportRef.current.getPages();
+            const pbiPage = pages.find(p => p.isActive);
+            if (!pbiPage) return;
+            
+            const visuals = await pbiPage.getVisuals();
+            let allDataText = `ข้อมูลหน้า ${activePage?.title}:\n`;
+            for (const visual of visuals) {
+                if (visual.title && visual.type !== 'image' && visual.type !== 'textbox') {
+                    try {
+                        const result = await visual.exportData(models.ExportDataType.Summarized);
+                        allDataText += `\n- ${visual.title}:\n${result.data}\n`;
+                    } catch (e) { console.warn(e); }
+                }
+            }
+            setCurrentReportData(allDataText);
+            summarizedPageRef.current = activePageId; 
+            const token = await getToken(); 
+
+            const aiRes = await dashboardService.chat("ช่วยสรุป Executive Summary", allDataText, langRef.current, token);
+            setSummary(aiRes.message); 
+            setTimeout(() => {
+                handleAiSpeak(aiRes.message);
+            }, 2000);
+
+            // (ส่วนแนะนำคำถามและ Ticker คงเดิม)
+            const suggestPrompt = "แนะนำ 10 คำถามสำคัญสั้นๆ แยกบรรทัดกัน";
+            const suggestRes = await dashboardService.chat(suggestPrompt, allDataText, langRef.current, token);
+            const questions = suggestRes.message.split('\n').map(q => q.replace(/^\d+\.\s*/, '').trim()).filter(q => q.length > 5).slice(0, 10);
+            setSuggestedQuestions(questions);
+            setTickerText("AI กำลังประเมินสถานการณ์...");
+            const tickerPrompt = `ช่วยสรุปข้อมูลทั้งหมดเป็น "พาดหัวข่าวตัววิ่ง" สั้นๆ (ไม่เกิน 1 ประโยค)...(ตัดสั้น)`;
+            const tickerRes = await dashboardService.chat(tickerPrompt, allDataText, langRef.current, token);
+            if (tickerRes && tickerRes.message) {
+                let rawMsg = tickerRes.message;
+                if (rawMsg.includes("ALERT:")) {
+                    setTickerType('alert'); setTickerText(rawMsg.replace("ALERT:", "").trim());
+                } else {
+                    setTickerType('info'); setTickerText(rawMsg.replace("INFO:", "").trim());
+                }
+            }
+        } catch (err) { 
+            console.error(err);
+            setTickerText("ระบบข่าวขัดข้อง");
+        } finally { 
+            setSummaryLoading(false); 
+        }
+    };
+
+    const handleSpeechEnd = React.useCallback(() => {
+        setAiState(prev => ({ ...prev, status: 'idle' }));
+    }, []);
+
+    const handleLogin = () => instance.loginRedirect(loginRequest);
+
+    const handleStartApp = () => {
+        setShowStartButton(false);
+        setAppReady(true);
+    };
+
+    const handleLogout = () => {
+        stopAllVoices(); 
+        localStorage.clear(); sessionStorage.clear();
+        const currentUrl = window.location.origin;
+        instance.logoutRedirect({ postLogoutRedirectUri: currentUrl, account: activeAccount })
+        .catch(e => { window.location.href = currentUrl; });
+    };
+    const handleHeaderSearch = (text) => { setQuestion(text); triggerAiChat(text); };
+
+    if (!isAuthenticated) return <LoginPage onLogin={handleLogin} />;
+    if (!isAppReady) {
+        return (
+            <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
+                {/* โชว์ Loading Screen เป็นพื้นหลังไว้ก่อน */}
+                <LoadingScreen /> 
+                
+                {/* ถ้าโหลดเสร็จแล้ว (ครบ 5.5 วิ) ให้ขึ้นปุ่มกด */}
+                {showStartButton && (
+                    <div style={{
+                        position: 'absolute',
+                        top: 0, left: 0, width: '100%', height: '100%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        backgroundColor: 'rgba(0,0,0,0.4)', // ฉากดำจางๆ
+                        zIndex: 10000,
+                        animation: 'fadeIn 0.5s'
+                    }}>
+                        <button 
+                            onClick={handleStartApp}
+                            style={{
+                                padding: '15px 40px',
+                                fontSize: '1.5rem',
+                                fontWeight: 'bold',
+                                color: 'white',
+                                background: 'linear-gradient(135deg, #00c49f 0%, #0078d4 100%)',
+                                border: 'none',
+                                borderRadius: '50px',
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+                                transition: 'transform 0.2s',
+                            }}
+                            onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
+                            onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
+                        >
+                            คลิกเพื่อเข้าสู่ระบบ
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+    }
+    if (isUnauthorized) return <div className="access-denied-overlay">...</div>;
+
+    const currentPage = menuList.find(p => p.id === activePageId);
+
+    return (
+        <DashboardLayout
+            menuItems={menuList}
+            activePageId={activePageId}
+            onMenuClick={handleMenuChange}
+            onLogout={handleLogout} 
+            rightPanelWidth={rightPanelWidth}
+            onResizerMouseDown={startResizing}
+            user={{ name: userInfo.name, role: userInfo.displayRole, avatar: userAvatar }}
+            isSidebarCollapsed={isSidebarCollapsed}
+            toggleSidebar={() => setSidebarCollapsed(!isSidebarCollapsed)}
+            scrollRef={scrollRef} 
+            onSearch={handleHeaderSearch}
+            pageTitle={currentPage ? currentPage.title : "Smart Dashboard"}
+            notifications={notifications}
+            isPlaying={isPlaying}
+            togglePlay={() => setIsPlaying(!isPlaying)}
+            autoPlayCountdown={autoPlayCountdown}
+            theme={theme}
+            isTimerWaiting={isAiBusy}
+            toggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+            newsText={tickerText}
+            newsType={tickerType}
+            rightPanelProps={{
+                aiState: { ...aiState, isVisible: (aiState.status === 'talking' || aiState.status === 'thinking') ? true : aiState.isVisible },
+                countdown,
+                closeAi: () => setAiState(p => ({ ...p, isVisible: false, status: 'idle' })),
+                userQuestion: question, 
+                setUserQuestion: setQuestion, 
+                handleAsk: (e) => { e.preventDefault(); triggerAiChat(question); setQuestion(""); },
+                currentLang: lang, 
+                setCurrentLang: setLang, 
+                isProcessing,
+                onSpeechEnd: handleSpeechEnd,
+                suggestedQuestions: suggestedQuestions,
+                onSelectQuestion: (q) => { setSummaryLoading(true); setSummary(""); triggerAiChat(q); },
+                summaryWidget: (
+                        <div className="ai-summary-in-panel">
+                            <ResultBox 
+                                text={aiState.status === 'talking' ? aiState.message : summary} 
+                                isLoading={isSummaryLoading} 
+                                onRefresh={() => { summarizedPageRef.current = null; handleReportRendered(); }} 
+                            />
+                        </div>
+                    )
+            }}
+        >
+            <div className="fade-in" style={{ height: '100%', width: '100%' }}>
+                <div className="powerbi-container-wrapper" style={{ height: '80vh', width: '100%', background: '#fff', borderRadius: '8px' }}>
+                    <RealPowerBIEmbed 
+                      key={activePageId} 
+                      targetPageName={currentPage?.pageName} 
+                      eventHandlers={new Map([['dataSelected', handlePowerBIClick]])}
+                      getEmbeddedComponent={(report) => { powerBIReportRef.current = report; }}
+                      onReportRendered={handleReportRendered}
+                    />
+                </div>
+            </div>
+        </DashboardLayout>
+    );
 }
 
 export default App;

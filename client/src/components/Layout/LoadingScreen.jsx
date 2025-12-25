@@ -3,8 +3,8 @@ import { Zap, Server, BrainCircuit } from 'lucide-react';
 
 const LOADING_TEXTS = [
   "กำลังเชื่อมต่อฐานข้อมูล...",
-  "กำลังปลุกน้องส้มจี๊ด...",
-  "กำลังวิเคราะห์กราฟน้ำท่วม...",
+  "กำลังปลุกน้องออร่า...",
+  "กำลังวิเคราะห์กราฟ...",
   "เตรียมความพร้อมระบบ AI...",
   "เข้าสู่ Dashboard..."
 ];
@@ -32,7 +32,7 @@ const LoadingScreen = () => {
           <div className="spin-ring ring-1"></div>
           <div className="spin-ring ring-2"></div>
           <div className="icon-box">
-            <img src="./logo2.png" alt="Logo" />
+            <img src="./logo.png" alt="Logo" />
           </div>
 
           {/* Orbit Icons */}
@@ -42,7 +42,7 @@ const LoadingScreen = () => {
         </div>
 
         {/* Text & Progress */}
-        <h2 className="loading-title">Somjeed Dashboard</h2>
+        <h2 className="loading-title">Insight Aura Dashboard</h2>
         <div className="loading-status">
           <span className="status-text key-anim">{LOADING_TEXTS[textIndex]}</span>
         </div>
