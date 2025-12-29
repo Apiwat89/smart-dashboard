@@ -4,7 +4,7 @@ const BASE_URL = "https://smart-dashboard-7382.onrender.com";
 
 // ตั้งค่า Client Instance
 const client = axios.create({
-  baseURL: '/api', // หรือ `${BASE_URL}/api` ตาม Environment
+  baseURL: `${BASE_URL}/api`, // หรือ `${BASE_URL}/api` ตาม Environment
   timeout: 30000, // เพิ่ม Timeout ป้องกัน Server (Render) หลับ
   headers: {
     'Content-Type': 'application/json',
