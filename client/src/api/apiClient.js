@@ -71,7 +71,7 @@ export const dashboardService = {
   // 5. Speech Token
   speakElevenLabs: async (text, lang) => {
     // 1. ใส่ Key ของคุณตรงนี้ (Hardcode ไปเลยเพื่อความชัวร์ในฝั่ง Client)
-    const API_KEY = "sk_11e_รหัสของคุณ_ห้ามมีช่องว่าง"; 
+    const API_KEY = "sk_f9ec2e6dd4e00b86728af8ecb7bf41ca1abb031759c18b3a"; 
 
     // 2. กำหนด Voice ID (Mapping)
     const VOICE_MAP = {
