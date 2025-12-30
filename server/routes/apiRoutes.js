@@ -185,74 +185,74 @@ router.post('/ask-dashboard', async (req, res) => {
 });
 
 // 5. Get Speech Token
-router.post('/speak-eleven', async (req, res) => {
-    const { text, lang} = req.body;    
-    const API_KEY = process.env.ELEVEN_API_KEY;
+// router.post('/speak-eleven', async (req, res) => {
+//     const { text, lang} = req.body;    
+//     const API_KEY = process.env.ELEVEN_API_KEY;
 
-    const VOICE_MAP = {
-        'TH': process.env.ELEVEN_VOICE_ID_TH,
-        'JP': process.env.ELEVEN_VOICE_ID_TH, 
-        'EN': process.env.ELEVEN_VOICE_ID_TH, 
-        'CN': process.env.ELEVEN_VOICE_ID_TH,
-        'default': process.env.ELEVEN_VOICE_ID_TH 
-    };      
+//     const VOICE_MAP = {
+//         'TH': process.env.ELEVEN_VOICE_ID_TH,
+//         'JP': process.env.ELEVEN_VOICE_ID_TH, 
+//         'EN': process.env.ELEVEN_VOICE_ID_TH, 
+//         'CN': process.env.ELEVEN_VOICE_ID_TH,
+//         'default': process.env.ELEVEN_VOICE_ID_TH 
+//     };      
 
-    const selectedVoiceId = VOICE_MAP[lang] || VOICE_MAP['default'];
+//     const selectedVoiceId = VOICE_MAP[lang] || VOICE_MAP['default'];
 
-    try {
-        const response = await axios({
-            method: 'post',
-            // 3. ใช้ ID ที่เลือกมา
-            url: `https://api.elevenlabs.io/v1/text-to-speech/${selectedVoiceId}`,
-            headers: {
-                'Accept': 'audio/mpeg',
-                'xi-api-key': API_KEY,
-                'Content-Type': 'application/json'
-            },
-            data: {
-                text: text,
-                model_id: "eleven_v3",
-                voice_settings: { stability: 0.5, similarity_boost: 0.75 }
-            },
-            responseType: 'stream'
-        });
-
-        res.setHeader('Content-Type', 'audio/mpeg');
-        response.data.pipe(res);
-
-    } catch (err) {
-        // จัดการ Error ให้ละเอียด
-        const status = err.response?.status || 500;
-        console.error(`❌ ElevenLabs Error (${status}):`);
-        
-        // พยายามอ่าน Error message จาก Stream (ถ้ามี)
-        if (err.response?.data) {
-             err.response.data.on('data', (chunk) => {
-                 console.error("👉 Server ตอบว่า:", chunk.toString());
-             });
-        } else {
-             console.error("👉", err.message);
-        }
-
-        res.status(status).json({ error: "Speech generation failed" });
-    }
-});
-// router.get('/get-speech-token', async (req, res) => {
 //     try {
-//         const speechKey = process.env.SPEECH_KEY;
-//         const speechRegion = process.env.SPEECH_REGION;
+//         const response = await axios({
+//             method: 'post',
+//             // 3. ใช้ ID ที่เลือกมา
+//             url: `https://api.elevenlabs.io/v1/text-to-speech/${selectedVoiceId}`,
+//             headers: {
+//                 'Accept': 'audio/mpeg',
+//                 'xi-api-key': API_KEY,
+//                 'Content-Type': 'application/json'
+//             },
+//             data: {
+//                 text: text,
+//                 model_id: "eleven_v3",
+//                 voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+//             },
+//             responseType: 'stream'
+//         });
 
-//         const tokenResponse = await axios.post(
-//             `https://${speechRegion}.api.cognitive.microsoft.com/sts/v1.0/issueToken`, 
-//             null, 
-//             { headers: { 'Ocp-Apim-Subscription-Key': speechKey, 'Content-Type': 'application/x-www-form-urlencoded' } }
-//         );
-//         res.json({ token: tokenResponse.data, region: speechRegion });
+//         res.setHeader('Content-Type', 'audio/mpeg');
+//         response.data.pipe(res);
+
 //     } catch (err) {
-//         console.error("❌ Azure STS Error:", err.message);
-//         res.status(500).json({ error: "Failed to fetch speech token" });
+//         // จัดการ Error ให้ละเอียด
+//         const status = err.response?.status || 500;
+//         console.error(`❌ ElevenLabs Error (${status}):`);
+        
+//         // พยายามอ่าน Error message จาก Stream (ถ้ามี)
+//         if (err.response?.data) {
+//              err.response.data.on('data', (chunk) => {
+//                  console.error("👉 Server ตอบว่า:", chunk.toString());
+//              });
+//         } else {
+//              console.error("👉", err.message);
+//         }
+
+//         res.status(status).json({ error: "Speech generation failed" });
 //     }
 // });
+router.get('/get-speech-token', async (req, res) => {
+    try {
+        const speechKey = process.env.SPEECH_KEY;
+        const speechRegion = process.env.SPEECH_REGION;
+
+        const tokenResponse = await axios.post(
+            `https://${speechRegion}.api.cognitive.microsoft.com/sts/v1.0/issueToken`, 
+            null, 
+            { headers: { 'Ocp-Apim-Subscription-Key': speechKey, 'Content-Type': 'application/x-www-form-urlencoded' } }
+        );
+        res.json({ token: tokenResponse.data, region: speechRegion });
+    } catch (err) {
+        console.error("❌ Azure STS Error:", err.message);
+        res.status(500).json({ error: "Failed to fetch speech token" });
+    }
+});
 
 router.post('/generate-ticker', async (req, res) => {
     const { allData, pageTitle, lang } = req.body;

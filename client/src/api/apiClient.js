@@ -4,7 +4,7 @@ const BASE_URL = "https://smart-dashboard-7382.onrender.com";
 
 // ตั้งค่า Client Instance
 const client = axios.create({
-  baseURL: '/api', // หรือ `${BASE_URL}/api` ตาม Environment
+  baseURL: `${BASE_URL}/api`, // หรือ `${BASE_URL}/api` ตาม Environment
   timeout: 30000, // เพิ่ม Timeout ป้องกัน Server (Render) หลับ
   headers: {
     'Content-Type': 'application/json',
@@ -69,25 +69,25 @@ export const dashboardService = {
   },
 
   // 5. Speech Token
-  speakElevenLabs: async (text) => {
-    try {
-      // ระบุ responseType: 'blob' เพื่อรับไฟล์เสียง
-      const res = await client.post('/speak-eleven', { text }, { responseType: 'blob' });
-      return res.data; // ส่งกลับเป็น Blob
-    } catch (e) {
-      console.error("Speech API Error:", e);
-      return null;
-    }
-  },
-  // getSpeechToken: async () => {
+  // speakElevenLabs: async (text) => {
   //   try {
-  //     const res = await client.get('/get-speech-token');
-  //     return res.data;
+  //     // ระบุ responseType: 'blob' เพื่อรับไฟล์เสียง
+  //     const res = await client.post('/speak-eleven', { text }, { responseType: 'blob' });
+  //     return res.data; // ส่งกลับเป็น Blob
   //   } catch (e) {
-  //     console.error("Token fetch failed", e);
+  //     console.error("Speech API Error:", e);
   //     return null;
   //   }
   // },
+  getSpeechToken: async () => {
+    try {
+      const res = await client.get('/get-speech-token');
+      return res.data;
+    } catch (e) {
+      console.error("Token fetch failed", e);
+      return null;
+    }
+  },
 
   // 6. News Ticker
   getNewsTicker: async (allData, pageTitle, lang, token) => {
