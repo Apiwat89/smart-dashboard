@@ -30,6 +30,15 @@ const RightPanel = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isSuggestOpen]);
 
+  const UI_TEXT = {
+    TH: { title: "คำถามที่น่าสนใจ ✨", loading: "กำลังคิดคำถาม..." },
+    EN: { title: "Interesting Questions ✨", loading: "Thinking..." },
+    JP: { title: "おすすめの質問 ✨", loading: "考え中..." },
+    CN: { title: "有趣的提问 ✨", loading: "正在思考..." },
+    KR: { title: "흥미로운 질문 ✨", loading: "생각 중..." },
+    VN: { title: "Câu hỏi thú vị ✨", loading: "Đang suy nghĩ..." }
+  };
+
   return (
     <aside
       className="right-panel"
@@ -43,7 +52,7 @@ const RightPanel = ({
       {/* 1. Language Switcher */}
       <div className="lang-switcher-row">
         <Globe size={14} color="#94a3b8" style={{ marginRight: '4px' }} />
-        {['TH', 'EN', 'JP', 'CN', 'KR'].map((lang) => (
+        {['TH', 'EN', 'JP', 'CN', 'KR', 'VN'].map((lang) => (
           <button
             key={lang}
             className={`lang-btn ${currentLang === lang ? 'active' : ''}`}
@@ -78,9 +87,11 @@ const RightPanel = ({
         ref={suggestBoxRef} 
       >
         <div className="suggested-questions-box">
-          <div className="suggest-header">คำถามที่น่าสนใจ ✨</div>
+          <div className="suggest-header">{UI_TEXT[currentLang]?.title || UI_TEXT['TH'].title}</div>
           <div className="questions-list">
-            {suggestedQuestions.map((q, idx) => (
+            {
+            suggestedQuestions.length === 0 ? (<div style={{ padding: '10px', textAlign: 'center', color: 'var(--text-muted)' }}>{UI_TEXT[currentLang]?.loading}</div>) :
+            suggestedQuestions.map((q, idx) => (
               <button 
                 key={idx} 
                 className="question-item"

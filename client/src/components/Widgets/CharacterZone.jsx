@@ -137,7 +137,8 @@ const CharacterZone = ({ status, text, lang, onSpeechEnd }) => {
             'EN': { name: 'en-US-AvaNeural', style: 'cheerful', pitch: '+20%', rate: '+5%' },
             'JP': { name: 'ja-JP-NanamiNeural', style: 'cheerful', pitch: '+10%', rate: '+5%' },
             'CN': { name: 'zh-CN-XiaoxiaoNeural', style: 'cheerful', pitch: '+10%', rate: '+5%' },
-            'KR': { name: 'ko-KR-SunHiNeural', style: 'cheerful', pitch: '+10%', rate: '+5%' }
+            'KR': { name: 'ko-KR-SunHiNeural', style: 'cheerful', pitch: '+10%', rate: '+5%' },
+            'VN': { name: 'vi-VN-HoaiMyNeural', style: 'cheerful', pitch: '+10%', rate: '+5%' }
           };
           const config = voiceConfigs[lang] || voiceConfigs['TH'];
           speechConfig.speechSynthesisVoiceName = config.name;
@@ -197,9 +198,18 @@ const CharacterZone = ({ status, text, lang, onSpeechEnd }) => {
   }, [status, text, lang]); 
 
   // ... (ส่วน Render JSX เหมือนเดิมเป๊ะ) ...
-  const videoStyle = { width: '100%', height: '100%', position: 'absolute', top: 0, left: 0, objectFit: 'cover' };
+  const videoStyle = { 
+    width: '105%',          // กว้างเกิน 100% นิดนึงกันขอบขาว
+    height: '105%',         // สูงเกิน 100% นิดนึง
+    position: 'absolute', 
+    top: '50%',             // จัดกึ่งกลางแนวตั้ง
+    left: '50%',            // จัดกึ่งกลางแนวนอน
+    transform: 'translate(-50%, -50%)', // ดึงกลับมาให้อยู่ตรงกลางเป๊ะๆ
+    objectFit: 'cover',     // สั่งให้ขยายเต็มพื้นที่ (ยอมตัดส่วนเกินออก)
+    objectPosition: 'center center' // จัด position ของเนื้อวิดีโอ
+};
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', backgroundColor: '#000', borderRadius: '24px' }}>
+    <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', backgroundColor: 'white', borderRadius: '5px'}}>
       <video style={{ display: visualState === 'thinking' ? 'block' : 'none', ...videoStyle }} autoPlay loop muted playsInline src="./assets/char-thinking.mp4" />
       <video style={{ display: visualState === 'talking' ? 'block' : 'none', ...videoStyle }} autoPlay loop muted playsInline src="./assets/char-talking.mp4" />
       <video style={{ display: visualState === 'idle' ? 'block' : 'none', ...videoStyle }} autoPlay loop muted playsInline src="./assets/char-idle.mp4" />

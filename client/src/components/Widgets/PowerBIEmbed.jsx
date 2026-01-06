@@ -5,10 +5,7 @@ import { useMsal } from "@azure/msal-react";
 import { InteractionRequiredAuthError } from "@azure/msal-browser";
 import { powerBIRequest } from "../../authConfig";
 
-const REPORT_ID = '8ea65247-20ec-48bb-b405-2d9d6eb9cc63';
-const EMBED_URL = "https://app.powerbi.com/reportEmbed";
-
-const RealPowerBIEmbed = ({ eventHandlers, getEmbeddedComponent, onReportRendered, targetPageName }) => {
+const RealPowerBIEmbed = ({ eventHandlers, getEmbeddedComponent, onReportRendered, targetPageName, ClientID}) => {
   const { instance, accounts } = useMsal();
   const [embedConfig, setEmbedConfig] = useState(null);
   const [needsConsent, setNeedsConsent] = useState(false);
@@ -55,8 +52,8 @@ const RealPowerBIEmbed = ({ eventHandlers, getEmbeddedComponent, onReportRendere
         
         setEmbedConfig({
           type: 'report',
-          id: REPORT_ID,
-          embedUrl: EMBED_URL,
+          id: ClientID,
+          embedUrl: "https://app.powerbi.com/reportEmbed",
           accessToken: response.accessToken,
           tokenType: models.TokenType.Aad,
           pageName: targetPageName || undefined,

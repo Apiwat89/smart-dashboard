@@ -19,28 +19,41 @@ const getLangInstruction = (lang) => {
         case 'KR': return "Respond in Korean (Natural, Polite, Professional)."; // เพิ่มเกาหลี
         case 'EN': return "Respond in English (Natural, Polite, Professional).";
         case 'JP': return "Respond in Japanese (Natural, Polite, Professional).";
+        case 'VN': return "Respond in Vietnam (Natural, Polite, Professional).";
         case 'TH': default: return "Respond in Thai (Natural, Polite, Professional).";
     }
 };
 
 const getMascotName = (lang) => {
     switch (lang) {
-        case 'CN': return "小橘 (Somjeed)"; // ชื่อจีน
-        case 'KR': return "솜짓 (Somjeed)"; // ชื่อเกาหลี
-        case 'EN': return "Somjeed";
-        case 'JP': return "ソムジード (Somjeed)";
+        case 'CN': return "奥拉 (Aura)"; // จีน (อ่านว่า อ้าว-ลา)
+        case 'KR': return "아우라 (Aura)"; // เกาหลี (อ่านว่า อา-อู-รา)
+        case 'EN': return "Aura";
+        case 'JP': return "オーラ (Aura)"; // ญี่ปุ่น (อ่านว่า โอ-ระ)
+        case 'VN': return "Aura"; // เวียดนาม (ใช้ทับศัพท์ได้เลย)
         case 'TH': 
-        default: return "ส้มจี๊ด";
+        default: return "ออร่า";
     }
 };
 
 // --- Endpoints ---
 
+// getClientID
+router.get('/Client-ID', (req, res) => {
+    try {
+        const id = process.env.POWERBI_CLIENT_ID;
+        res.json(id);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ error: "Client ID not found"});
+    }
+})
+
 // 1. Get Dashboard Data (Database)
 router.get('/dashboard-data', (req, res) => {
     try {
         const data = getDashboardData();
-        setTimeout(() => res.json(data), 3000);
+        res.json(data);
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: "Data not found" });
@@ -53,83 +66,94 @@ router.post('/summarize-view', async (req, res) => {
     const langInstruction = getLangInstruction(lang);
 
     const prompt = `
-        Role: Senior Data Analyst & Power BI Consultant
+        Role: Senior Data Analyst named "Aura".
+        
+        Objective: 
+        Analyze the visuals and provide a summary in 4-5 bullet points.
 
-        Objective:
-        Analyze the provided Power BI visuals and generate an executive-level summary for decision makers.
-
-        Input Data (Visible Charts Only):
+        Input Data:
         ${JSON.stringify(visibleCharts)}
 
         Language Instruction:
         ${langInstruction}
 
-        Analysis Rules:
-        1. Cross-visual Insight: Connect relationships between charts (cause–effect, contrast, or confirmation).
-        2. Highlight Extremes: Identify unusual spikes, drops, or standout values.
-        3. Business Meaning: Explain implications, risks, or opportunities — not raw numbers only.
-        4. Be concise, factual, and decision-oriented.
+        STRICT FORMATTING RULES:
+        1. **NO INTRO/OUTRO**: Do NOT start with greetings like "สวัสดีค่ะ", "ออร่ายินดีสรุป...", or "นี่คือข้อมูล...". 
+        2. **IMMEDIATE START**: Your very first character must be "-". 
+        3. **NO POLITE FILLERS**: Skip "นะคะ", "ค่ะ", "ทราบนะคะ" ในส่วนบทนำ ให้เข้าถึงตัวเลขข้อมูลทันที
+        4. **AURA'S TOUCH**: You can use "ออร่าขอแนะนำ..." or "ออร่ามองว่า..." ONLY in the last bullet point (Recommendation).
+        
+        STRUCTURE:
+        - [Point 1]: Big picture summary with key numbers.
+        - [Point 2-3]: Specific insights/anomalies found in the data.
+        - [Point 4]: Potential risks or opportunities.
+        - [Point 5]: Actionable recommendation (Aura style).
 
-        Response Structure (Plain Text Only):
-        [Executive Summary]
-        - 2–3 sentences summarizing the overall trend and key takeaway.
-
-        [Key Insights]
-        - Insight 1 (relationship across charts)
-        - Insight 2 (outlier or anomaly)
-        - Insight 3 (notable pattern or trend)
-
-        [Recommendation]
-        - One clear, actionable recommendation based on the data.
-
-        Constraints:
-        - Plain text only
-        - Use "-" for bullet points
-        - No markdown, no emojis
+        Example of THE ONLY ACCEPTABLE format:
+        - จังหวัดเชียงใหม่มีความเสียหายรวมสูงสุดที่ 394,980 ตามด้วยนราธิวาสและสุโขทัย...
+        - พบว่าพื้นที่ภาคตะวันออกเฉียงเหนือมีการกระจุกตัวของความเสียหายในหลายจังหวัด...
+        - ความเสียหายที่เกิดขึ้นสะท้อนถึงความจำเป็นในการเฝ้าระวังพื้นที่ลุ่มน้ำ...
+        - ออร่าขอแนะนำให้เร่งจัดสรรงบประมาณเยียวยาไปยัง 3 จังหวัดแรกที่มีมูลค่าความเสียหายสูงสุดค่ะ
     `;
 
-    const reply = await generateAIResponse(prompt, "You are a professional Data Analyst.");
-    res.json({ message: reply });
+    try {
+        const reply = await generateAIResponse(prompt, "You are a helpful Data Analyst.");
+        res.json({ message: reply });
+    } catch (err) {
+        console.error("AI Error:", err);
+        res.status(500).json({ message: "Analysis currently unavailable." });
+    }
 });
 
-// 3. Character Reaction
+
+// 3. Character Reaction Endpoint
 router.post('/character-reaction', async (req, res) => {
     const { pointData, contextData, lang } = req.body;
+    
+    // ดึงคำสั่งภาษา และ ชื่อ Mascot
     const langInstruction = getLangInstruction(lang);
-    const mascotName = getMascotName(lang); // ⭐ ดึงชื่อตามภาษา
+    const mascotName = getMascotName(lang); 
 
     let prompt = "";
+
+    // 🟢 กรณี 1: User จิ้มที่แท่งกราฟ/จุดข้อมูล (Point Click)
     if (pointData) {
         prompt = `
-            Role: ${mascotName} — a cheerful, insightful Power BI mascot. 
+            Role: ${mascotName} — a professional yet friendly Data Analyst Assistant.
             
             User Interaction:
-            Clicked Item: "${pointData.name}"
-            Value: ${pointData.uv}
+            User clicked on item: "${pointData.name}" with Value: "${pointData.uv}"
             
-            Chart Context:
+            Chart Context (for comparison):
             ${JSON.stringify(contextData)}
             
             Language Instruction:
             ${langInstruction}
             
             Tasks:
-            1. Refer to yourself as '${mascotName}' only.
-            2. Compare the clicked value with the rest of the dataset.
-            3. React appropriately (High: Excited, Low: Encouraging, Average: Insightful).
-            4. Explain briefly WHY it stands out.
+            1. Refer to yourself as '${mascotName}'.
+            2. Analyze the clicked value:
+               - Is it high, low, or average compared to others?
+               - Is it a good thing or a worrying thing?
+            3. **Tone Adjustment**:
+               - If Good/High: Be excited and congratulatory.
+               - If Bad/Low: Be empathetic and encouraging (don't be too cheerful if the data is bad).
+               - If Average: Be informative.
+            4. Explain in 1 short sentence WHY this point matters.
             
             Constraints:
-            - Maximum 2 sentences
-            - Plain text only
-            - No emojis, no markdown
+            - Maximum 2 sentences.
+            - Plain text only (NO markdown, NO emojis).
+            - Speak naturally as if talking to the user.
         `;        
-    } else {
+    } 
+    // 🔵 กรณี 2: ดูภาพรวม (Overview)
+    else {
         prompt = `
-            Role: ${mascotName} — a cheerful, insightful Power BI mascot.
+            Role: ${mascotName} — a professional yet friendly Data Analyst Assistant.
 
             User Interaction:
-            Overview of the entire chart
+            User is viewing the Chart Overview.
 
             Chart Context:
             ${JSON.stringify(contextData)}
@@ -138,18 +162,24 @@ router.post('/character-reaction', async (req, res) => {
             ${langInstruction}
 
             Tasks:
-            1. Refer to yourself as '${mascotName}' only.
-            2. Identify ONE most noticeable trend.
-            3. Describe it in a friendly style.
+            1. Refer to yourself as '${mascotName}'.
+            2. Scan for the most obvious pattern (e.g., "Sales are rising" or "April was the lowest").
+            3. Summarize it in a friendly, conversational way.
 
             Constraints:
-            - Maximum 3 sentences
-            - Plain text only
+            - Maximum 2-3 sentences.
+            - Plain text only (NO markdown, NO emojis).
+            - Focus on the "Big Picture".
         `;
     }
     
-    const reply = await generateAIResponse(prompt, "You are a helpful AI mascot.");
-    res.json({ message: reply });
+    try {
+        const reply = await generateAIResponse(prompt, "You are Aura, a helpful data assistant.");
+        res.json({ message: reply });
+    } catch (err) {
+        console.error("Reaction Error:", err);
+        res.status(500).json({ message: "..." });
+    }
 });
 
 // 4. Chat with Somjeed
@@ -256,18 +286,29 @@ router.get('/get-speech-token', async (req, res) => {
 
 router.post('/generate-ticker', async (req, res) => {
     const { allData, pageTitle, lang } = req.body;
-    const mascotName = getMascotName(lang); // ดึงชื่อส้มจี๊ดตามภาษา
+    const mascotName = getMascotName(lang);
+    const langInstruction = getLangInstruction(lang)
 
     const prompt = `
-        Role: News Editor for ${mascotName} Dashboard.
-        Source Data (from Page: ${pageTitle}): ${JSON.stringify(allData)}
+        Role: News Editor for Dashboard (Strict Mode).
+        Source Data: ${JSON.stringify(allData)}
         
         Task:
-        Summarize the data into 3-4 short news headlines for a scrolling ticker.
-        - Focus on key numbers or critical warnings.
-        - Format: [Icon] Headline | [Icon] Headline
-        - Maximum 250 characters total.
-        - NO Markdown, NO intro text.
+        1. Summarize the data into 1 news headline.
+        2. **STRICT STARTING RULE**: 
+        - You MUST start your response with either "ALERT:" or "INFO:".
+        - DO NOT say "Aura says...", "Here is the summary...", or any intro text.
+        - DO NOT translate "ALERT:" or "INFO:". Use these English words only.
+        
+        Logic:
+        - Use "ALERT:" if you see negative trends, drops, or risks.
+        - Use "INFO:" for normal updates or positive news.
+
+        Language of content: ${langInstruction}
+
+        Constraints:
+        - Output format: ALERT: [Content] OR INFO: [Content]
+        - NO Markdown, NO Emojis, NO Intro.
     `;
 
     try {

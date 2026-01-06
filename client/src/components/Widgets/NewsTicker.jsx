@@ -12,7 +12,10 @@ const NewsTicker = ({ text, type = 'info' }) => {
       <div className="ticker-label" style={{ backgroundColor: labelColor }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {isAlert ? <AlertTriangle size={18} /> : <Info size={18} />}
+          
+          {/* 👇 แก้ไขตรงนี้ครับ ให้แสดงคำตามประเภทที่ส่งมา 👇 */}
           {isAlert ? 'CRITICAL ALERT' : 'LATEST UPDATE'}
+          {/* 👆 หรือถ้าอยากให้เปลี่ยนตามภาษา ให้ใช้ UI_TEXT[lang] มาใส่แทนก็ได้ครับ */}
         </span>
       </div>
 

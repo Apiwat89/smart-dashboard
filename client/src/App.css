@@ -199,6 +199,7 @@
      z-index: 10;
      color: var(--text-main);
      height: 100%; /* เต็มพื้นที่ Grid Row 1 */
+     
    }
    
    /* Styles เดิมของ Header */
@@ -220,7 +221,7 @@
       7. AI SUMMARY BOX
       ========================================= */
    .result-header { height: 56px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; background: var(--bg-card); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 5; flex-shrink: 0; }
-   .header-left, .header-right { display: flex; align-items: center; gap: 10px; }
+   .header-left, .header-right { display: flex; align-items: center; gap: 10px;}
    .header-title { font-weight: 600; font-size: 0.95rem; }
    .icon-sparkle { color: var(--primary-green); }
    .icon-btn { background: transparent; border: none; cursor: pointer; padding: 8px; border-radius: 8px; color: var(--text-light); transition: 0.2s; display: flex; align-items: center; justify-content: center; }
@@ -254,6 +255,7 @@
      background: var(--bg-card);
      border-left: 1px solid var(--border-color);
      width: 100%; 
+     
    }
    
    /* 🌐 Lang Switcher */

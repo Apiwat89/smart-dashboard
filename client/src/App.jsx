@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import './App.css';
-import { models } from 'powerbi-client';
+import { Dashboard, models } from 'powerbi-client';
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { loginRequest } from "./authConfig";
 import DashboardLayout from './components/Layout/DashboardLayout';
@@ -12,14 +12,14 @@ import { dashboardService } from './api/apiClient';
 
 function App() {
     // --- State & Hooks ---
-    const [tickerText, setTickerText] = useState("กำลังเชื่อมต่อดาวเทียมสภาพอากาศ...");
+    const [tickerText, setTickerText] = useState("กำลังเชื่อมต่อ Power BI...");
     const [tickerType, setTickerType] = useState("info");
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
     const [isAppReady, setAppReady] = useState(false);
     const [userAvatar, setUserAvatar] = useState(null);
-    const [rightPanelWidth, setRightPanelWidth] = useState(340);
+    const [rightPanelWidth, setRightPanelWidth] = useState(380);
     const isResizing = useRef(false);
     const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [menuList, setMenuList] = useState([]);
@@ -39,6 +39,7 @@ function App() {
     const [notifications, setNotifications] = useState([]);
     const [isUnauthorized, setIsUnauthorized] = useState(false);
     const [showStartButton, setShowStartButton] = useState(false);
+    const [ClientID, setClientID] = useState(null);
 
     // Refs
     const scrollRef = useRef(null); 
@@ -60,6 +61,14 @@ function App() {
     }, [activeAccount]);
 
     // --- Effects ---
+
+    useEffect(() => {
+        const fetch = async () => {
+            const res = await dashboardService.getClientID();
+            if (res) setClientID(res);
+        }; fetch();
+    }, []);
+
     useEffect(() => {
         if (isAuthenticated && isAppReady && userInfo.displayRole === "General User") {
             setIsUnauthorized(true);
@@ -135,6 +144,64 @@ function App() {
             setAutoPlayCountdown(TIMER_DURATION);
         }
     }, [autoPlayCountdown, isPlaying, menuList, TIMER_DURATION]);
+
+    // ✅ Effect สำหรับเปลี่ยนภาษา: ทำงานเมื่อค่า lang เปลี่ยน โดยใช้ข้อมูลเดิม
+    useEffect(() => {
+        const refreshQuestionsOnLangChange = async () => {
+            // 1. ถ้าไม่มีข้อมูลกราฟ (แปลว่ายังไม่ได้โหลดหน้า) ก็ไม่ต้องทำอะไร
+            if (!currentReportData) return;
+
+            console.log(`🌍 Changing language to ${lang}... Refreshing questions.`);
+
+            const token = await getToken();
+            const prompt = "Suggest 10 short important questions about this data, separated by newlines.";
+            const tickerPrompt = `ช่วยสรุปข้อมูลทั้งหมดเป็น "พาดหัวข่าวตัววิ่ง" สั้นๆ (ไม่เกิน 1 ประโยค)...(ตัดสั้น)`;
+            
+            setTickerText("AI กำลังประเมินสถานการณ์...");
+
+            try {
+                // (Optional) เคลียร์คำถามเก่าก่อนเพื่อให้ User รู้ว่ากำลังคิดใหม่
+                setSuggestedQuestions([]); 
+
+                // 3. 🔥 ยิง API chat ด้วยข้อมูลเดิม (currentReportData) + ภาษาใหม่ (lang)
+                const res = await dashboardService.chat(prompt, currentReportData, lang, token);
+                
+                // 4. แปลงผลลัพธ์เป็นรายการคำถาม
+                const questions = res.message
+                    .split('\n')
+                    .map(q => q.replace(/^\d+\.\s*/, '').replace(/^- /, '').trim())
+                    .filter(q => q.length > 5)
+                    .slice(0, 10);
+
+                // 5. อัปเดต State เพื่อโชว์คำถามภาษาใหม่
+                setSuggestedQuestions(questions);
+
+                const tickerRes = await dashboardService.chat(tickerPrompt, currentReportData, lang, token);
+                if (tickerRes && tickerRes.message) {
+                    let rawMsg = tickerRes.message;
+                    const upperMsg = rawMsg.toUpperCase(); // แปลงเป็นตัวพิมพ์ใหญ่เพื่อเช็ค Tag
+
+                    if (upperMsg.startsWith("ALERT:")) {
+                        setTickerType('alert');
+                        // ตัด Tag ออกโดยไม่สนตัวพิมพ์เล็กใหญ่
+                        setTickerText(rawMsg.replace(/^ALERT:/i, "").trim());
+                    } else {
+                        setTickerType('info');
+                        // ตัด Tag INFO: ออก (ถ้ามี)
+                        setTickerText(rawMsg.replace(/^INFO:/i, "").trim());
+                    }
+                }
+
+            } catch (err) {
+                console.error("Error refreshing questions on language change:", err);
+                // กรณี Error อาจจะใส่คำถาม Default ไว้กันเหนียว
+                setSuggestedQuestions(lang === 'EN' ? ["Analyzing data..."] : ["กำลังประมวลผลข้อมูล..."]);
+            }
+        };
+
+        refreshQuestionsOnLangChange();
+
+    }, [lang]); // 👈 สำคัญมาก! บรรทัดนี้สั่งให้รันทุกครั้งที่ "lang" เปลี่ยน
 
     const handleMenuChange = (id) => {
         setActivePageId(id);
@@ -284,10 +351,16 @@ function App() {
             const tickerRes = await dashboardService.chat(tickerPrompt, allDataText, langRef.current, token);
             if (tickerRes && tickerRes.message) {
                 let rawMsg = tickerRes.message;
-                if (rawMsg.includes("ALERT:")) {
-                    setTickerType('alert'); setTickerText(rawMsg.replace("ALERT:", "").trim());
+                const upperMsg = rawMsg.toUpperCase(); // แปลงเป็นตัวพิมพ์ใหญ่เพื่อเช็ค Tag
+
+                if (upperMsg.startsWith("ALERT:")) {
+                    setTickerType('alert');
+                    // ตัด Tag ออกโดยไม่สนตัวพิมพ์เล็กใหญ่
+                    setTickerText(rawMsg.replace(/^ALERT:/i, "").trim());
                 } else {
-                    setTickerType('info'); setTickerText(rawMsg.replace("INFO:", "").trim());
+                    setTickerType('info');
+                    // ตัด Tag INFO: ออก (ถ้ามี)
+                    setTickerText(rawMsg.replace(/^INFO:/i, "").trim());
                 }
             }
         } catch (err) { 
@@ -418,6 +491,7 @@ function App() {
                       eventHandlers={new Map([['dataSelected', handlePowerBIClick]])}
                       getEmbeddedComponent={(report) => { powerBIReportRef.current = report; }}
                       onReportRendered={handleReportRendered}
+                      ClientID={ClientID}
                     />
                 </div>
             </div>

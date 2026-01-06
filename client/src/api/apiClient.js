@@ -4,7 +4,7 @@ const BASE_URL = "https://smart-dashboard-7382.onrender.com";
 
 // ตั้งค่า Client Instance
 const client = axios.create({
-  baseURL: `${BASE_URL}/api`, // หรือ `${BASE_URL}/api` ตาม Environment
+  baseURL: `/api`, // หรือ `${BASE_URL}/api` ตาม Environment
   timeout: 30000, // เพิ่ม Timeout ป้องกัน Server (Render) หลับ
   headers: {
     'Content-Type': 'application/json',
@@ -15,8 +15,11 @@ const client = axios.create({
 const getErrorMsg = (lang) => {
   const messages = {
     TH: "แย่จัง... ระบบมีปัญหาชั่วคราวค่ะ",
-    JP: "システムエラーが発生しました。",
     EN: "Oops... System is unavailable.",
+    JP: "システムエラーが発生しました。",
+    CN: "糟糕... 系统暂时出现问题。",       // จีน
+    KR: "죄송합니다... 시스템에 문제가 발생했습니다.", // เกาหลี
+    VN: "Rất tiếc... Hệ thống đang gặp sự cố.",    // เวียดนาม
   };
   return messages[lang] || "System Error";
 };
@@ -27,6 +30,18 @@ const getAuthConfig = (token) => ({
 });
 
 export const dashboardService = {
+
+  // ดึง Report 
+  getClientID: async () => {
+    try {
+      const res = await client.get('/Client-ID');
+      return res.data;
+    } catch (e) {
+      console.log("Fetch Data Error:", e);
+      return null;
+    }
+  },
+
   // 1. ดึงข้อมูล Dashboard
   getData: async (token) => {
     try {
@@ -69,6 +84,46 @@ export const dashboardService = {
   },
 
   // 5. Speech Token
+  // speakElevenLabs: async (text, lang) => {
+  //   // 1. ใส่ Key ของคุณตรงนี้ (Hardcode ไปเลยเพื่อความชัวร์ในฝั่ง Client)
+  //   const API_KEY = "sk_b5cb52c198e6029f8c62060ac5b3cf9baf95084653018b92"; 
+
+  //   // 2. กำหนด Voice ID (Mapping)
+  //   const VOICE_MAP = {
+  //       'TH': 'B8gJV1IhpuegLxdpXFOE', // เสียงไทย (หรือเสียงที่คุณเลือก)
+  //       'JP': 'B8gJV1IhpuegLxdpXFOE',
+  //       'EN': '...ID_เสียงฝรั่ง...', 
+  //       'CN': '...ID_เสียงจีน...',
+  //       'default': 'B8gJV1IhpuegLxdpXFOE'
+  //   };
+  //   const selectedVoiceId = VOICE_MAP[lang] || VOICE_MAP['default'];
+
+  //   try {
+  //     console.log(`🔊 Client กำลังขอเสียงจาก ElevenLabs (${lang})...`);
+      
+  //     const response = await axios({
+  //       method: 'post',
+  //       url: `https://api.elevenlabs.io/v1/text-to-speech/${selectedVoiceId}`,
+  //       headers: {
+  //         'Accept': 'audio/mpeg',
+  //         'xi-api-key': API_KEY, // ส่ง Key จาก Browser
+  //         'Content-Type': 'application/json'
+  //       },
+  //       data: {
+  //         text: text,
+  //         model_id: "eleven_v3", // ใช้ v3 หรือ eleven_multilingual_v2
+  //         voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+  //       },
+  //       responseType: 'blob' // 👈 สำคัญ: รับเป็น Blob (ไฟล์เสียง) โดยตรง
+  //     });
+
+  //     return response.data; // ส่ง Blob กลับไปให้ CharacterZone เล่น
+
+  //   } catch (e) {
+  //     console.error("❌ ElevenLabs Client Error:", e);
+  //     return null;
+  //   }
+  // },
   // speakElevenLabs: async (text) => {
   //   try {
   //     // ระบุ responseType: 'blob' เพื่อรับไฟล์เสียง

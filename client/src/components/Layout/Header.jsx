@@ -124,13 +124,13 @@ const Header = ({
         </button>
 
         {/* Notifications */}
-        <button
+        {/* <button
           onClick={() => setShowNotif(!showNotif)}
           style={{ background: 'none', border: 'none', cursor: 'pointer', marginRight: '15px', color: 'var(--text-muted)', position: 'relative', display: 'flex', alignItems: 'center' }}
         >
           <Bell size={22} />
           {notifications.length > 0 && <span style={styles.notifBadge} />}
-        </button>
+        </button> */}
 
         {/* User Profile */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: '1.3', marginRight: '12px' }}>
