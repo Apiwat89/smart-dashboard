@@ -19,7 +19,7 @@ const getLangInstruction = (lang) => {
         case 'KR': return "Respond in Korean (Natural, Polite, Professional)."; // เพิ่มเกาหลี
         case 'EN': return "Respond in English (Natural, Polite, Professional).";
         case 'JP': return "Respond in Japanese (Natural, Polite, Professional).";
-        case 'VN': return "Respond in Vietnam (Natural, Polite, Professional).";
+        case 'VN': return "Respond in Vietnamese (Natural, Polite, Professional).";
         case 'TH': default: return "Respond in Thai (Natural, Polite, Professional).";
     }
 };
@@ -285,7 +285,7 @@ router.get('/get-speech-token', async (req, res) => {
 });
 
 router.post('/generate-ticker', async (req, res) => {
-    const { allData, pageTitle, lang } = req.body;
+    const { allData, lang} = req.body;
     const mascotName = getMascotName(lang);
     const langInstruction = getLangInstruction(lang)
 

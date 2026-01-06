@@ -4,7 +4,7 @@ const BASE_URL = "https://smart-dashboard-7382.onrender.com";
 
 // ตั้งค่า Client Instance
 const client = axios.create({
-  baseURL: `${BASE_URL}/api`, // หรือ `${BASE_URL}/api` ตาม Environment
+  baseURL: `/api`, // หรือ `${BASE_URL}/api` ตาม Environment
   timeout: 30000, // เพิ่ม Timeout ป้องกัน Server (Render) หลับ
   headers: {
     'Content-Type': 'application/json',
@@ -145,9 +145,9 @@ export const dashboardService = {
   },
 
   // 6. News Ticker
-  getNewsTicker: async (allData, pageTitle, lang, token) => {
+  getNewsTicker: async (allData, lang, token) => {
     try {
-      const res = await client.post('/generate-ticker', { allData, pageTitle, lang }, getAuthConfig(token));
+      const res = await client.post('/generate-ticker', { allData, lang }, getAuthConfig(token));
       return res.data;
     } catch (e) {
       console.error("Ticker API Error", e);

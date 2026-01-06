@@ -151,11 +151,8 @@ function App() {
             // 1. ถ้าไม่มีข้อมูลกราฟ (แปลว่ายังไม่ได้โหลดหน้า) ก็ไม่ต้องทำอะไร
             if (!currentReportData) return;
 
-            console.log(`🌍 Changing language to ${lang}... Refreshing questions.`);
-
             const token = await getToken();
             const prompt = "Suggest 10 short important questions about this data, separated by newlines.";
-            const tickerPrompt = `ช่วยสรุปข้อมูลทั้งหมดเป็น "พาดหัวข่าวตัววิ่ง" สั้นๆ (ไม่เกิน 1 ประโยค)...(ตัดสั้น)`;
             
             setTickerText("AI กำลังประเมินสถานการณ์...");
 
@@ -176,7 +173,7 @@ function App() {
                 // 5. อัปเดต State เพื่อโชว์คำถามภาษาใหม่
                 setSuggestedQuestions(questions);
 
-                const tickerRes = await dashboardService.chat(tickerPrompt, currentReportData, lang, token);
+                const tickerRes = await dashboardService.getNewsTicker(currentReportData, lang, token);
                 if (tickerRes && tickerRes.message) {
                     let rawMsg = tickerRes.message;
                     const upperMsg = rawMsg.toUpperCase(); // แปลงเป็นตัวพิมพ์ใหญ่เพื่อเช็ค Tag
@@ -335,20 +332,19 @@ function App() {
             summarizedPageRef.current = activePageId; 
             const token = await getToken(); 
 
-            const aiRes = await dashboardService.chat("ช่วยสรุป Executive Summary", allDataText, langRef.current, token);
+            const aiRes = await dashboardService.getSummary(allDataText, lang, token);
             setSummary(aiRes.message); 
             setTimeout(() => {
                 handleAiSpeak(aiRes.message);
             }, 2000);
 
             // (ส่วนแนะนำคำถามและ Ticker คงเดิม)
-            const suggestPrompt = "แนะนำ 10 คำถามสำคัญสั้นๆ แยกบรรทัดกัน";
+            const suggestPrompt = "Suggest 10 short important questions about this data, separated by newlines.";
             const suggestRes = await dashboardService.chat(suggestPrompt, allDataText, langRef.current, token);
             const questions = suggestRes.message.split('\n').map(q => q.replace(/^\d+\.\s*/, '').trim()).filter(q => q.length > 5).slice(0, 10);
             setSuggestedQuestions(questions);
             setTickerText("AI กำลังประเมินสถานการณ์...");
-            const tickerPrompt = `ช่วยสรุปข้อมูลทั้งหมดเป็น "พาดหัวข่าวตัววิ่ง" สั้นๆ (ไม่เกิน 1 ประโยค)...(ตัดสั้น)`;
-            const tickerRes = await dashboardService.chat(tickerPrompt, allDataText, langRef.current, token);
+            const tickerRes = await dashboardService.getNewsTicker(allDataText, langRef.current, token);
             if (tickerRes && tickerRes.message) {
                 let rawMsg = tickerRes.message;
                 const upperMsg = rawMsg.toUpperCase(); // แปลงเป็นตัวพิมพ์ใหญ่เพื่อเช็ค Tag
