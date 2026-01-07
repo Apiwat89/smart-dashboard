@@ -10,6 +10,8 @@ import ResultBox from './components/Widgets/ResultBox';
 import LoginPage from './components/Layout/LoginPage';
 import { dashboardService } from './api/apiClient';
 
+const dashboardCache = {};
+
 function App() {
     // --- State & Hooks ---
     const [tickerText, setTickerText] = useState("กำลังเชื่อมต่อ Power BI...");
@@ -147,58 +149,70 @@ function App() {
 
     // ✅ Effect สำหรับเปลี่ยนภาษา: ทำงานเมื่อค่า lang เปลี่ยน โดยใช้ข้อมูลเดิม
     useEffect(() => {
-        const refreshQuestionsOnLangChange = async () => {
-            // 1. ถ้าไม่มีข้อมูลกราฟ (แปลว่ายังไม่ได้โหลดหน้า) ก็ไม่ต้องทำอะไร
+        const refreshAIContentOnLangChange = async () => {
             if (!currentReportData) return;
 
-            const token = await getToken();
-            const prompt = "Suggest 10 short important questions about this data, separated by newlines.";
-            
-            setTickerText("AI กำลังประเมินสถานการณ์...");
+            // 🟢 1. ตรวจสอบ Cache ก่อน
+            const cacheKey = `${activePageId}_${lang}`;
+            if (dashboardCache[cacheKey]) {
+                console.log("🚀 [Cache Hit] เปลี่ยนภาษาแบบไม่ต้องยิง API:", cacheKey);
+                const cached = dashboardCache[cacheKey];
+                setSummary(cached.summary);
+                setSuggestedQuestions(cached.suggestions);
+                setTickerText(cached.tickerText);
+                setTickerType(cached.tickerType);
+                setTimeout(() => handleAiSpeak(cached.summary), 500);
+                return; 
+            }
+
+            // 🔵 2. ถ้าไม่มี Cache ค่อยยิง API
+            setSummaryLoading(true);
+            setTickerText("AI กำลังอัปเดตภาษา...");
+            setSuggestedQuestions([]);
 
             try {
-                // (Optional) เคลียร์คำถามเก่าก่อนเพื่อให้ User รู้ว่ากำลังคิดใหม่
-                setSuggestedQuestions([]); 
+                const token = await getToken();
+                const [summaryRes, suggestRes, tickerRes] = await Promise.all([
+                    dashboardService.getSummary(currentReportData, lang, token),
+                    dashboardService.chat("Suggest 10 short important questions about this data, separated by newlines.", currentReportData, lang, token),
+                    dashboardService.getNewsTicker(currentReportData, lang, token)
+                ]);
 
-                // 3. 🔥 ยิง API chat ด้วยข้อมูลเดิม (currentReportData) + ภาษาใหม่ (lang)
-                const res = await dashboardService.chat(prompt, currentReportData, lang, token);
-                
-                // 4. แปลงผลลัพธ์เป็นรายการคำถาม
-                const questions = res.message
+                // จัดการคำถาม (ตัวแปรนี้แหละค่ะที่ตอนแรกมันหาไม่เจอ)
+                const questionsList = suggestRes.message
                     .split('\n')
                     .map(q => q.replace(/^\d+\.\s*/, '').replace(/^- /, '').trim())
                     .filter(q => q.length > 5)
                     .slice(0, 10);
 
-                // 5. อัปเดต State เพื่อโชว์คำถามภาษาใหม่
-                setSuggestedQuestions(questions);
+                const isAlert = tickerRes.message.toUpperCase().startsWith("ALERT:");
+                const cleanTicker = tickerRes.message.replace(/^(ALERT:|INFO:)/i, "").trim();
 
-                const tickerRes = await dashboardService.getNewsTicker(currentReportData, lang, token);
-                if (tickerRes && tickerRes.message) {
-                    let rawMsg = tickerRes.message;
-                    const upperMsg = rawMsg.toUpperCase(); // แปลงเป็นตัวพิมพ์ใหญ่เพื่อเช็ค Tag
+                // ✅ 3. บันทึกลง Cache (ใช้ชื่อตัวแปรที่ประกาศด้านบน)
+                dashboardCache[cacheKey] = {
+                    summary: summaryRes.message,
+                    suggestions: questionsList, // 👈 ใช้ชื่อนี้ให้ตรงกัน
+                    tickerText: cleanTicker,
+                    tickerType: isAlert ? 'alert' : 'info',
+                    rawData: currentReportData
+                };
 
-                    if (upperMsg.startsWith("ALERT:")) {
-                        setTickerType('alert');
-                        // ตัด Tag ออกโดยไม่สนตัวพิมพ์เล็กใหญ่
-                        setTickerText(rawMsg.replace(/^ALERT:/i, "").trim());
-                    } else {
-                        setTickerType('info');
-                        // ตัด Tag INFO: ออก (ถ้ามี)
-                        setTickerText(rawMsg.replace(/^INFO:/i, "").trim());
-                    }
-                }
+                // อัปเดต UI
+                setSummary(summaryRes.message);
+                setSuggestedQuestions(questionsList);
+                setTickerText(cleanTicker);
+                setTickerType(isAlert ? 'alert' : 'info');
+                setTimeout(() => handleAiSpeak(summaryRes.message), 1000);
 
             } catch (err) {
-                console.error("Error refreshing questions on language change:", err);
-                // กรณี Error อาจจะใส่คำถาม Default ไว้กันเหนียว
-                setSuggestedQuestions(lang === 'EN' ? ["Analyzing data..."] : ["กำลังประมวลผลข้อมูล..."]);
+                console.error("Error refreshing on lang change:", err);
+            } finally {
+                setSummaryLoading(false);
             }
         };
 
-        refreshQuestionsOnLangChange();
-
-    }, [lang]); // 👈 สำคัญมาก! บรรทัดนี้สั่งให้รันทุกครั้งที่ "lang" เปลี่ยน
+        refreshAIContentOnLangChange();
+    }, [lang]);
 
     const handleMenuChange = (id) => {
         setActivePageId(id);
@@ -301,17 +315,72 @@ function App() {
       }
     };
 
+    const handleVisualClick = async (event) => {
+        const visual = event.detail.visual;
+        // ป้องกันการทำงานซ้ำซ้อนกับ dataSelected
+        if (isProcessing) return;
+    
+        try {
+            setProcessing(true);
+            setSummaryLoading(true);
+            setAiState({ status: 'thinking', message: '', isVisible: true });
+    
+            // ✅ ลองดึงข้อมูล (บาง Visual ต้องการ Summarized เท่านั้น)
+            let result;
+            try {
+                result = await visual.exportData(models.ExportDataType.Summarized);
+            } catch (exportErr) {
+                console.warn("Summarized export failed, trying different method...", exportErr);
+                // ถ้าแบบแรกไม่ได้ ให้ AI ใช้แค่ชื่อหัวข้อกราฟมาวิเคราะห์เบื้องต้นก่อน
+                result = { data: `This is the chart titled "${visual.title}"` };
+            }
+    
+            const token = await getToken(); 
+            
+            // ส่งไปที่ Backend (ส่งค่า null ไปที่ pointData เพื่อให้เข้าเงื่อนไขวิเคราะห์ภาพรวม)
+            const res = await dashboardService.getReaction(null, result.data, lang, token);
+            
+            setSummary(res.message); 
+            handleAiSpeak(res.message);
+        } catch (error) {
+            console.error("Visual Click Error Detail:", error); // ดู Error ใน F12
+            setSummary(lang === 'TH' ? "ออร่าไม่สามารถเข้าถึงข้อมูลเชิงลึกของกราฟนี้ได้ค่ะ" : "Cannot access this chart's data.");
+        } finally {
+            setProcessing(false);
+            setSummaryLoading(false);
+        }
+    };
+
     const handleReportRendered = async () => {
         if (!powerBIReportRef.current) return;
-        const activePage = menuList.find(p => p.id === activePageId);
+        
+        // 🚩 ป้องกันการรันซ้ำในหน้าเดิม (Check Ref ปกติ)
         if (summarizedPageRef.current === activePageId) return;
 
-        // 🔥 แก้ไข 2: สั่งใบ้กิน + ทำท่าคิด ทันทีที่เริ่มเปลี่ยนหน้า เพื่อแก้เสียงซ้อน
+        // 🟢 [NEW] ตรวจสอบ Cache ก่อนเริ่มทำงาน
+        const cacheKey = `${activePageId}_${lang}`;
+        if (dashboardCache[cacheKey]) {
+            console.log("🚀 [Cache Hit] ดึงข้อมูลจากคลัง:", cacheKey);
+            const cached = dashboardCache[cacheKey];
+            
+            // ใช้ข้อมูลจาก Cache ทันที
+            setSummary(cached.summary);
+            setSuggestedQuestions(cached.suggestions);
+            setTickerText(cached.tickerText);
+            setTickerType(cached.tickerType);
+            setCurrentReportData(cached.rawData); // เก็บไว้ใช้ตอนสลับภาษา
+            
+            summarizedPageRef.current = activePageId;
+            setTimeout(() => handleAiSpeak(cached.summary), 500);
+            return; // จบการทำงาน ไม่ต้องดึงข้อมูลใหม่
+        }
+
+        // --- เริ่มกระบวนการดึงข้อมูลใหม่ (ถ้าไม่มี Cache) ---
+        summarizedPageRef.current = activePageId; 
         setAiState(prev => ({ ...prev, status: 'thinking', message: '' }));
         stopAllVoices();
-
         setSummaryLoading(true);
-        setSummary("กำลังอ่านข้อมูล...");
+        setSummary("กำลังอ่านข้อมูลจาก Power BI...");
 
         try {
             const pages = await powerBIReportRef.current.getPages();
@@ -319,49 +388,61 @@ function App() {
             if (!pbiPage) return;
             
             const visuals = await pbiPage.getVisuals();
-            let allDataText = `ข้อมูลหน้า ${activePage?.title}:\n`;
+            const activePage = menuList.find(p => p.id === activePageId);
+            let allDataText = `ข้อมูลหน้า ${activePage?.title || 'ปัจจุบัน'}:\n`;
+            
             for (const visual of visuals) {
                 if (visual.title && visual.type !== 'image' && visual.type !== 'textbox') {
                     try {
                         const result = await visual.exportData(models.ExportDataType.Summarized);
                         allDataText += `\n- ${visual.title}:\n${result.data}\n`;
-                    } catch (e) { console.warn(e); }
+                    } catch (e) { console.warn(`Export failed for ${visual.title}`, e); }
                 }
             }
+
             setCurrentReportData(allDataText);
-            summarizedPageRef.current = activePageId; 
             const token = await getToken(); 
 
-            const aiRes = await dashboardService.getSummary(allDataText, lang, token);
-            setSummary(aiRes.message); 
-            setTimeout(() => {
-                handleAiSpeak(aiRes.message);
-            }, 2000);
+            // 🔥 ยิง 3 API พร้อมกัน
+            const [summaryRes, suggestRes, tickerRes] = await Promise.all([
+                dashboardService.getSummary(allDataText, lang, token),
+                dashboardService.chat("Suggest 10 short important questions about this data, separated by newlines.", allDataText, lang, token),
+                dashboardService.getNewsTicker(allDataText, lang, token)
+            ]);
 
-            // (ส่วนแนะนำคำถามและ Ticker คงเดิม)
-            const suggestPrompt = "Suggest 10 short important questions about this data, separated by newlines.";
-            const suggestRes = await dashboardService.chat(suggestPrompt, allDataText, langRef.current, token);
-            const questions = suggestRes.message.split('\n').map(q => q.replace(/^\d+\.\s*/, '').trim()).filter(q => q.length > 5).slice(0, 10);
-            setSuggestedQuestions(questions);
-            setTickerText("AI กำลังประเมินสถานการณ์...");
-            const tickerRes = await dashboardService.getNewsTicker(allDataText, langRef.current, token);
-            if (tickerRes && tickerRes.message) {
-                let rawMsg = tickerRes.message;
-                const upperMsg = rawMsg.toUpperCase(); // แปลงเป็นตัวพิมพ์ใหญ่เพื่อเช็ค Tag
+            // เตรียมข้อมูลสำหรับ UI และ Cache
+            const finalSummary = summaryRes.message;
+            const finalQuestions = suggestRes.message
+                .split('\n')
+                .map(q => q.replace(/^\d+\.\s*/, '').trim())
+                .filter(q => q.length > 5)
+                .slice(0, 10);
+            
+            const isAlert = tickerRes?.message?.toUpperCase().startsWith("ALERT:");
+            const finalTickerText = tickerRes?.message?.replace(/^(ALERT:|INFO:)/i, "").trim() || "";
+            const finalTickerType = isAlert ? 'alert' : 'info';
 
-                if (upperMsg.startsWith("ALERT:")) {
-                    setTickerType('alert');
-                    // ตัด Tag ออกโดยไม่สนตัวพิมพ์เล็กใหญ่
-                    setTickerText(rawMsg.replace(/^ALERT:/i, "").trim());
-                } else {
-                    setTickerType('info');
-                    // ตัด Tag INFO: ออก (ถ้ามี)
-                    setTickerText(rawMsg.replace(/^INFO:/i, "").trim());
-                }
-            }
+            // ✅ [NEW] บันทึกลง Cache
+            dashboardCache[cacheKey] = {
+                summary: finalSummary,
+                suggestions: finalQuestions,
+                tickerText: finalTickerText,
+                tickerType: finalTickerType,
+                rawData: allDataText
+            };
+
+            // อัปเดต UI
+            setSummary(finalSummary);
+            setSuggestedQuestions(finalQuestions);
+            setTickerText(finalTickerText);
+            setTickerType(finalTickerType);
+            
+            setTimeout(() => handleAiSpeak(finalSummary), 2000);
+
         } catch (err) { 
-            console.error(err);
-            setTickerText("ระบบข่าวขัดข้อง");
+            console.error("Report Rendered Error:", err);
+            summarizedPageRef.current = null; // ปลดล็อคถ้าเกิด Error
+            delete dashboardCache[cacheKey]; // เคลียร์ cache ที่อาจจะเสียออก
         } finally { 
             setSummaryLoading(false); 
         }
@@ -473,7 +554,19 @@ function App() {
                             <ResultBox 
                                 text={aiState.status === 'talking' ? aiState.message : summary} 
                                 isLoading={isSummaryLoading} 
-                                onRefresh={() => { summarizedPageRef.current = null; handleReportRendered(); }} 
+                                onRefresh={() => { 
+                                    const cacheKey = `${activePageId}_${lang}`;
+                                    if (dashboardCache[cacheKey]) {
+                                        delete dashboardCache[cacheKey];
+                                    }
+                                    
+                                    // ล้างหน้าจอให้ขาวสะอาดก่อนโหลดใหม่
+                                    setSummary("");
+                                    setSuggestedQuestions([]);
+                                    
+                                    summarizedPageRef.current = null; 
+                                    handleReportRendered(); 
+                                }}
                             />
                         </div>
                     )
@@ -484,7 +577,7 @@ function App() {
                     <RealPowerBIEmbed 
                       key={activePageId} 
                       targetPageName={currentPage?.pageName} 
-                      eventHandlers={new Map([['dataSelected', handlePowerBIClick]])}
+                      eventHandlers={new Map([['dataSelected', handlePowerBIClick], ['visualClicked', handleVisualClick]])}
                       getEmbeddedComponent={(report) => { powerBIReportRef.current = report; }}
                       onReportRendered={handleReportRendered}
                       ClientID={ClientID}

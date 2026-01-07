@@ -106,78 +106,53 @@ router.post('/summarize-view', async (req, res) => {
 });
 
 
-// 3. Character Reaction Endpoint
+// 3. Character Reaction Endpoint (ใน apiRoutes.js)
 router.post('/character-reaction', async (req, res) => {
     const { pointData, contextData, lang } = req.body;
-    
-    // ดึงคำสั่งภาษา และ ชื่อ Mascot
     const langInstruction = getLangInstruction(lang);
     const mascotName = getMascotName(lang); 
 
     let prompt = "";
 
-    // 🟢 กรณี 1: User จิ้มที่แท่งกราฟ/จุดข้อมูล (Point Click)
     if (pointData) {
+        // 🟢 กรณี 1: จิ้มโดนจุดข้อมูล (เหมือนเดิมที่คุณมี)
         prompt = `
-            Role: ${mascotName} — a professional yet friendly Data Analyst Assistant.
-            
-            User Interaction:
-            User clicked on item: "${pointData.name}" with Value: "${pointData.uv}"
-            
-            Chart Context (for comparison):
-            ${JSON.stringify(contextData)}
-            
-            Language Instruction:
-            ${langInstruction}
-            
-            Tasks:
-            1. Refer to yourself as '${mascotName}'.
-            2. Analyze the clicked value:
-               - Is it high, low, or average compared to others?
-               - Is it a good thing or a worrying thing?
-            3. **Tone Adjustment**:
-               - If Good/High: Be excited and congratulatory.
-               - If Bad/Low: Be empathetic and encouraging (don't be too cheerful if the data is bad).
-               - If Average: Be informative.
-            4. Explain in 1 short sentence WHY this point matters.
-            
-            Constraints:
-            - Maximum 2 sentences.
-            - Plain text only (NO markdown, NO emojis).
-            - Speak naturally as if talking to the user.
-        `;        
-    } 
-    // 🔵 กรณี 2: ดูภาพรวม (Overview)
-    else {
+            Role: ${mascotName} — a professional Data Analyst.
+            Action: User clicked specific data "${pointData.name}" with value "${pointData.uv}".
+            Context: ${JSON.stringify(contextData)}
+            Language: ${langInstruction}
+            Task: Refer to yourself as '${mascotName}'. Analyze if this specific point is high/low/normal. 
+            Constraints: Max 2 sentences, no markdown.
+        `;
+    } else {
+        // 🔵 กรณี 2: คลิกที่ตัวกราฟ (วิเคราะห์ภาพรวมของกราฟนั้น)
         prompt = `
-            Role: ${mascotName} — a professional yet friendly Data Analyst Assistant.
-
-            User Interaction:
-            User is viewing the Chart Overview.
-
-            Chart Context:
-            ${JSON.stringify(contextData)}
+            Role: ${mascotName} — a professional Data Analyst.
+            Action: User selected an entire chart to analyze.
+            
+            Chart Data Content:
+            ${contextData}
 
             Language Instruction:
             ${langInstruction}
 
             Tasks:
             1. Refer to yourself as '${mascotName}'.
-            2. Scan for the most obvious pattern (e.g., "Sales are rising" or "April was the lowest").
-            3. Summarize it in a friendly, conversational way.
+            2. Analyze the OVERALL data of this specific chart. 
+            3. Identify the most important trend, the highest value, or a significant pattern in this chart.
+            4. Speak in a friendly, helpful tone as ${mascotName}.
 
             Constraints:
-            - Maximum 2-3 sentences.
-            - Plain text only (NO markdown, NO emojis).
-            - Focus on the "Big Picture".
+            - Start with something like "${mascotName} looks at this chart and sees..." (in the target language).
+            - Maximum 3 sentences.
+            - Plain text only.
         `;
     }
-    
+
     try {
-        const reply = await generateAIResponse(prompt, "You are Aura, a helpful data assistant.");
+        const reply = await generateAIResponse(prompt, `You are ${mascotName}, analyzing a specific chart.`);
         res.json({ message: reply });
     } catch (err) {
-        console.error("Reaction Error:", err);
         res.status(500).json({ message: "..." });
     }
 });
