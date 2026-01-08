@@ -15,6 +15,7 @@ const dashboardCache = {};
 function App() {
     // --- State & Hooks ---
     const [tickerText, setTickerText] = useState("กำลังเชื่อมต่อ Power BI...");
+    const [pbiLastUpdate, setPbiLastUpdate] = useState("อัพเดตล่าสุด...");
     const [tickerType, setTickerType] = useState("info");
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
     const { instance, accounts } = useMsal();
@@ -354,39 +355,51 @@ function App() {
     const handleReportRendered = async () => {
         if (!powerBIReportRef.current) return;
         
-        // 🚩 ป้องกันการรันซ้ำในหน้าเดิม (Check Ref ปกติ)
-        if (summarizedPageRef.current === activePageId) return;
-
-        // 🟢 [NEW] ตรวจสอบ Cache ก่อนเริ่มทำงาน
         const cacheKey = `${activePageId}_${lang}`;
+        // 1. ตรวจสอบ Cache ก่อน (เหมือนเดิม)
         if (dashboardCache[cacheKey]) {
-            console.log("🚀 [Cache Hit] ดึงข้อมูลจากคลัง:", cacheKey);
             const cached = dashboardCache[cacheKey];
-            
-            // ใช้ข้อมูลจาก Cache ทันที
             setSummary(cached.summary);
             setSuggestedQuestions(cached.suggestions);
             setTickerText(cached.tickerText);
             setTickerType(cached.tickerType);
-            setCurrentReportData(cached.rawData); // เก็บไว้ใช้ตอนสลับภาษา
-            
+            setCurrentReportData(cached.rawData);
+            setPbiLastUpdate(cached.lastUpdate || ""); 
             summarizedPageRef.current = activePageId;
             setTimeout(() => handleAiSpeak(cached.summary), 500);
-            return; // จบการทำงาน ไม่ต้องดึงข้อมูลใหม่
+            return;
         }
-
-        // --- เริ่มกระบวนการดึงข้อมูลใหม่ (ถ้าไม่มี Cache) ---
+    
         summarizedPageRef.current = activePageId; 
         setAiState(prev => ({ ...prev, status: 'thinking', message: '' }));
-        stopAllVoices();
         setSummaryLoading(true);
-        setSummary("กำลังอ่านข้อมูลจาก Power BI...");
-
+    
         try {
-            const pages = await powerBIReportRef.current.getPages();
-            const pbiPage = pages.find(p => p.isActive);
-            if (!pbiPage) return;
+            const report = powerBIReportRef.current;
             
+            // 🟢 แก้ไขจุดนี้: ดึงเวลาด้วยวิธีที่ปลอดภัยกว่า
+            let formattedDate = "";
+            try {
+                // ลองดึงจากฟังก์ชันมาตรฐาน
+                const lastRefreshDate = await report.getUpdatedTime(); 
+                if (lastRefreshDate) {
+                    const dateObj = new Date(lastRefreshDate);
+                    formattedDate = dateObj.toLocaleDateString('th-TH') + " " + 
+                                   dateObj.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+                }
+            } catch (e) {
+                // Fallback: หากฟังก์ชัน getUpdatedTime ไม่มีจริง ให้ใช้เวลาที่ Render เสร็จแทน
+                console.warn("getUpdatedTime not available, using render time.");
+                const now = new Date();
+                formattedDate = now.toLocaleDateString('th-TH') + " " + 
+                               now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            }
+            
+            setPbiLastUpdate(formattedDate);
+    
+            // --- ส่วนดึงข้อมูล Visuals ตามเดิมของคุณ ---
+            const pages = await report.getPages();
+            const pbiPage = pages.find(p => p.isActive);
             const visuals = await pbiPage.getVisuals();
             const activePage = menuList.find(p => p.id === activePageId);
             let allDataText = `ข้อมูลหน้า ${activePage?.title || 'ปัจจุบัน'}:\n`;
@@ -399,50 +412,39 @@ function App() {
                     } catch (e) { console.warn(`Export failed for ${visual.title}`, e); }
                 }
             }
-
+    
             setCurrentReportData(allDataText);
             const token = await getToken(); 
-
-            // 🔥 ยิง 3 API พร้อมกัน
+    
             const [summaryRes, suggestRes, tickerRes] = await Promise.all([
                 dashboardService.getSummary(allDataText, lang, token),
-                dashboardService.chat("Suggest 10 short important questions about this data, separated by newlines.", allDataText, lang, token),
+                dashboardService.chat("Suggest 10 short important questions...", allDataText, lang, token),
                 dashboardService.getNewsTicker(allDataText, lang, token)
             ]);
-
-            // เตรียมข้อมูลสำหรับ UI และ Cache
-            const finalSummary = summaryRes.message;
-            const finalQuestions = suggestRes.message
-                .split('\n')
-                .map(q => q.replace(/^\d+\.\s*/, '').trim())
-                .filter(q => q.length > 5)
-                .slice(0, 10);
-            
+    
+            const finalQuestions = suggestRes.message.split('\n').filter(q => q.length > 5).slice(0, 10);
             const isAlert = tickerRes?.message?.toUpperCase().startsWith("ALERT:");
             const finalTickerText = tickerRes?.message?.replace(/^(ALERT:|INFO:)/i, "").trim() || "";
-            const finalTickerType = isAlert ? 'alert' : 'info';
-
-            // ✅ [NEW] บันทึกลง Cache
+    
+            // ✅ บันทึกลง Cache
             dashboardCache[cacheKey] = {
-                summary: finalSummary,
+                summary: summaryRes.message,
                 suggestions: finalQuestions,
                 tickerText: finalTickerText,
-                tickerType: finalTickerType,
-                rawData: allDataText
+                tickerType: isAlert ? 'alert' : 'info',
+                rawData: allDataText,
+                lastUpdate: formattedDate // บันทึกเวลาที่ถูกต้องลง Cache
             };
-
-            // อัปเดต UI
-            setSummary(finalSummary);
+    
+            setSummary(summaryRes.message);
             setSuggestedQuestions(finalQuestions);
             setTickerText(finalTickerText);
-            setTickerType(finalTickerType);
-            
-            setTimeout(() => handleAiSpeak(finalSummary), 2000);
-
+            setTickerType(isAlert ? 'alert' : 'info');
+            setTimeout(() => handleAiSpeak(summaryRes.message), 2000);
+    
         } catch (err) { 
             console.error("Report Rendered Error:", err);
-            summarizedPageRef.current = null; // ปลดล็อคถ้าเกิด Error
-            delete dashboardCache[cacheKey]; // เคลียร์ cache ที่อาจจะเสียออก
+            summarizedPageRef.current = null;
         } finally { 
             setSummaryLoading(false); 
         }
@@ -515,6 +517,7 @@ function App() {
 
     return (
         <DashboardLayout
+            lastUpdated={pbiLastUpdate}
             menuItems={menuList}
             activePageId={activePageId}
             onMenuClick={handleMenuChange}
@@ -527,6 +530,7 @@ function App() {
             scrollRef={scrollRef} 
             onSearch={handleHeaderSearch}
             pageTitle={currentPage ? currentPage.title : "Smart Dashboard"}
+            
             notifications={notifications}
             isPlaying={isPlaying}
             togglePlay={() => setIsPlaying(!isPlaying)}
