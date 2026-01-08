@@ -179,10 +179,14 @@ router.post('/ask-dashboard', async (req, res) => {
         1. Always use the name '${mascotName}' when referring to yourself.
         2. Answer ONLY using the provided Context Data.
         3. Tone: Cheerful, clear, and accurate.
+        4. CRITICAL: Start your answer IMMEDIATELY with the information. 
+        5. CRITICAL: DO NOT include any introductory phrases like "Here are the answers," "I found the data," or "Based on the dashboard."
+        6. If the user asks for a list, start directly with "1. [First Item]".
 
         Output Format:
-        - Plain text
-        - No markdown, no emojis
+        - Plain text only.
+        - STRICTLY NO introductory text, no "Here is your data", no conversational filler.
+        - No markdown, no emojis.
     `;
 
     const reply = await generateAIResponse(prompt, "You are a helpful AI Dashboard Assistant.");

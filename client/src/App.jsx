@@ -182,8 +182,9 @@ function App() {
                 // จัดการคำถาม (ตัวแปรนี้แหละค่ะที่ตอนแรกมันหาไม่เจอ)
                 const questionsList = suggestRes.message
                     .split('\n')
-                    .map(q => q.replace(/^\d+\.\s*/, '').replace(/^- /, '').trim())
-                    .filter(q => q.length > 5)
+                    // กรองเอาเฉพาะบรรทัดที่ขึ้นต้นด้วยตัวเลข 1-9 หรือบรรทัดที่มีเครื่องหมายคำถาม เท่านั้น
+                    .filter(line => /^\d+\./.test(line.trim())) 
+                    .map(q => q.replace(/^\d+\.\s*/, '').trim())
                     .slice(0, 10);
 
                 const isAlert = tickerRes.message.toUpperCase().startsWith("ALERT:");
