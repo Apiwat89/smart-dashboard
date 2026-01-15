@@ -22,7 +22,7 @@ function App() {
     const isAuthenticated = useIsAuthenticated();
     const [isAppReady, setAppReady] = useState(false);
     const [userAvatar, setUserAvatar] = useState(null);
-    const [rightPanelWidth, setRightPanelWidth] = useState(380);
+    const [rightPanelWidth, setRightPanelWidth] = useState(window.innerWidth > 2500 ? 1100 : 380);
     const isResizing = useRef(false);
     const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [menuList, setMenuList] = useState([]);
@@ -232,7 +232,13 @@ function App() {
     const handleMouseMove = (e) => {
         if (!isResizing.current) return;
         const newWidth = window.innerWidth - e.clientX;
-        if (newWidth > 280 && newWidth < 600) setRightPanelWidth(newWidth);
+        
+        // 🚩 ขยายขีดจำกัดการลากให้กว้างขึ้นสำหรับจอ 4K
+        const maxLimit = window.innerWidth > 2500 ? 1500 : 600; 
+        
+        if (newWidth > 200 && newWidth < maxLimit) {
+            setRightPanelWidth(newWidth);
+        }
     };
     const stopResizing = () => {
         isResizing.current = false;

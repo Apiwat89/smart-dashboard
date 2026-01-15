@@ -77,6 +77,12 @@ const Header = ({
       borderRadius: '50%',
       border: '1px solid var(--bg-card)',
     },
+    imgTimer: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '20px',
+    }
   };
   
   const getTimerColor = () => {
@@ -101,9 +107,9 @@ const Header = ({
       {/* 2. User & Controls Section */}
       <div className="user-profile">
         {/* Timer Control */}
-        <div style={styles.timerBox}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '8px', color: isPlaying ? 'var(--primary-green)' : 'var(--text-muted)', fontWeight: '600', fontSize: '0.85rem' }}>
-            <Timer size={16} />
+        <div className='timerBox' style={styles.timerBox}>
+          <div className='timerText' style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '8px', color: isPlaying ? 'var(--primary-green)' : 'var(--text-muted)', fontWeight: '600', fontSize: '0.85rem' }}>
+            <Timer className='imgTimer' style={styles.imgTimer}/> 
               <span style={{ 
                 fontVariantNumeric: 'tabular-nums',
                 lineHeight: 1,
@@ -114,13 +120,13 @@ const Header = ({
             </span>
           </div>
           <button onClick={togglePlay} style={styles.playBtn}>
-            {isPlaying ? <Pause size={14} fill="white" /> : <Play size={14} style={{ marginLeft: '2px' }} />}
+            {isPlaying ? <Pause className='btnPause' size={14} fill="white" /> : <Play className='btnPlay' size={14} style={{ marginLeft: '2px' }} />}
           </button>
         </div>
 
         {/* Theme Toggle */}
-        <button onClick={toggleTheme} style={styles.themeBtn}>
-          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+        <button className='themeBtn' onClick={toggleTheme} style={styles.themeBtn}>
+          {theme === 'dark' ? <Sun className='ThemeSun' size={20} /> : <Moon className='ThemeMoon' size={20} />}
         </button>
 
         {/* Notifications */}
@@ -133,9 +139,9 @@ const Header = ({
         </button> */}
 
         {/* User Profile */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: '1.3', marginRight: '12px' }}>
-          <span style={{ fontWeight: '600', fontSize: '0.9rem', color: 'var(--text-main)' }}>{user?.name}</span>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '500' }}>{user?.role}</span>
+        <div className='user-profile-box' style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: '1.3', marginRight: '12px' }}>
+          <span className='user-name' style={{ fontWeight: '600', fontSize: '0.9rem', color: 'var(--text-main)' }}>{user?.name}</span>
+          <span className='user-role' style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: '500' }}>{user?.role}</span>
         </div>
 
         <img

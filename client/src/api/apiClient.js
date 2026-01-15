@@ -4,7 +4,7 @@ const BASE_URL = "https://smart-dashboard-7382.onrender.com";
 
 // ตั้งค่า Client Instance
 const client = axios.create({
-  baseURL: `${BASE_URL}/api`, // หรือ `${BASE_URL}/api` ตาม Environment
+  baseURL: `/api`, // หรือ `${BASE_URL}/api` ตาม Environment
   timeout: 30000, // เพิ่ม Timeout ป้องกัน Server (Render) หลับ
   headers: {
     'Content-Type': 'application/json',
@@ -84,6 +84,47 @@ export const dashboardService = {
   },
 
   // 5. Speech Token
+  // OpenAI
+  speakOpenAI: async (text, lang) => {
+    try {
+      // ⏳ ไม้ตาย: หน่วงเวลา 1.2 วินาที เพื่อหลบ API Data/Summary/Ticker 
+      // ที่ยิงรัวตอนเปิดหน้าเว็บครั้งแรก
+      await new Promise(r => setTimeout(r, 1200));
+
+      const res = await client.post('/speak-openai', { text, lang }, { responseType: 'blob' });
+      return res.data; 
+    } catch (e) {
+      console.error("OpenAI TTS API Error:", e);
+      return null;
+    }
+  },
+
+  // Google AI Studio
+  // speakGeminiTTS: async (text, lang, retryCount = 0) => {
+  //   try {
+  //     // ⏳ จังหวะโหลดหน้าแรก (retryCount 0) ให้รอไปเลย 4 วินาที 
+  //     // เพื่อให้มั่นใจว่า API อื่นๆ ที่ยิงตอนเปลี่ยนหน้าโหลดเสร็จหมดแล้ว
+  //     if (retryCount === 0) {
+  //         console.log("🔊 TTS Waiting for other APIs to settle...");
+  //         await new Promise(r => setTimeout(r, 4000)); 
+  //     }
+
+  //     const res = await client.post('/speak-google', { text, lang }, { responseType: 'blob' });
+  //     return res.data; 
+
+  //   } catch (e) {
+  //     // 🚩 หากยังล้มเหลว (เช่น Error 500 หรือ Timeout) ให้รออีก 5 วินาทีก่อนลองใหม่
+  //     if (retryCount < 2) {
+  //       console.warn(`🔊 TTS Busy (Attempt ${retryCount + 1}), waiting longer before retry...`);
+  //       await new Promise(resolve => setTimeout(resolve, 5000));
+  //       return dashboardService.speakGeminiTTS(text, lang, retryCount + 1);
+  //     }
+  //     console.error("❌ Gemini TTS API Final Error:", e);
+  //     return null;
+  //   }
+  // },
+
+  // ElevenLabs have 2 choice 
   // speakElevenLabs: async (text, lang) => {
   //   // 1. ใส่ Key ของคุณตรงนี้ (Hardcode ไปเลยเพื่อความชัวร์ในฝั่ง Client)
   //   const API_KEY = "sk_b5cb52c198e6029f8c62060ac5b3cf9baf95084653018b92"; 
@@ -134,15 +175,17 @@ export const dashboardService = {
   //     return null;
   //   }
   // },
-  getSpeechToken: async () => {
-    try {
-      const res = await client.get('/get-speech-token');
-      return res.data;
-    } catch (e) {
-      console.error("Token fetch failed", e);
-      return null;
-    }
-  },
+
+  // Microsoft Azure
+  // getSpeechToken: async () => {
+  //   try {
+  //     const res = await client.get('/get-speech-token');
+  //     return res.data;
+  //   } catch (e) {
+  //     console.error("Token fetch failed", e);
+  //     return null;
+  //   }
+  // },
 
   // 6. News Ticker
   getNewsTicker: async (allData, lang, token) => {

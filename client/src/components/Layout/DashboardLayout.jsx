@@ -32,13 +32,17 @@ const DashboardLayout = ({
   return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', overflow: 'hidden' }}>
           <div 
-          className="app-container"
-          style={{ 
-            display: 'grid',
-            // 1fr ตรงกลางคือหัวใจสำคัญที่ทำให้ไม่มีช่องว่าง
-            gridTemplateColumns: `${isSidebarCollapsed ? '72px' : '240px'} 1fr auto ${rightPanelWidth}px`,
-            gridTemplateAreas: '"sidebar header header header" "sidebar main resizer right"',
-          }}
+            /* 🚩 เพิ่มคลาส sidebar-closed เพื่อให้ CSS Media Query ทำงาน */
+            className={`app-container ${isSidebarCollapsed ? 'sidebar-closed' : ''}`}
+            style={{ 
+              display: 'grid',
+              /* 🚩 ส่งค่าการลากขยายผ่านตัวแปร CSS แทนการล็อค Grid Template */
+              '--dynamic-right-width': `${rightPanelWidth}px`,
+              
+              /* ใช้ตัวแปร CSS แทนตัวเลข 72px/240px เพื่อให้จอ TV ขยายสเกลได้ */
+              gridTemplateColumns: `var(--current-sidebar-width, ${isSidebarCollapsed ? '72px' : '240px'}) 1fr auto var(--dynamic-right-width)`,
+              gridTemplateAreas: '"sidebar header header header" "sidebar main resizer right"',
+            }}
         >
         <Sidebar 
             isCollapsed={isSidebarCollapsed} 
