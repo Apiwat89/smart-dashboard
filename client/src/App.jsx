@@ -324,41 +324,58 @@ function App() {
     };
 
     const handleVisualClick = async (event) => {
-        const visual = event.detail.visual;
-        // ป้องกันการทำงานซ้ำซ้อนกับ dataSelected
+        // 1. รับแค่ "ป้ายชื่อ" มาก่อน (ตัวนี้ไม่มี exportData)
+        const visualDescriptor = event.detail.visual;
+        console.log("🖱️ User clicked on:", visualDescriptor.name);
+    
         if (isProcessing) return;
     
         try {
-            setProcessing(true);
-            setSummaryLoading(true);
-            setAiState({ status: 'thinking', message: '', isVisible: true });
+          setProcessing(true);
+          setAiState({ status: 'thinking', message: 'Analyzing chart data...', isVisible: true });
     
-            // ✅ ลองดึงข้อมูล (บาง Visual ต้องการ Summarized เท่านั้น)
-            let result;
-            try {
-                result = await visual.exportData(models.ExportDataType.Summarized);
-            } catch (exportErr) {
-                console.warn("Summarized export failed, trying different method...", exportErr);
-                // ถ้าแบบแรกไม่ได้ ให้ AI ใช้แค่ชื่อหัวข้อกราฟมาวิเคราะห์เบื้องต้นก่อน
-                result = { data: `This is the chart titled "${visual.title}"` };
-            }
+          // 2. เริ่มปฏิบัติการ "ค้นหาตัวจริง"
+          const report = powerBIReportRef.current;
+          const pages = await report.getPages();
+          const activePage = pages.find(p => p.isActive);
+          const visuals = await activePage.getVisuals();
     
-            const token = await getToken(); 
-            
-            // ส่งไปที่ Backend (ส่งค่า null ไปที่ pointData เพื่อให้เข้าเงื่อนไขวิเคราะห์ภาพรวม)
-            const res = await dashboardService.getReaction(null, result.data, lang, token);
-            
-            setSummary(res.message); 
-            handleAiSpeak(res.message);
+          // 3. หาตัวกราฟที่มีชื่อตรงกัน (ตัวนี้แหละที่มี exportData!)
+          const targetVisual = visuals.find(v => v.name === visualDescriptor.name);
+    
+          if (!targetVisual) {
+            throw new Error("❌ หาตัวกราฟจริงไม่เจอในหน้านี้");
+          }
+    
+          // 4. สั่งดึงข้อมูลจากตัวจริง
+          let result;
+          try {
+            // พยายามดึงข้อมูลสรุปก่อน (ข้อมูลที่ตาเห็น)
+            result = await targetVisual.exportData('Summarized');
+          } catch (err) {
+            console.warn("Summarized failed, trying Underlying...");
+            // ถ้าไม่ได้ ให้ดึงข้อมูลดิบ (Underlying)
+            result = await targetVisual.exportData('Underlying');
+          }
+    
+          console.log("✅ Data exported:", result.data);
+    
+          // 5. ส่งข้อมูลไปให้ AI
+          const token = await getToken(); 
+          // แก้ตรงนี้ให้ตรงกับ Service ของคุณ
+          const res = await dashboardService.getReaction(null, result.data, lang, token);
+          
+          setSummary(res.message);
+          handleAiSpeak(res.message);
+    
         } catch (error) {
-            console.error("Visual Click Error Detail:", error); // ดู Error ใน F12
-            setSummary(lang === 'TH' ? "ออร่าไม่สามารถเข้าถึงข้อมูลเชิงลึกของกราฟนี้ได้ค่ะ" : "Cannot access this chart's data.");
+          console.error("🔥 Error exporting data:", error);
+          setSummary("ไม่สามารถอ่านข้อมูลจากกราฟนี้ได้ครับ");
         } finally {
-            setProcessing(false);
-            setSummaryLoading(false);
+          setProcessing(false);
         }
-    };
-
+      };
+      
     const handleReportRendered = async () => {
         if (!powerBIReportRef.current) return;
         
