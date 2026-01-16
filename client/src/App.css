@@ -84,7 +84,7 @@
      display: grid;
      width: 100vw;
      /* ⭐ ล็อคความสูงรวม = จอภาพ - ความสูงแถบข่าว (40px) */
-     height: calc(100vh - 40px);
+     height: calc(100vh - var(--ticker-container-height, 40px));
      
      grid-template-columns: var(--sidebar-width) 1fr var(--right-panel-width);
      
@@ -261,7 +261,7 @@
    }
    
    /* 🌐 Lang Switcher */
-   .lang-switcher-row { display: flex; justify-content: center; align-items: center; gap: 4px; background: var(--bg-main); padding: 5px 10px; border-radius: 50px; width: fit-content; margin: 0 auto 8px auto; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid white; z-index: 10; flex-shrink: 0; }
+   .lang-switcher-row { display: flex; justify-content: center; align-items: center; gap: 4px; background: var(--bg-main); padding: 5px 10px; border-radius: 50px; width: fit-content; margin: 0 auto 8px auto; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid white; z-index: 10; flex-shrink: 0; flex-wrap: wrap !important; height: auto !important;}
    .lang-btn { background: transparent; border: none; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #64748b; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
    .lang-btn.active { background: var(--primary-green); color: white; box-shadow: 0 2px 6px rgba(0, 196, 159, 0.3); }
    
@@ -300,12 +300,40 @@
    .question-item:hover { background: #f0fdfa; border-color: var(--primary-green); transform: translateX(-5px); color: var(--primary-green); }
    .ask-trigger-fab-dynamic { width: 56px; height: 56px; flex-shrink: 0; border-radius: 20px; background: var(--primary-green); color: white; border: none; box-shadow: 0 8px 20px rgba(0, 196, 159, 0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); margin-right: 10px; }
    .chat-interaction-group.is-open .ask-trigger-fab-dynamic { width: 42px; height: 42px; border-radius: 14px; background: rgb(247, 126, 126); color: #64748b; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-   
+   .scroll-btn-group {
+      display: flex !important;
+      gap: 15px !important;
+      padding: 15px 10px 5px 10px !important;
+      border-top: 1px solid #e8e8e8 !important;
+      margin-top: 10px !important;
+    }
+    .scroll-btn {
+      flex: 1 !important;        
+      height: 30px !important;  
+      background: #f1f5f9 !important;
+      border-radius: 20px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      border: none !important;
+      color: var(--primary-green) !important;
+      cursor: pointer !important;
+      transition: all 0.2s ease !important;
+    }
+    .scroll-btn:hover {
+      background: var(--primary-green-dim) !important;
+      transform: translateY(-3px) !important; 
+    }
+    .scroll-btn svg {
+      width: 20px !important;
+      height: 20px !important;
+      stroke-width: 3px !important;
+    }
    /* =========================================
       9. NEWS TICKER STYLES
       ========================================= */
    .ticker-container {
-     bottom: 0; left: 0; width: 100%; height: 40px; background-color: var(--bg-card); display: flex; align-items: center; z-index: 9999; border-top: 1px solid var(--border-color); box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+     bottom: 0; left: 0; width: 100%; height: var(--ticker-container-height, 40px); background-color: var(--bg-card); display: flex; align-items: center; z-index: 9999; border-top: 1px solid var(--border-color); box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
    }
    .ticker-label { color: white; padding: 0 20px; height: 100%; display: flex; align-items: center; font-weight: 800; font-size: 0.9rem; letter-spacing: 1px; text-transform: uppercase; z-index: 2; box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1); }
    .ticker-track { flex: 1; overflow: hidden; position: relative; height: 100%; display: flex; align-items: center; mask-image: linear-gradient(to right, transparent, black 20px, black 95%, transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 20px, black 95%, transparent); }
@@ -389,7 +417,7 @@
    @keyframes pulseIcon { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.8; } 100% { transform: scale(1); opacity: 1; } }
    
    /* 1. จัดการ Resizer Bar */
-   .resizer-bar { width: 6px; cursor: col-resize; background: transparent; z-index: 1001; transition: background 0.2s; position: relative; }
+   .resizer-bar { width: 6px; cursor: col-resize; background: transparent; z-index: 100; transition: background 0.2s; position: relative; }
    .resizer-bar:hover, .resizer-bar:active { background: var(--primary-green); box-shadow: 0 0 10px rgba(0, 196, 159, 0.3); }
 
   /* =========================================
@@ -470,6 +498,7 @@
       --sidebar-collapsed-width: 250px;
       --resizer-width: 15px; 
       --header-height: 230px;
+      --ticker-container-height: 120px;
       font-size: 32px; 
     }
 
@@ -630,7 +659,7 @@
       height: 100% !important;
       cursor: col-resize;
       background: transparent;
-      z-index: 1001;
+      z-index: 100;
       transition: background 0.2s;
     }
     .resizer-bar:hover {
@@ -649,14 +678,15 @@
     }
 
     .lang-switcher-row {
-      padding: 15px;
+      padding: 15px 30px;
       gap: 15px !important;
       margin-bottom: 20px;
+      flex-wrap: wrap !important;
+      height: auto !important;
     }
     .lang-switcher-row svg {
       width: 1.5rem;
       height: 1.5rem;
-      margin-left: 20px;
     }
     .lang-btn {
       font-size: 35px;
@@ -680,6 +710,7 @@
     }
     .result-header{
       padding: 70px 50px;
+      border: 3px solid var(--border-color);
     }
     .result-header .icon-sparkle {
       width: 1.8rem !important;
@@ -701,6 +732,196 @@
       border-radius: 30px;
     }
     .result-text {
+      padding: 30px;
+      font-size: 40px;
+      border-radius: 30px;
+    }
+    .result-content-wrapper {
+      padding: 30px;
+    }
+    .typing-indicator {
+      margin-left: 20px;
+      margin-right: 20px;
+    }
+    .typing-indicator span {
+      width: 30px;
+      height: 30px;
+      margin-top: 15px;
+      margin-left: 5px;
+      margin-right: 5px;
+    }
+    .loading-text {
       font-size: 48px;
     }
+    .ask-trigger-fab-dynamic {
+      width: 150px;
+      height: 150px;
+      margin-right: 40px;
+      margin-bottom: 30px;
+      border-radius: 50px;
+    }
+    .chat-interaction-group.is-open .ask-trigger-fab-dynamic {
+      width: 100px;
+      height: 100px;
+      border-radius: 30px;
+    }
+    .chat-interaction-group.is-open .ask-trigger-fab-dynamic svg {
+      width: 60px;
+      height: 60px;
+    }
+    
+    .chat-interaction-group.is-open .suggested-questions-box {
+      margin-right: 100px;
+      margin-bottom: 30px;
+      width: 950px;
+      height: auto;
+      max-height: 1300px;
+      opacity: 1;
+      padding: 41px 40px;
+      border-radius: 70px;
+    }
+    .suggest-header {
+      font-size: 40px;
+      border-bottom: 3px solid rgba(0, 0, 0, 0.05);
+      padding-bottom: 20px;
+      margin-left: 15px;
+      margin-bottom: 20px;
+    }
+    .questions-list {
+      gap: 15px;
+      padding-right: 15px;
+    }
+    .question-item {
+      font-size: 40px;
+      padding: 40px 44px;
+      border-radius: 50px;
+    }
+    .scroll-btn-group {
+      gap: 30px !important;
+      padding: 30px 10px 5px 10px !important;
+      border-top: 3px solid #e8e8e8 !important;
+      margin-top: 20px !important;
+    }
+    .scroll-btn {
+      height: 100px !important;     
+      border-radius: 50px !important;
+    }
+    .scroll-btn svg {
+      width: 60px !important;
+      height: 60px !important;
+      stroke-width: 3px !important;
+    }
+
+    .ticker-label {
+      width: 450px;
+      justify-content: center;
+    }
+    .ticker-label span {
+      font-size: 38px;
+    }
+    .ticker-label svg {
+      width: 1.6rem;
+      height: 1.6rem;
+      margin-right: 5px;
+    }
+    .ticker-content {
+      font-size: 40px;
+    }
+
+    .login-card {
+      max-width: 2500px; 
+      min-height: 1500px;
+      border-radius: 80px;
+    }
+    .visual-content {
+      padding: 200px 80px;
+    }
+    .logo-badge {
+      width: 200px;
+      margin-bottom: 130px; 
+    }
+    .visual-content h1 {
+      font-size: 80px;
+    }
+    .visual-content P {
+      font-size: 45px;
+      margin-bottom: 100px;
+    }
+    .feature-list {
+      gap: 40px;
+    }
+    .feature-list .feature-item {
+      font-size: 40px;
+      gap: 25px;
+      padding: 30px 40px;
+      border-radius: 30px;
+    }
+    .feature-list .feature-item svg {
+      width: 2rem;
+      height: 2rem;
+    }
+    .login-action {
+      padding: 120px;
+    }
+    .login-header h2 {
+      font-size: 80px;
+    }
+    .login-header p {
+      font-size: 45px;
+      margin-bottom: 120px;
+    }
+    .ms-login-btn {
+      max-width: 850px;
+      gap: 40px;
+      padding: 35px 20px;
+      border-radius: 30px;
+    }
+    .ms-login-btn .ms-logo {
+      width: 70px;
+      height: 70px;
+    }
+    .ms-login-btn span {
+      font-size: 45px;
+    }
+    .login-footer p {
+      font-size: 40px;
+    }
+    .login-footer .version {
+      font-size: 40px;
+    }
+    
+    .loading-content {
+      height: 800px;
+    }
+    .logo-wrapper {
+      width: 400px; height: 400px;
+    }
+    .icon-box img {
+      width: 300px;
+    }
+    .orbit-icon {
+      width: 100px;
+      height: 100px;
+      justify-content: center;
+      text-align: center;
+      align-items: center;
+      display: flex;
+    }
+    .orbit-icon svg {
+      width: 60px;
+      height: 60px;
+    }
+    .loading-title {
+      font-size: 60px;
+      margin-bottom: 90px;
+    }
+    .loading-status span {
+      font-size: 40px;
+      margin-bottom: 120px;
+    }
+    .progress-bar-wrapper {
+      width: 400px;
+      height: 20px;
+    }
+    @keyframes floatBlob { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(20px, -20px) scale(15); } }
   }

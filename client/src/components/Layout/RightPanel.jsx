@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Globe, X, Sparkles } from 'lucide-react';
+import { Globe, X, Sparkles, ChevronUp, ChevronDown } from 'lucide-react';
 import CharacterZone from '../Widgets/CharacterZone';
 
 const RightPanel = ({
@@ -39,6 +39,17 @@ const RightPanel = ({
     VN: { title: "Câu hỏi thú vị ✨", loading: "Đang suy nghĩ..." }
   };
 
+  const questionsListRef = useRef(null);
+  const scrollQuestions = (direction) => {
+    if (questionsListRef.current) {
+      const scrollAmount = window.innerWidth > 2500 ? 200 : 100; // ระยะเลื่อน (จอ TV จะเลื่อนไกลกว่า)
+      questionsListRef.current.scrollBy({
+        top: direction === 'down' ? scrollAmount : -scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   return (
     <aside
       className="right-panel"
@@ -46,7 +57,7 @@ const RightPanel = ({
         display: 'flex',
         flexDirection: 'column',
         position: 'relative',
-        overflow: 'visible' // Necessary for popup overflow
+        overflow: 'visible'
       }}
     >
       {/* 1. Language Switcher */}
@@ -88,7 +99,10 @@ const RightPanel = ({
       >
         <div className="suggested-questions-box">
           <div className="suggest-header">{UI_TEXT[currentLang]?.title || UI_TEXT['TH'].title}</div>
-          <div className="questions-list">
+
+          <div className="questions-list" 
+            ref={questionsListRef}
+          >
             {
             suggestedQuestions.length === 0 ? (<div style={{ padding: '10px', textAlign: 'center', color: 'var(--text-muted)' }}>{UI_TEXT[currentLang]?.loading}</div>) :
             suggestedQuestions.map((q, idx) => (
@@ -107,6 +121,17 @@ const RightPanel = ({
               </button>
             ))}
           </div>
+
+          <div className='scroll-btn-group'>
+            <button className="scroll-btn up" onClick={() => scrollQuestions('up')}>
+              <ChevronUp size={window.innerWidth > 2500 ? 40 : 20} />
+            </button>
+
+            <button className="scroll-btn down" onClick={() => scrollQuestions('down')}>
+              <ChevronDown size={window.innerWidth > 2500 ? 40 : 20} />
+            </button>
+          </div>
+
         </div>
 
         <button 

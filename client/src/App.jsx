@@ -507,6 +507,7 @@ function App() {
                                 cursor: 'pointer',
                                 boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
                                 transition: 'transform 0.2s',
+                                marginTop: '35%'
                             }}
                             onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
                             onMouseOut={(e) => e.target.style.transform = 'scale(1)'}

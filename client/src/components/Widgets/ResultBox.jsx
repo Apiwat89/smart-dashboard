@@ -48,7 +48,7 @@ const ResultBox = ({ text, isLoading, onRefresh }) => {
         {isLoading ? (
           <div className="loading-state">
             <div className="typing-indicator"><span></span><span></span><span></span></div>
-            <span style={{ marginLeft: '10px' }}>Generating insights...</span>
+            <span className='loading-text' style={{ marginLeft: '10px' }}>Generating insights...</span>
           </div>
         ) : (
           <div className="result-text">{formatText(text)}</div>

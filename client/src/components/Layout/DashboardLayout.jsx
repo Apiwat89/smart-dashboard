@@ -94,9 +94,8 @@ const DashboardLayout = ({
         <RightPanel {...rightPanelProps} />
       </div>
       
-      <div style={{ flexShrink: 0, height: '40px', zIndex: 10000, background: 'white' }}>
-         <NewsTicker text={newsText} type={newsType} />
-         {/* <Footer /> */}
+      <div style={{ flexShrink: 0, height: '40px', zIndex: 10000, background: 'white'}}>
+            <NewsTicker text={newsText} type={newsType} />
       </div>
     </div>
   );
