@@ -2,7 +2,6 @@ import React from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import RightPanel from './RightPanel';
-import Footer from './Footer';
 import NewsTicker from '../Widgets/NewsTicker';
 
 const DashboardLayout = ({ 

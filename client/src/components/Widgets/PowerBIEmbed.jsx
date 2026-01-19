@@ -3,9 +3,8 @@ import { PowerBIEmbed } from 'powerbi-client-react';
 import { models } from 'powerbi-client';
 import { useMsal } from "@azure/msal-react";
 import { InteractionRequiredAuthError } from "@azure/msal-browser";
-import { powerBIRequest } from "../../authConfig";
 
-const RealPowerBIEmbed = ({ eventHandlers, getEmbeddedComponent, onReportRendered, targetPageName, ClientID}) => {
+const RealPowerBIEmbed = ({ eventHandlers, getEmbeddedComponent, onReportRendered, targetPageName, ClientID, powerBIRequest}) => {
   const { instance, accounts } = useMsal();
   const [embedConfig, setEmbedConfig] = useState(null);
   const [needsConsent, setNeedsConsent] = useState(false);

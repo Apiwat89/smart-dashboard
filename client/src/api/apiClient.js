@@ -85,19 +85,19 @@ export const dashboardService = {
 
   // 5. Speech Token
   // OpenAI
-  speakOpenAI: async (text, lang) => {
-    try {
-      // ⏳ ไม้ตาย: หน่วงเวลา 1.2 วินาที เพื่อหลบ API Data/Summary/Ticker 
-      // ที่ยิงรัวตอนเปิดหน้าเว็บครั้งแรก
-      await new Promise(r => setTimeout(r, 1200));
+  // speakOpenAI: async (text, lang) => {
+  //   try {
+  //     // ⏳ ไม้ตาย: หน่วงเวลา 1.2 วินาที เพื่อหลบ API Data/Summary/Ticker 
+  //     // ที่ยิงรัวตอนเปิดหน้าเว็บครั้งแรก
+  //     await new Promise(r => setTimeout(r, 1200));
 
-      const res = await client.post('/speak-openai', { text, lang }, { responseType: 'blob' });
-      return res.data; 
-    } catch (e) {
-      console.error("OpenAI TTS API Error:", e);
-      return null;
-    }
-  },
+  //     const res = await client.post('/speak-openai', { text, lang }, { responseType: 'blob' });
+  //     return res.data; 
+  //   } catch (e) {
+  //     console.error("OpenAI TTS API Error:", e);
+  //     return null;
+  //   }
+  // },
 
   // Google AI Studio
   // speakGeminiTTS: async (text, lang, retryCount = 0) => {
@@ -177,15 +177,15 @@ export const dashboardService = {
   // },
 
   // Microsoft Azure
-  // getSpeechToken: async () => {
-  //   try {
-  //     const res = await client.get('/get-speech-token');
-  //     return res.data;
-  //   } catch (e) {
-  //     console.error("Token fetch failed", e);
-  //     return null;
-  //   }
-  // },
+  getSpeechToken: async () => {
+    try {
+      const res = await client.get('/get-speech-token');
+      return res.data;
+    } catch (e) {
+      console.error("Token fetch failed", e);
+      return null;
+    }
+  },
 
   // 6. News Ticker
   getNewsTicker: async (allData, lang, token) => {
