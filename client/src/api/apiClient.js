@@ -206,7 +206,7 @@ export const dashboardService = {
       
       // ⚠️ แก้ตรงนี้: เพิ่ม /api เข้าไปในลิงก์ผลลัพธ์
       // เพราะ Route view ตอนนี้คือ /api/view/:id
-      return `${BASE_URL}/view/${res.data.id}`;
+      return `${BASE_URL}api/view/${res.data.id}`;
     } catch (e) {
       console.error("Share Summary Error:", e);
       throw e; 
