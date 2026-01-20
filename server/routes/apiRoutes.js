@@ -460,10 +460,10 @@ router.get('/view/:id', (req, res) => {
         </head>
         <body>
             <div class="card">
-                <h2>🤖 สรุปผล AI Insight</h2>
+                <h2>🤖 สรุปผล Insight Aura</h2>
                 <div>${content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>')}</div>
                 <div style="margin-top: 30px; font-size: 12px; color: #999; text-align: center;">
-                    Powered by Insight Aura (Render)
+                    Powered by Insight Aura 
                 </div>
             </div>
         </body>
