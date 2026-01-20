@@ -27,8 +27,8 @@ function App({ loginRequest, powerBIRequest }) {
     const [menuList, setMenuList] = useState([]);
     const [activePageId, setActivePageId] = useState("page_overview");
     const [isPlaying, setIsPlaying] = useState(false);
-    const [autoPlayCountdown, setAutoPlayCountdown] = useState(120);
-    const TIMER_DURATION = 120; 
+    const [autoPlayCountdown, setAutoPlayCountdown] = useState(600);
+    const TIMER_DURATION = 600; 
     const [lang, setLang] = useState('TH');
     const [aiState, setAiState] = useState({ status: 'idle', message: '', isVisible: false });
     const [isProcessing, setProcessing] = useState(false);
@@ -72,10 +72,10 @@ function App({ loginRequest, powerBIRequest }) {
     }, []);
 
     useEffect(() => {
-        if (isAuthenticated && isAppReady && userInfo.displayRole === "General User") {
+        if (isAuthenticated & userInfo.displayRole === "General User") {
             setIsUnauthorized(true);
         }
-    }, [isAuthenticated, isAppReady, userInfo]);
+    }, [isAuthenticated, userInfo]);
 
     useEffect(() => { langRef.current = lang; }, [lang]);
     useEffect(() => {
@@ -84,12 +84,30 @@ function App({ loginRequest, powerBIRequest }) {
     }, [theme]);
 
     useEffect(() => {
-      const appMenu = [
-        { title: "สถิติน้ำท่วม 1", icon: "LayoutDashboard", pageName: "798ca254819667030432" },
-        { title: "สถิติน้ำท่วม 2", icon: "Map", pageName: "5b3cc48690823dd3da6d" },
-        { title: "สถิติน้ำท่วม 3", icon: "BarChart", pageName: "e93c812d89901cad35c2" }
-      ];
-      setMenuList(appMenu);
+        const appMenu = [
+            { 
+            id: "page_overview", 
+            title: "สถิติจังหวัด",             
+            headerTitle: "สถิติน้ำท่วมในแต่ละจังหวัด", 
+            icon: "LayoutDashboard", 
+            pageName: "798ca254819667030432" 
+            },
+            { 
+            id: "page_details", 
+            title: "สถิติรายเดือน",            
+            headerTitle: "สถิติน้ำท่วมของเดือนที่เกิดเหตุ", 
+            icon: "Map", 
+            pageName: "5b3cc48690823dd3da6d" 
+            },
+            { 
+            id: "page_analysis", 
+            title: "ความเสียหาย",              
+            headerTitle: "ความเสียหายในแต่ละด้าน",   
+            icon: "BarChart", 
+            pageName: "e93c812d89901cad35c2" 
+            }
+        ];
+        setMenuList(appMenu);
     }, []);
 
     useEffect(() => {
@@ -530,6 +548,18 @@ function App({ loginRequest, powerBIRequest }) {
     const handleHeaderSearch = (text) => { setQuestion(text); triggerAiChat(text); };
 
     if (!isAuthenticated) return <LoginPage onLogin={handleLogin} />;
+    
+    if (isUnauthorized) {
+        return (
+            <div className='AccessDenied'>
+                <h1>🚫 Access Denied</h1>
+                <p>คุณไม่มีสิทธิ์เข้าใช้งานระบบ (Role: {userInfo.displayRole})</p>
+                <p>กรุณาติดต่อผู้ดูแลระบบ เพื่อขอสิทธิ์ในการเข้าใช้งานระบบ</p>
+                <button onClick={handleLogout}>ออกจากระบบ</button>
+            </div>
+        );
+    } 
+
     if (!isAppReady) {
         return (
             <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
@@ -571,7 +601,6 @@ function App({ loginRequest, powerBIRequest }) {
             </div>
         );
     }
-    if (isUnauthorized) return <div className="access-denied-overlay">...</div>;
 
     const currentPage = menuList.find(p => p.id === activePageId);
 
@@ -589,8 +618,8 @@ function App({ loginRequest, powerBIRequest }) {
             toggleSidebar={() => setSidebarCollapsed(!isSidebarCollapsed)}
             scrollRef={scrollRef} 
             onSearch={handleHeaderSearch}
-            pageTitle={currentPage ? currentPage.title : "Smart Dashboard"}
-            
+            pageTitle={currentPage ? (currentPage.headerTitle || currentPage.title) : "Smart Dashboard"}
+
             notifications={notifications}
             isPlaying={isPlaying}
             togglePlay={() => setIsPlaying(!isPlaying)}

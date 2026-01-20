@@ -5,6 +5,7 @@ const path = require('path');
 const axios = require('axios'); 
 const { ElevenLabsClient } = require('elevenlabs'); 
 const { generateAIResponse } = require('../services/aiService');
+const { v4: uuidv4 } = require('uuid');
 
 // Helper Functions
 const getDashboardData = () => {
@@ -35,6 +36,8 @@ const getMascotName = (lang) => {
         default: return "ออร่า";
     }
 };
+
+const summaryStore = {};
 
 // --- Endpoints ---
 
@@ -407,6 +410,65 @@ router.post('/generate-ticker', async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: "AI failed to generate ticker" });
     }
+});
+
+router.post('/share', (req, res) => {
+    try {
+        const { text } = req.body;
+        if (!text) return res.status(400).json({ error: "No text" });
+
+        const id = uuidv4().substring(0, 8);
+        summaryStore[id] = text;
+        
+        // ส่ง ID กลับไป
+        res.json({ id });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Server Error" });
+    }
+});
+
+
+router.get('/view/:id', (req, res) => {
+    const { id } = req.params;
+    const content = summaryStore[id];
+
+    if (!content) {
+        return res.status(404).send(`
+            <div style="font-family: sans-serif; text-align: center; padding: 50px;">
+                <h1>⚠️ ไม่พบข้อมูล</h1>
+                <p>ข้อมูลอาจหมดอายุ หรือ Server มีการรีสตาร์ท</p>
+                <p>กรุณากดสร้าง QR Code ใหม่อีกครั้ง</p>
+            </div>
+        `);
+    }
+
+    res.send(`
+        <!DOCTYPE html>
+        <html lang="th">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>AI Summary</title>
+            <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
+            <style>
+                body { font-family: 'Sarabun', sans-serif; padding: 20px; line-height: 1.6; background: #f4f7f6; margin: 0; }
+                .card { max-width: 600px; margin: 20px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+                h2 { color: #00c49f; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
+                strong { color: #008a70; font-weight: bold; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <h2>🤖 สรุปผล AI Insight</h2>
+                <div>${content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>')}</div>
+                <div style="margin-top: 30px; font-size: 12px; color: #999; text-align: center;">
+                    Powered by Insight Aura (Render)
+                </div>
+            </div>
+        </body>
+        </html>
+    `);
 });
 
 module.exports = router;

@@ -4,7 +4,7 @@ const BASE_URL = "https://smart-dashboard-7382.onrender.com";
 
 // ตั้งค่า Client Instance
 const client = axios.create({
-  baseURL: `/api`, // หรือ `${BASE_URL}/api` ตาม Environment
+  baseURL: `${BASE_URL}/api`, // หรือ `${BASE_URL}/api` ตาม Environment
   timeout: 30000, // เพิ่ม Timeout ป้องกัน Server (Render) หลับ
   headers: {
     'Content-Type': 'application/json',
@@ -195,6 +195,21 @@ export const dashboardService = {
     } catch (e) {
       console.error("Ticker API Error", e);
       return { message: "เชื่อมต่อข้อมูลระบบข่าวขัดข้อง..." };
+    }
+  },
+
+  // ✨ 7. สร้างลิงก์ QR Code (แก้ URL ให้ถูกต้อง)
+  shareSummary: async (text) => {
+    try {
+      // ยิงไปที่ /share (axios config มี baseURL: /api อยู่แล้ว -> กลายเป็น /api/share)
+      const res = await client.post('/share', { text });
+      
+      // ⚠️ แก้ตรงนี้: เพิ่ม /api เข้าไปในลิงก์ผลลัพธ์
+      // เพราะ Route view ตอนนี้คือ /api/view/:id
+      return `${BASE_URL}/view/${res.data.id}`;
+    } catch (e) {
+      console.error("Share Summary Error:", e);
+      throw e; 
     }
   },
 };

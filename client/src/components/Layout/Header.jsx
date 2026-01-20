@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Bell, Moon, Sun, Play, Pause, Timer, TextAlignCenter } from 'lucide-react';
-import NotificationDropdown from '../Widgets/NotificationDropdown';
 
 const formatTime = (seconds) => {
   if (seconds < 60) return `${seconds}s`;

@@ -238,6 +238,92 @@
    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; } .typing-indicator span:nth-child(2) { animation-delay: -0.16s; } .typing-indicator span:nth-child(3) { animation-delay: 0s; }
    @keyframes typingBlink { 0%, 80%, 100% { transform: scale(0); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
    
+   /* --- Animation --- */
+@keyframes spin { 
+  100% { transform: rotate(360deg); } 
+}
+
+.spin-anim { 
+  animation: spin 1s linear infinite; 
+}
+
+/* --- Layout --- */
+.static-view { 
+  height: 100%; 
+  display: flex; 
+  flex-direction: column; 
+}
+
+.result-content-wrapper {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* --- QR Code Modal Styles --- */
+.qr-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.8); /* ฉากหลังดำจางๆ */
+  z-index: 99999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(5px); /* เบลอฉากหลัง */
+}
+
+.qr-modal-content {
+  background-color: white;
+  padding: 30px;
+  border-radius: 20px;
+  text-align: center;
+  max-width: 90%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  position: relative; /* เพื่อให้ปุ่มปิดอ้างอิงตำแหน่งได้ */
+  animation: popup 0.3s ease-out;
+}
+
+.qr-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  transition: color 0.2s;
+}
+
+.qr-modal-close:hover {
+  color: #333;
+}
+
+.qr-wrapper {
+  background: white;
+  padding: 10px;
+  display: inline-block;
+}
+
+.qr-modal-title {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.qr-modal-desc {
+  margin-top: 20px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Animation ตอนเด้งขึ้นมา */
+@keyframes popup {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
    /* =========================================
       8. RIGHT PANEL (Fix Scrolling Issue)
       ========================================= */
@@ -487,6 +573,80 @@
     border-radius: 4px;
   }
 
+/* =========================================
+   Access Denied
+   ========================================= */
+   .AccessDenied {
+    position: fixed; /* ลอยทับทุกอย่างในหน้าจอ */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh; /* ความสูงเต็มจอ */
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* จัดกึ่งกลางแนวตั้ง */
+    align-items: center;     /* จัดกึ่งกลางแนวนอน */
+    background: #f0f2f5;     /* สีพื้นหลังเทาอ่อนๆ สบายตา */
+    z-index: 9999;           /* มั่นใจว่าอยู่บนสุด */
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  .AccessDenied::before {
+    content: "";
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+  }
+
+  .AccessDenied h1 {
+    font-size: 3rem;
+    color: #d32f2f; /* สีแดงแจ้งเตือน */
+    margin-bottom: 1rem;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .AccessDenied p {
+    color: #555;
+    margin: 0; /* ล้างค่าเดิมก่อน เพื่อความชัวร์ */
+    line-height: 1.5; /* ระยะห่างบรรทัดให้อ่านง่าย */
+  }
+  
+  /* 🎯 บรรทัดที่ 1: บอก Role */
+  .AccessDenied p:nth-of-type(1) {
+    font-size: 1.2rem;
+    font-weight: 500;
+    margin-bottom: 8px; /* เว้นห่างจากบรรทัดล่างแค่นิดเดียวพอ */
+  }
+  
+  /* 🎯 บรรทัดที่ 2: บอกให้ติดต่อ Admin */
+  .AccessDenied p:nth-of-type(2) {
+    font-size: 1rem;       /* ตัวเล็กกว่านิดนึง เพื่อให้ Role เด่นกว่า */
+    color: #888;           /* สีจางลงหน่อย */
+    margin-bottom: 30px;   /* เว้นห่างจากปุ่มเยอะๆ */
+  }
+
+  .AccessDenied button {
+    padding: 12px 30px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(211, 47, 47, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+
+  .AccessDenied button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(211, 47, 47, 0.6);
+  }
+  
+  .AccessDenied button:active {
+    transform: translateY(0);
+  }
 
 /* =========================================
    ULTRA-WIDE TV OPTIMIZATION (3666 x 2116)
@@ -924,4 +1084,23 @@
       height: 20px;
     }
     @keyframes floatBlob { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(20px, -20px) scale(15); } }
+
+    .AccessDenied h1 {
+      font-size: 130px;
+      margin-bottom: 50px;
+    }
+    .AccessDenied p:nth-of-type(1) {
+      font-size: 50px;
+      margin-bottom: 20px;
+    }
+    .AccessDenied p:nth-of-type(2) {
+      font-size: 41px;
+      margin-bottom:80px;
+    }
+
+    .AccessDenied button {
+      font-size: 45px;
+      padding: 30px 70px;
+      border-radius: 100px;
+    }
   }
