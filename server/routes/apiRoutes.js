@@ -554,10 +554,10 @@ router.get('/view/:id', (req, res) => {
 
                 function shareToLine() {
                     const currentUrl = window.location.href; // ลิงก์ของหน้านี้
-                    const message = "🤖 AI Summary by Aura\n\n" +
-                        "อ่านสรุปฉบับเต็มได้ที่นี่:\n" +
-                        "Read the full summary here:\n\n" +
-                        currentUrl;
+                    const message = "🤖 AI Insight Aura Summary\\n\\n" +
+                                        "อ่านสรุปฉบับเต็มได้ที่นี่:\\n" +
+                                        "Read the full summary here:\\n\\n" +
+                                        currentUrl;
 
                     // ส่งเข้า LINE
                     window.location.href = "https://line.me/R/msg/text/?" + encodeURIComponent(message);
