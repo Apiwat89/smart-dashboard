@@ -564,21 +564,28 @@ router.get('/view/:id', (req, res) => {
                 }
 
                 async function nativeShare() {
-                    const text = getRawText();
+                    // 1. เตรียมลิงก์ (ลบพารามิเตอร์แปลกปลอมออก)
+                    const cleanUrl = window.location.href.replace(/[?&]openExternalBrowser=1/, "");
+                    
                     if (navigator.share) {
                         try {
                             await navigator.share({
-                                title: 'AI Insight Summary',
-                                text: text,
-                                url: window.location.href // แนบลิงก์หน้านี้ไปด้วย
+                                title: 'AI Summary', // หัวข้อสำหรับบางแอป
+                                text: "🤖 AI Insight Aura Summary\n\n" +
+                                      "อ่านสรุปฉบับเต็มได้ที่นี่:\n" +
+                                      "Read the full summary here:", 
+                                url: cleanUrl // ส่งลิงก์ไปด้วย (Browser จะเอาไปต่อท้ายข้อความให้เอง)
                             });
                         } catch (err) {
-                            console.log('Share canceled');
+                            // ผู้ใช้กดยกเลิก
                         }
                     } else {
-                        // ถ้า Browser ไม่รองรับ (เช่นในคอม) ให้ Copy แทน
-                        copyContent();
-                        showToast("This browser does not support sharing (copied for you)");
+                        // ⚠️ กรณีแชร์ไม่ได้ (เช่น บนคอม) -> คัดลอกลิงก์ให้แทนเหมือนเดิม
+                        navigator.clipboard.writeText(cleanUrl).then(() => {
+                            alert("This browser does not support sharing.\nThe link has been copied to your clipboard instead!\n(You can paste it to share now)");
+                        }).catch(err => {
+                            alert("Failed to copy link.");
+                        });
                     }
                 }
 
