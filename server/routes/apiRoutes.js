@@ -513,7 +513,7 @@ router.get('/view/:id', (req, res) => {
         </head>
         <body>
             <div class="container">
-                <h2>🤖 Insight Aura</h2>
+                <h2>🤖 AI Summary by Aura</h2>
                 
                 <div class="content" id="content-text">${content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>')}</div>
 
@@ -553,9 +553,14 @@ router.get('/view/:id', (req, res) => {
                 }
 
                 function shareToLine() {
-                    const text = getRawText();
-                    // เปิด LINE พร้อมข้อความ
-                    window.location.href = "https://line.me/R/msg/text/?" + encodeURIComponent(text);
+                    const currentUrl = window.location.href; // ลิงก์ของหน้านี้
+                    const message = "🤖 AI Summary by Aura\n\n" +
+                        "อ่านสรุปฉบับเต็มได้ที่นี่:\n" +
+                        "Read the full summary here:\n\n" +
+                        currentUrl;
+
+                    // ส่งเข้า LINE
+                    window.location.href = "https://line.me/R/msg/text/?" + encodeURIComponent(message);
                 }
 
                 async function nativeShare() {
