@@ -42,7 +42,7 @@ const summaryStore = {};
 // --- Endpoints ---
 
 // config
-router.get('/api/auth-config', (req, res) => {
+router.get('/auth-config', (req, res) => {
     try {
         res.json({
             clientId: process.env.AZURE_CLIENT_ID,
@@ -437,8 +437,7 @@ router.get('/view/:id', (req, res) => {
         return res.status(404).send(`
             <div style="font-family: sans-serif; text-align: center; padding: 50px;">
                 <h1>⚠️ ไม่พบข้อมูล</h1>
-                <p>ข้อมูลอาจหมดอายุ หรือ Server มีการรีสตาร์ท</p>
-                <p>กรุณากดสร้าง QR Code ใหม่อีกครั้ง</p>
+                <p>ข้อมูลอาจหมดอายุ หรือ Server ถูกรีสตาร์ท</p>
             </div>
         `);
     }
@@ -451,21 +450,140 @@ router.get('/view/:id', (req, res) => {
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>AI Summary</title>
             <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                body { font-family: 'Sarabun', sans-serif; padding: 20px; line-height: 1.6; background: #f4f7f6; margin: 0; }
-                .card { max-width: 600px; margin: 20px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-                h2 { color: #00c49f; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0; }
+                body { font-family: 'Sarabun', sans-serif; padding: 0; margin: 0; background: #f4f7f6; color: #333; }
+                .container { max-width: 600px; margin: 20px auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); position: relative; }
+                h2 { color: #00c49f; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-top: 0; font-size: 1.4rem; }
+                .content { white-space: pre-line; font-size: 1rem; line-height: 1.7; color: #444; margin-bottom: 30px; }
                 strong { color: #008a70; font-weight: bold; }
+                
+                /* --- Action Buttons --- */
+                .action-bar {
+                    display: flex;
+                    gap: 10px;
+                    margin-top: 20px;
+                    border-top: 1px solid #eee;
+                    padding-top: 20px;
+                }
+                .btn {
+                    flex: 1;
+                    padding: 12px;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-family: 'Sarabun', sans-serif;
+                    font-weight: bold;
+                    font-size: 14px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    transition: transform 0.1s;
+                    text-decoration: none; /* สำหรับลิงก์ */
+                }
+                .btn:active { transform: scale(0.96); }
+                
+                .btn-copy { background: #e9ecef; color: #333; }
+                .btn-line { background: #06c755; color: white; }
+                .btn-share { background: #007bff; color: white; }
+
+                .footer { margin-top: 20px; text-align: center; font-size: 0.8rem; color: #ccc; }
+                
+                /* Toast Notification */
+                #toast {
+                    visibility: hidden;
+                    min-width: 250px;
+                    background-color: #333;
+                    color: #fff;
+                    text-align: center;
+                    border-radius: 50px;
+                    padding: 16px;
+                    position: fixed;
+                    z-index: 1;
+                    left: 50%;
+                    bottom: 30px;
+                    transform: translateX(-50%);
+                    font-size: 14px;
+                }
+                #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+                @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+                @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
             </style>
         </head>
         <body>
-            <div class="card">
-                <h2>🤖 สรุปผล Insight Aura</h2>
-                <div>${content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>')}</div>
-                <div style="margin-top: 30px; font-size: 12px; color: #999; text-align: center;">
-                    Powered by Insight Aura 
+            <div class="container">
+                <h2>🤖 Insight Aura</h2>
+                
+                <div class="content" id="content-text">${content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>')}</div>
+
+                <div class="action-bar">
+                    <button class="btn btn-copy" onclick="copyContent()">
+                        <i class="fa-regular fa-copy"></i> Copy
+                    </button>
+                    
+                    <button class="btn btn-line" onclick="shareToLine()">
+                        <i class="fa-brands fa-line"></i> LINE
+                    </button>
+                    
+                    <button class="btn btn-share" onclick="nativeShare()">
+                        <i class="fa-solid fa-share-nodes"></i> Share
+                    </button>
                 </div>
+
+                <div class="footer">Powered by Insight Aura</div>
             </div>
+
+            <div id="toast">Text copied</div>
+
+            <script>
+                // ดึงข้อความดิบ (เอา <br> ออกเพื่อให้ก๊อปไปวางสวยๆ)
+                function getRawText() {
+                    const html = document.getElementById('content-text').innerHTML;
+                    return html.replace(/<br\\s*\\/?>/gi, '\\n').replace(/<[^>]+>/g, ''); // แปลง br เป็น newline และลบ tag อื่นๆ
+                }
+
+                function copyContent() {
+                    const text = getRawText();
+                    navigator.clipboard.writeText(text).then(() => {
+                        showToast("Text copied");
+                    }).catch(err => {
+                        alert("Copy failed!");
+                    });
+                }
+
+                function shareToLine() {
+                    const text = getRawText();
+                    // เปิด LINE พร้อมข้อความ
+                    window.location.href = "https://line.me/R/msg/text/?" + encodeURIComponent(text);
+                }
+
+                async function nativeShare() {
+                    const text = getRawText();
+                    if (navigator.share) {
+                        try {
+                            await navigator.share({
+                                title: 'AI Insight Summary',
+                                text: text,
+                                url: window.location.href // แนบลิงก์หน้านี้ไปด้วย
+                            });
+                        } catch (err) {
+                            console.log('Share canceled');
+                        }
+                    } else {
+                        // ถ้า Browser ไม่รองรับ (เช่นในคอม) ให้ Copy แทน
+                        copyContent();
+                        showToast("This browser does not support sharing (copied for you)");
+                    }
+                }
+
+                function showToast(msg) {
+                    var x = document.getElementById("toast");
+                    x.innerText = msg;
+                    x.className = "show";
+                    setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
+                }
+            </script>
         </body>
         </html>
     `);

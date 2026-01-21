@@ -90,7 +90,7 @@ const ResultBox = ({ text, isLoading, onRefresh }) => {
                     <X size={24} />
                 </button>
 
-                <h3 className="qr-modal-title">☁️ สแกนเพื่ออ่านบนมือถือ</h3>
+                <h3 className="qr-modal-title">สแกนเพื่ออ่านบนมือถือ</h3>
                 
                 <div className="qr-wrapper">
                     {/* ✅ ใช้ qrUrl ที่เป็น Link สั้นๆ จาก Server 
@@ -105,7 +105,7 @@ const ResultBox = ({ text, isLoading, onRefresh }) => {
                 
                 <p className="qr-modal-desc">
                     ใช้กล้องมือถือสแกนเพื่อเปิดหน้าเว็บ <br/>
-                    (รองรับทั้ง iOS และ Android ทั่วโลก)
+                    (รองรับทั้ง iOS และ Android)
                 </p>
             </div>
         </div>
