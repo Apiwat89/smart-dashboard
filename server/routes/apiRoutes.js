@@ -3,8 +3,8 @@ const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios'); 
-const { ElevenLabsClient } = require('elevenlabs'); 
 const { generateAIResponse } = require('../services/aiService');
+const { fetchAzureSpeechToken, generateElevenLabsSpeech } = require('../services/speechService');
 const { v4: uuidv4 } = require('uuid');
 
 // Helper Functions
@@ -210,173 +210,34 @@ router.post('/ask-dashboard', async (req, res) => {
 });
 
 // 5. Get Speech Token
-// openAI
-// router.post('/speak-openai', async (req, res) => {
-//     const { text } = req.body;
-//     const API_KEY = process.env.OPENAI_API_KEY;
-
-//     try {
-//         const speechText = text.replace(/,/g, ''); // ลบคอมมาเพื่อให้อ่านเลข 303,352 ถูกต้อง
-
-//         const response = await axios({
-//             method: 'post',
-//             url: 'https://api.openai.com/v1/audio/speech',
-//             headers: {
-//                 'Authorization': `Bearer ${API_KEY}`,
-//                 'Content-Type': 'application/json'
-//             },
-//             data: {
-//                 model: "tts-1", // ใช้ tts-1 เพื่อความเร็ว หรือ tts-1-hd เพื่อคุณภาพสูงสุด
-//                 input: speechText,
-//                 voice: "shimmer", // เสียงแนะนำ: shimmer (สดใส), nova (ฉลาด), alloy (กลางๆ)
-//                 response_format: "mp3",
-//                 speed: 1.0
-//             },
-//             responseType: 'arraybuffer'
-//         });
-
-//         res.setHeader('Content-Type', 'audio/mpeg');
-//         res.send(Buffer.from(response.data));
-//     } catch (err) {
-//         console.error("❌ OpenAI TTS Error:", err.response?.data || err.message);
-//         res.status(500).json({ error: "OpenAI Speech failed" });
-//     }
-// });
-
-// Google AI studio
-// function encodeWav(audioData) {
-//     const sampleRate = 24000; 
-//     const bitsPerSample = 16;
-//     const numChannels = 1;
-//     const dataSize = audioData.length;
-//     const header = Buffer.alloc(44);
-
-//     header.write('RIFF', 0);
-//     header.writeUInt32LE(36 + dataSize, 4);
-//     header.write('WAVE', 8);
-//     header.write('fmt ', 12);
-//     header.writeUInt32LE(16, 16);
-//     header.writeUInt16LE(1, 20);
-//     header.writeUInt16LE(numChannels, 22);
-//     header.writeUInt32LE(sampleRate, 24);
-//     header.writeUInt32LE(sampleRate * numChannels * (bitsPerSample / 8), 28);
-//     header.writeUInt16LE(numChannels * (bitsPerSample / 8), 32);
-//     header.writeUInt16LE(bitsPerSample, 34);
-//     header.write('data', 36);
-//     header.writeUInt32LE(dataSize, 40);
-
-//     return Buffer.concat([header, audioData]);
-// }
-
-// router.post('/speak-google', async (req, res) => {
-//     const { text } = req.body;
-//     const API_KEY = process.env.GOOGLE_API_KEY;
-
-//     try {
-//         const speechText = text.replace(/,/g, ''); // ลบคอมมาเพื่อให้อ่านเลข 303,352 ถูกต้อง
-
-//         const response = await axios.post(
-//             `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro-preview-tts:generateContent?key=${API_KEY}`,
-//             {
-//                 contents: [{ role: "user", parts: [{ text: `Read aloud: ${speechText}` }] }],
-//                 generationConfig: {
-//                     response_modalities: ["audio"],
-//                     speechConfig: {
-//                         voiceConfig: { prebuiltVoiceConfig: { voiceName: "Leda" } } //
-//                     }
-//                 }
-//             },
-//             { timeout: 45000 } // ✅ ขยาย Timeout Backend เป็น 45 วินาที เพื่อรองรับช่วง Traffic หนาแน่น
-//         );
-
-//         const base64Data = response.data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-//         if (base64Data) {
-//             const wavBuffer = encodeWav(Buffer.from(base64Data, 'base64')); 
-//             res.setHeader('Content-Type', 'audio/wav');
-//             res.send(wavBuffer);
-//         } else {
-//             res.status(500).json({ error: "Google logic failed" });
-//         }
-//     } catch (err) {
-//         console.error("❌ GOOGLE API CRASH:", err.message);
-//         res.status(err.response?.status || 500).json({ error: "TTS Process Timeout" });
-//     }
-// });
-
-// ElevenLabs
-// router.post('/speak-eleven', async (req, res) => {
-//     const { text, lang} = req.body;    
-//     const API_KEY = process.env.ELEVEN_API_KEY;
-
-//     const VOICE_MAP = {
-//         'TH': process.env.ELEVEN_VOICE_ID,
-//         'JP': process.env.ELEVEN_VOICE_ID, 
-//         'EN': process.env.ELEVEN_VOICE_ID, 
-//         'CN': process.env.ELEVEN_VOICE_ID,
-//         'KR': process.env.ELEVEN_VOICE_ID,
-//         'VN': process.env.ELEVEN_VOICE_ID,
-//         'default': process.env.ELEVEN_VOICE_ID 
-//     };      
-
-//     const selectedVoiceId = VOICE_MAP[lang] || VOICE_MAP['default'];
-
-//     try {
-//         const response = await axios({
-//             method: 'post',
-//             // 3. ใช้ ID ที่เลือกมา
-//             url: `https://api.elevenlabs.io/v1/text-to-speech/${selectedVoiceId}`,
-//             headers: {
-//                 'Accept': 'audio/mpeg',
-//                 'xi-api-key': API_KEY,
-//                 'Content-Type': 'application/json'
-//             },
-//             data: {
-//                 text: text,
-//                 model_id: "eleven_v3",
-//                 voice_settings: { stability: 0.5, similarity_boost: 0.75 }
-//             },
-//             responseType: 'stream'
-//         });
-
-//         res.setHeader('Content-Type', 'audio/mpeg');
-//         response.data.pipe(res);
-
-//     } catch (err) {
-//         // จัดการ Error ให้ละเอียด
-//         const status = err.response?.status || 500;
-//         console.error(`❌ ElevenLabs Error (${status}):`);
-        
-//         // พยายามอ่าน Error message จาก Stream (ถ้ามี)
-//         if (err.response?.data) {
-//              err.response.data.on('data', (chunk) => {
-//                  console.error("👉 Server ตอบว่า:", chunk.toString());
-//              });
-//         } else {
-//              console.error("👉", err.message);
-//         }
-
-//         res.status(status).json({ error: "Speech generation failed" });
-//     }
-// });
-
-// Microsoft Azure
-router.get('/get-speech-token', async (req, res) => {
+router.post('/speak-eleven', async (req, res) => {
     try {
-        const speechKey = process.env.SPEECH_KEY;
-        const speechRegion = process.env.SPEECH_REGION;
+        const { text, lang } = req.body;
+        
+        // 1. เรียก Service (ถ้า Error มันจะ Log ในนั้น แล้วเด้งไป catch เอง)
+        const audioStream = await generateElevenLabsSpeech(text, lang);
 
-        const tokenResponse = await axios.post(
-            `https://${speechRegion}.api.cognitive.microsoft.com/sts/v1.0/issueToken`, 
-            null, 
-            { headers: { 'Ocp-Apim-Subscription-Key': speechKey, 'Content-Type': 'application/x-www-form-urlencoded' } }
-        );
-        res.json({ token: tokenResponse.data, region: speechRegion });
+        // 2. ส่ง Stream กลับไปที่หน้าเว็บ
+        res.setHeader('Content-Type', 'audio/mpeg');
+        audioStream.pipe(res);
+
     } catch (err) {
-        console.error("❌ Azure STS Error:", err.message);
+        // ไม่ต้อง Log ซ้ำแล้ว เพราะ Service ทำหน้าที่นั้นไปแล้ว
+        res.status(500).json({ error: "Speech generation failed" });
+    }
+});
+
+router.get('/speech-azure', async (req, res) => {
+    try {
+        const data = await fetchAzureSpeechToken();
+        res.json(data);
+    } catch (err) {
+        // Error Log ถูกปริ้นท์ไปแล้วใน Service แต่ถ้าอยากปริ้นท์ตรงนี้อีกก็ได้
         res.status(500).json({ error: "Failed to fetch speech token" });
     }
 });
 
+// 6. ticker
 router.post('/generate-ticker', async (req, res) => {
     const { allData, lang} = req.body;
     const mascotName = getMascotName(lang);
@@ -412,6 +273,7 @@ router.post('/generate-ticker', async (req, res) => {
     }
 });
 
+// 7. QR Summary
 router.post('/share', (req, res) => {
     try {
         const { text } = req.body;
@@ -452,7 +314,7 @@ router.get('/view/:id', (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                body { font-family: 'Sarabun', sans-serif; padding: 0; margin: 0; background: #f4f7f6; color: #333; }
+                body { font-family: 'Sarabun', sans-serif; padding: 10px 10px; margin: 0; background: #f4f7f6; color: #333; }
                 .container { max-width: 600px; margin: 20px auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); position: relative; }
                 h2 { color: #00c49f; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-top: 0; font-size: 1.4rem; }
                 .content { white-space: pre-line; font-size: 1rem; line-height: 1.7; color: #444; margin-bottom: 30px; }

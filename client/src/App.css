@@ -1103,4 +1103,21 @@
       padding: 30px 70px;
       border-radius: 100px;
     }
+
+    /* --- QR Code Modal Styles --- */
+    .qr-modal-content {
+      padding: 100px 100px;
+      border-radius: 60px;
+    }
+
+    .qr-modal-title {
+      font-size: 1.8rem;
+      margin-bottom: 80px;
+    }
+
+    .qr-modal-desc {
+      font-size: 40px;
+      margin-top: 80px;
+    }
+
   }

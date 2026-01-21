@@ -86,20 +86,26 @@ const ResultBox = ({ text, isLoading, onRefresh }) => {
         <div className="qr-modal-overlay" onClick={() => setShowQR(false)}>
             <div className="qr-modal-content" onClick={e => e.stopPropagation()}>
                 
-                <button className="qr-modal-close" onClick={() => setShowQR(false)}>
-                    <X size={24} />
-                </button>
-
                 <h3 className="qr-modal-title">สแกนเพื่ออ่านบนมือถือ</h3>
                 
-                <div className="qr-wrapper">
-                    {/* ✅ ใช้ qrUrl ที่เป็น Link สั้นๆ จาก Server 
-                       QR Code จะโล่งสะอาดตา สแกนง่ายมาก
-                    */}
+                <div className="qr-wrapper" style={{ 
+                        width: "100%", 
+                        
+                        // 🔥 สูตรลับ: กำหนดความกว้างเป็น 35% ของความสูงจอ (35vh)
+                        // ถ้าจอทีวี (สูง 1080px) -> QR จะกว้างประมาณ 380px (ใหญ่สะใจ)
+                        // ถ้าจอคอม (สูง 768px) -> QR จะกว้างประมาณ 270px (กำลังดี)
+                        maxWidth: "35vh",  
+                        
+                        margin: "0 auto" 
+                    }}>
+                      {/* ✅ ใช้ qrUrl ที่เป็น Link สั้นๆ จาก Server 
+                        QR Code จะโล่งสะอาดตา สแกนง่ายมาก
+                      */}
                     <QRCode 
                         value={qrUrl} 
                         size={256} 
                         level="L" 
+                        style={{ height: "auto", maxWidth: "100%", width: "100%" }}
                     />
                 </div>
                 

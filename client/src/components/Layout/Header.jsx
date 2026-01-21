@@ -85,7 +85,6 @@ const Header = ({
   };
   
   const getTimerColor = () => {
-      if (isTimerWaiting) return '#f59e0b'; // 🟠 สีส้ม: รอ AI (Stuck/Busy)
       if (isPlaying) return '#00c49f';      // 🟢 สีเขียว: กำลังเดิน (Playing)
       return '#64748b';                     // ⚪ สีเทา: หยุด (Paused)
   };
