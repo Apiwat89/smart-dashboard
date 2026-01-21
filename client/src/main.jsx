@@ -23,7 +23,7 @@ const bootstrap = async () => {
   try {
     // 2. ดึง Config จาก Server
     // ⚠️ อย่าลืมแก้ URL ให้ถูกต้องตามที่คุยกันไว้ (เช่น /api/auth-config)
-    const response = await fetch(`/api/auth-config`);
+    const response = await fetch(`${BASE_URL}/api/auth-config`);
     
     if (!response.ok) throw new Error("โหลด Config ไม่สำเร็จ");
     
