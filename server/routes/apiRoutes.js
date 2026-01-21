@@ -582,7 +582,7 @@ router.get('/view/:id', (req, res) => {
                     } else {
                         // ⚠️ กรณีแชร์ไม่ได้ (เช่น บนคอม) -> คัดลอกลิงก์ให้แทนเหมือนเดิม
                         navigator.clipboard.writeText(cleanUrl).then(() => {
-                            alert("This browser does not support sharing.\nThe link has been copied to your clipboard instead!\n(You can paste it to share now)");
+                            alert("This browser does not support sharing.\\nThe link has been copied to your clipboard instead!\\n(You can paste it to share now)");
                         }).catch(err => {
                             alert("Failed to copy link.");
                         });
