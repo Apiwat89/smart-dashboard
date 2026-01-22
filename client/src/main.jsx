@@ -6,6 +6,8 @@ import './index.css';
 import { PublicClientApplication } from "@azure/msal-browser";
 import { MsalProvider } from "@azure/msal-react";
 
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 // 1. ✅ ย้าย Config มาประกาศไว้ที่นี่ (เป็นค่าคงที่)
 const loginRequest = {
     scopes: ["User.Read"]
@@ -17,12 +19,10 @@ const powerBIRequest = {
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
-const BASE_URL = "https://smart-dashboard-7382.onrender.com";
-
 const bootstrap = async () => {
   try {
     // 2. ดึง Config จาก Server
-    // ⚠️ อย่าลืมแก้ URL ให้ถูกต้องตามที่คุยกันไว้ (เช่น /api/auth-config)
+    // const response = await fetch(`/api/auth-config`);
     const response = await fetch(`${BASE_URL}/api/auth-config`);
     
     if (!response.ok) throw new Error("โหลด Config ไม่สำเร็จ");
@@ -52,6 +52,7 @@ const bootstrap = async () => {
           <App 
             loginRequest={loginRequest} 
             powerBIRequest={powerBIRequest} 
+            TokenID={serverConfig.clientId}
           />
         </MsalProvider>
       </React.StrictMode>

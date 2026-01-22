@@ -11,7 +11,7 @@ import { dashboardService } from './api/apiClient';
 
 const dashboardCache = {};
 
-function App({ loginRequest, powerBIRequest }) {
+function App({ loginRequest, powerBIRequest, TokenID }) {
     // --- State & Hooks ---
     const [tickerText, setTickerText] = useState("กำลังเชื่อมต่อ Power BI...");
     const [pbiLastUpdate, setPbiLastUpdate] = useState("อัพเดตล่าสุด...");
@@ -268,7 +268,10 @@ function App({ loginRequest, powerBIRequest }) {
     const getToken = async () => {
         if (!activeAccount) return null;
         try {
-            const response = await instance.acquireTokenSilent({ ...loginRequest, account: activeAccount });
+            const response = await instance.acquireTokenSilent({ 
+                account: activeAccount, 
+                scopes: [`${TokenID}/.default`] 
+            });
             return response.accessToken;
         } catch (error) { return null; }
     };

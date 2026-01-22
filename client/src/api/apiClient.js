@@ -1,11 +1,13 @@
 import axios from 'axios';
+import { getValueAsType } from 'framer-motion';
 
-const BASE_URL = "https://smart-dashboard-7382.onrender.com";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // ตั้งค่า Client Instance
 const client = axios.create({
-  baseURL: `${BASE_URL}/api`, // หรือ `${BASE_URL}/api` ตาม Environment
-  timeout: 30000, // เพิ่ม Timeout ป้องกัน Server (Render) หลับ
+  // baseURL: `/api`, 
+  baseURL: `${BASE_URL}/api`, 
+  timeout: 30000, 
   headers: {
     'Content-Type': 'application/json',
   },
@@ -84,7 +86,7 @@ export const dashboardService = {
   },
 
   // 5. Speech Token
-  speakElevenLabs: async (text) => {
+  speakElevenLabs: async (text, token) => {
     try {
       // ระบุ responseType: 'blob' เพื่อรับไฟล์เสียง
       const res = await client.post('/speak-eleven', { text }, { responseType: 'blob' });
@@ -95,7 +97,7 @@ export const dashboardService = {
     }
   },
 
-  getSpeechToken: async () => {
+  getSpeechToken: async (token) => {
     try {
       const res = await client.get('/speech-azure');
       return res.data;

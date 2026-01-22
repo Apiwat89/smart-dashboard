@@ -5,6 +5,7 @@ const path = require('path');
 const axios = require('axios'); 
 const { generateAIResponse } = require('../services/aiService');
 const { fetchAzureSpeechToken, generateElevenLabsSpeech } = require('../services/speechService');
+const verifyToken = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 
 // Helper Functions
@@ -66,7 +67,7 @@ router.get('/Client-ID', (req, res) => {
 })
 
 // 1. Get Dashboard Data (Database)
-router.get('/dashboard-data', (req, res) => {
+router.get('/dashboard-data', verifyToken, async (req, res) => {
     try {
         const data = getDashboardData();
         res.json(data);
@@ -77,7 +78,7 @@ router.get('/dashboard-data', (req, res) => {
 });
 
 // 2. AI Summarize View
-router.post('/summarize-view', async (req, res) => {
+router.post('/summarize-view', verifyToken, async (req, res) => {
     const { visibleCharts, lang } = req.body;
     const langInstruction = getLangInstruction(lang);
 
@@ -123,7 +124,7 @@ router.post('/summarize-view', async (req, res) => {
 
 
 // 3. Character Reaction Endpoint (ใน apiRoutes.js)
-router.post('/character-reaction', async (req, res) => {
+router.post('/character-reaction', verifyToken, async (req, res) => {
     const { pointData, contextData, lang } = req.body;
     const langInstruction = getLangInstruction(lang);
     const mascotName = getMascotName(lang); 
@@ -174,7 +175,7 @@ router.post('/character-reaction', async (req, res) => {
 });
 
 // 4. Chat with Somjeed
-router.post('/ask-dashboard', async (req, res) => {
+router.post('/ask-dashboard', verifyToken, async (req, res) => {
     const { question, allData, lang } = req.body;
     const langInstruction = getLangInstruction(lang);
     const mascotName = getMascotName(lang); // ⭐ ดึงชื่อตามภาษา
@@ -238,7 +239,7 @@ router.get('/speech-azure', async (req, res) => {
 });
 
 // 6. ticker
-router.post('/generate-ticker', async (req, res) => {
+router.post('/generate-ticker', verifyToken, async (req, res) => {
     const { allData, lang} = req.body;
     const mascotName = getMascotName(lang);
     const langInstruction = getLangInstruction(lang)
