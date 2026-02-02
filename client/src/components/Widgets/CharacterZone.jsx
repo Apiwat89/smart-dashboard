@@ -80,7 +80,6 @@
 // export default CharacterZone;
 
 
-
 // Microsoft Azure
 import React, { useState, useEffect, useRef } from 'react';
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
@@ -91,7 +90,7 @@ const CharacterZone = ({ status, text, lang, onSpeechEnd}) => {
   const synthesizerRef = useRef(null);
   const playerRef = useRef(null);
 
-  // Preload Videos
+  // Preload Videos (คงเดิม)
   useEffect(() => {
     ['./assets/char-thinking.mp4', './assets/char-talking.mp4', './assets/char-idle.mp4'].forEach(src => {
       const link = document.createElement('link');
@@ -109,10 +108,14 @@ const CharacterZone = ({ status, text, lang, onSpeechEnd}) => {
     }
     if (playerRef.current) {
          try { playerRef.current.pause(); } catch(e) {}
+         playerRef.current = null;
     }
   };
 
   useEffect(() => {
+    // ⭐ 1. สร้างตัวแปรเช็คสถานะ (Flag)
+    let isCancelled = false;
+
     if (status === 'idle') {
       stopSpeaking();
       setVisualState('idle');
@@ -131,60 +134,41 @@ const CharacterZone = ({ status, text, lang, onSpeechEnd}) => {
       const speak = async () => {
         try {
           const authData = await dashboardService.getSpeechToken();
+          
+          // ⭐ 2. เช็คด่านแรก: ถ้าถูกยกเลิกแล้ว (เปลี่ยนภาษา/เปลี่ยนสถานะ) ให้จบเลย
+          if (isCancelled) return; 
+          
           if (!authData || !authData.token) return;
 
           const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(authData.token, authData.region);
           
+          // ... (Config Voice เหมือนเดิม) ...
           const voiceConfigs = {
-            'TH': { 
-              name: 'th-TH-NiwatNeural', 
-              style: 'default', // เสียงผู้ชายไทย (Niwat) ปัจจุบันยังไม่รองรับ style cheerful
-              pitch: '0%',      // เสียงผู้ชายปกติไม่ต้องดัน pitch สูงเหมือนผู้หญิง
-              rate: '-5%' 
-            },
-            'EN': { 
-              name: 'en-US-DavisNeural', 
-              style: 'cheerful', // Davis เป็นเสียงผู้ชายที่รองรับ cheerful
-              pitch: '0%', 
-              rate: '+5%' 
-            },
-            'JP': { 
-              name: 'ja-JP-KeitaNeural', 
-              style: 'default', // Keita เป็นเสียงมาตรฐานผู้ชายญี่ปุ่น
-              pitch: '0%', 
-              rate: '+5%' 
-            },
-            'CN': { 
-              name: 'zh-CN-YunxiNeural', 
-              style: 'default', // Yunxi เป็นเสียงผู้ชายจีนที่นิยมใช้ที่สุด
-              pitch: '0%', 
-              rate: '+5%' 
-            },
-            'KR': { 
-              name: 'ko-KR-InJoonNeural', 
-              style: 'default', // InJoon ไม่รองรับ style cheerful
-              pitch: '0%', 
-              rate: '+5%' 
-            },
-            'VN': { 
-              name: 'vi-VN-NamMinhNeural', 
-              style: 'default', // NamMinh เป็นเสียงผู้ชายเวียดนามมาตรฐาน
-              pitch: '0%', 
-              rate: '+5%' 
-            }
+            'TH': { name: 'th-TH-NiwatNeural', style: 'default', pitch: '0%', rate: '-5%' },
+            'EN': { name: 'en-US-DavisNeural', style: 'cheerful', pitch: '0%', rate: '+5%' }, // แก้ style EN กลับเป็น cheerful ได้ถ้าต้องการ
+            'JP': { name: 'ja-JP-KeitaNeural', style: 'default', pitch: '0%', rate: '+5%' },
+            'CN': { name: 'zh-CN-YunxiNeural', style: 'default', pitch: '0%', rate: '+5%' },
+            'KR': { name: 'ko-KR-InJoonNeural', style: 'default', pitch: '0%', rate: '+5%' },
+            'VN': { name: 'vi-VN-NamMinhNeural', style: 'default', pitch: '0%', rate: '+5%' }
           };
           const config = voiceConfigs[lang] || voiceConfigs['TH'];
           speechConfig.speechSynthesisVoiceName = config.name;
 
+          // ⭐ 3. เช็คอีกทีเพื่อความชัวร์ก่อนสร้าง Player
+          if (isCancelled) return;
+
           const player = new sdk.SpeakerAudioDestination();
           
           player.onAudioStart = () => {
-               setVisualState('talking'); 
+               // เช็คก่อนอัปเดต State ป้องกัน Memory Leak
+               if (!isCancelled) setVisualState('talking'); 
           };
           
           player.onAudioEnd = () => {
-               setVisualState('idle');
-               if (onSpeechEnd) onSpeechEnd();
+               if (!isCancelled) {
+                   setVisualState('idle');
+                   if (onSpeechEnd) onSpeechEnd();
+               }
           };
           
           playerRef.current = player;
@@ -202,45 +186,57 @@ const CharacterZone = ({ status, text, lang, onSpeechEnd}) => {
               </voice>
             </speak>`;
 
+          // ⭐ 4. เช็คครั้งสุดท้ายก่อนสั่งพูด
+          if (isCancelled) {
+              synthesizer.close();
+              return;
+          }
+
           synthesizer.speakSsmlAsync(
             ssml,
             result => {
               if (result.reason !== sdk.ResultReason.SynthesizingAudioCompleted) {
-                stopSpeaking();
-                setVisualState('idle');
+                // ถ้า Error หรือ Cancel
+                if (!isCancelled) {
+                    stopSpeaking();
+                    setVisualState('idle');
+                }
               }
               synthesizer.close();
             },
-            error => { stopSpeaking(); setVisualState('idle'); }
+            error => { 
+                if (!isCancelled) {
+                    stopSpeaking(); 
+                    setVisualState('idle'); 
+                }
+            }
           );
 
         } catch (err) {
-          stopSpeaking();
-          setVisualState('idle');
+          if (!isCancelled) {
+              stopSpeaking();
+              setVisualState('idle');
+          }
         }
       };
 
       speak();
     }
 
-    return () => stopSpeaking();
+    // ⭐ 5. Cleanup Function: เมื่อ Effect ถูกล้าง (เปลี่ยนภาษา/เปลี่ยน State)
+    return () => {
+        isCancelled = true; // สับสวิตช์บอก async function ว่า "หยุดนะ ฉันไปแล้ว"
+        stopSpeaking();
+    };
     
-    // 🔥🔥🔥 จุดสำคัญที่แก้บัค: ลบ onSpeechEnd ออกจากบรรทัดข้างล่างนี้ 🔥🔥🔥
-    // เดิม: }, [status, text, lang, onSpeechEnd]);
-    // ใหม่: }, [status, text, lang]);
   }, [status, text, lang]); 
 
-  // ... (ส่วน Render JSX เหมือนเดิมเป๊ะ) ...
+  // ... (ส่วน Render JSX คงเดิม) ...
   const videoStyle = { 
-    width: '105%',          // กว้างเกิน 100% นิดนึงกันขอบขาว
-    height: '105%',         // สูงเกิน 100% นิดนึง
-    position: 'absolute', 
-    top: '50%',             // จัดกึ่งกลางแนวตั้ง
-    left: '50%',            // จัดกึ่งกลางแนวนอน
-    transform: 'translate(-50%, -50%)', // ดึงกลับมาให้อยู่ตรงกลางเป๊ะๆ
-    objectFit: 'cover',     // สั่งให้ขยายเต็มพื้นที่ (ยอมตัดส่วนเกินออก)
-    objectPosition: 'center center' // จัด position ของเนื้อวิดีโอ
-};
+    width: '105%', height: '105%', position: 'absolute', 
+    top: '50%', left: '50%', transform: 'translate(-50%, -50%)', 
+    objectFit: 'cover', objectPosition: 'center center' 
+  };
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden', backgroundColor: 'white', borderRadius: '5px'}}>
       <video style={{ display: visualState === 'thinking' ? 'block' : 'none', ...videoStyle }} autoPlay loop muted playsInline src="./assets/char-thinking.mp4" />

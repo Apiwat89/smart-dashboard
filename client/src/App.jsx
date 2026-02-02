@@ -25,7 +25,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     const isResizing = useRef(false);
     const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [menuList, setMenuList] = useState([]);
-    const [activePageId, setActivePageId] = useState("page1");
+    const [activePageId, setActivePageId] = useState("page_overview");
     const [isPlaying, setIsPlaying] = useState(false);
     const [autoPlayCountdown, setAutoPlayCountdown] = useState(600);
     const TIMER_DURATION = 600; 
@@ -49,6 +49,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     const powerBIReportRef = useRef(null);    
     const langRef = useRef(lang);
     const summarizedPageRef = useRef(null);
+    const speechTimeoutRef = useRef(null);
 
     const isAiBusy = aiState.status !== 'idle' || isProcessing;
 
@@ -85,55 +86,55 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
 
     useEffect(() => {
         const appMenu = [
-            // { 
-            // id: "page_overview", 
-            // title: "สถิติจังหวัด",             
-            // headerTitle: "สถิติน้ำท่วมในแต่ละจังหวัด", 
-            // icon: "LayoutDashboard", 
-            // pageName: "798ca254819667030432" 
-            // },
-            // { 
-            // id: "page_details", 
-            // title: "สถิติรายเดือน",            
-            // headerTitle: "สถิติน้ำท่วมของเดือนที่เกิดเหตุ", 
-            // icon: "Map", 
-            // pageName: "5b3cc48690823dd3da6d" 
-            // },
-            // { 
-            // id: "page_analysis", 
-            // title: "ความเสียหาย",              
-            // headerTitle: "ความเสียหายในแต่ละด้าน",   
-            // icon: "BarChart", 
-            // pageName: "e93c812d89901cad35c2" 
-            // }
             { 
-            id: "page1", 
-            title: "Page 1",             
-            headerTitle: "Page 1", 
+            id: "page_overview", 
+            title: "สถิติจังหวัด",             
+            headerTitle: "สถิติน้ำท่วมในแต่ละจังหวัด", 
             icon: "LayoutDashboard", 
-            pageName: "c15ef30d4a86ca6b320a" 
+            pageName: "798ca254819667030432" 
             },
             { 
-            id: "Overview", 
-            title: "Overview",            
-            headerTitle: "Overview", 
+            id: "page_details", 
+            title: "สถิติรายเดือน",            
+            headerTitle: "สถิติน้ำท่วมของเดือนที่เกิดเหตุ", 
             icon: "Map", 
-            pageName: "d375384f0184e24da79a" 
+            pageName: "5b3cc48690823dd3da6d" 
             },
             { 
-            id: "DeepDive", 
-            title: "Deep Dive",              
-            headerTitle: "Deep Dive Analysis",   
+            id: "page_analysis", 
+            title: "ความเสียหาย",              
+            headerTitle: "ความเสียหายในแต่ละด้าน",   
             icon: "BarChart", 
-            pageName: "897d3bf4477b8920faa3" 
-            },
-            { 
-            id: "Page2", 
-            title: "Page 2",              
-            headerTitle: "Page 2",   
-            icon: "BarChart", 
-            pageName: "0c34c73b5de44b6d83fc" 
+            pageName: "e93c812d89901cad35c2" 
             }
+            // { 
+            // id: "page1", 
+            // title: "Page 1",             
+            // headerTitle: "Page 1", 
+            // icon: "LayoutDashboard", 
+            // pageName: "c15ef30d4a86ca6b320a" 
+            // },
+            // { 
+            // id: "Overview", 
+            // title: "Overview",            
+            // headerTitle: "Overview", 
+            // icon: "Map", 
+            // pageName: "d375384f0184e24da79a" 
+            // },
+            // { 
+            // id: "DeepDive", 
+            // title: "Deep Dive",              
+            // headerTitle: "Deep Dive Analysis",   
+            // icon: "BarChart", 
+            // pageName: "897d3bf4477b8920faa3" 
+            // },
+            // { 
+            // id: "Page2", 
+            // title: "Page 2",              
+            // headerTitle: "Page 2",   
+            // icon: "BarChart", 
+            // pageName: "0c34c73b5de44b6d83fc" 
+            // }
         ];
         setMenuList(appMenu);
     }, []);
@@ -141,7 +142,8 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     useEffect(() => {
         if (isAuthenticated) {
             const timer = setTimeout(() => { 
-                setShowStartButton(true); 
+                setShowStartButton(false); 
+                setAppReady(true);
             }, 5500); 
             return () => clearTimeout(timer);
         }
@@ -195,70 +197,96 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
 
     // Effect สำหรับเปลี่ยนภาษา: ทำงานเมื่อค่า lang เปลี่ยน โดยใช้ข้อมูลเดิม
     useEffect(() => {
+        // สร้างตัวแปรเช็คว่า Effect นี้ยังเป็นปัจจุบันอยู่ไหม (ป้องกัน Race Condition)
+        let isCurrentEffect = true;
+
+        // สั่งหยุดเสียงทันทีเมื่อมีการเปลี่ยนภาษา
+        stopAllVoices();
+
+        setAiState(prev => ({ ...prev, status: 'thinking', message: '' }));
+
         const refreshAIContentOnLangChange = async () => {
             if (!currentReportData) return;
 
-            // 🟢 1. ตรวจสอบ Cache ก่อน
+            // 🟢 1. ตรวจสอบ Cache
             const cacheKey = `${activePageId}_${lang}`;
             if (dashboardCache[cacheKey]) {
-                console.log("🚀 [Cache Hit] เปลี่ยนภาษาแบบไม่ต้องยิง API:", cacheKey);
                 const cached = dashboardCache[cacheKey];
-                setSummary(cached.summary);
-                setSuggestedQuestions(cached.suggestions);
-                setTickerText(cached.tickerText);
-                setTickerType(cached.tickerType);
-                setTimeout(() => handleAiSpeak(cached.summary), 500);
+                
+                if (isCurrentEffect) {
+                    setSummary(cached.summary);
+                    setSuggestedQuestions(cached.suggestions);
+                    setTickerText(cached.tickerText);
+                    setTickerType(cached.tickerType);
+                    
+                    // ⭐ ใช้ speechTimeoutRef เก็บ ID ไว้ เพื่อให้ยกเลิกได้ถ้าเปลี่ยนภาษาอีกรอบ
+                    speechTimeoutRef.current = setTimeout(() => {
+                        if (isCurrentEffect) handleAiSpeak(cached.summary);
+                    }, 500);
+                }
                 return; 
             }
 
-            // 🔵 2. ถ้าไม่มี Cache ค่อยยิง API
-            setSummaryLoading(true);
-            setTickerText("AI กำลังอัปเดตภาษา...");
-            setSuggestedQuestions([]);
+            // 🔵 2. ยิง API ใหม่
+            if (isCurrentEffect) {
+                setSummaryLoading(true);
+                setTickerText("AI กำลังอัปเดตภาษา...");
+                setSuggestedQuestions([]);
+            }
 
             try {
                 const token = await getToken();
+                
+                // เช็คอีกรอบก่อนยิง API (เผื่อเปลี่ยนภาษาระหว่างรอ token)
+                if (!isCurrentEffect) return;
+
                 const [summaryRes, suggestRes, tickerRes] = await Promise.all([
                     dashboardService.getSummary(currentReportData, lang, token),
-                    dashboardService.chat("Suggest 10 short important questions about this data, separated by newlines.", currentReportData, lang, token),
+                    dashboardService.chat("Suggest 10 short important questions...", currentReportData, lang, token),
                     dashboardService.getNewsTicker(currentReportData, lang, token)
                 ]);
 
-                // จัดการคำถาม (ตัวแปรนี้แหละค่ะที่ตอนแรกมันหาไม่เจอ)
-                const questionsList = suggestRes.message
-                    .split('\n')
-                    // กรองเอาเฉพาะบรรทัดที่ขึ้นต้นด้วยตัวเลข 1-9 หรือบรรทัดที่มีเครื่องหมายคำถาม เท่านั้น
-                    .filter(line => /^\d+\./.test(line.trim())) 
-                    .map(q => q.replace(/^\d+\.\s*/, '').trim())
-                    .slice(0, 10);
-
+                // ... (Logic จัดการข้อมูล เหมือนเดิม) ...
+                const questionsList = suggestRes.message.split('\n').filter(line => /^\d+\./.test(line.trim())).map(q => q.replace(/^\d+\.\s*/, '').trim()).slice(0, 10);
                 const isAlert = tickerRes.message.toUpperCase().startsWith("ALERT:");
                 const cleanTicker = tickerRes.message.replace(/^(ALERT:|INFO:)/i, "").trim();
 
-                // ✅ 3. บันทึกลง Cache (ใช้ชื่อตัวแปรที่ประกาศด้านบน)
                 dashboardCache[cacheKey] = {
                     summary: summaryRes.message,
-                    suggestions: questionsList, // 👈 ใช้ชื่อนี้ให้ตรงกัน
+                    suggestions: questionsList,
                     tickerText: cleanTicker,
                     tickerType: isAlert ? 'alert' : 'info',
                     rawData: currentReportData
                 };
 
-                // อัปเดต UI
-                setSummary(summaryRes.message);
-                setSuggestedQuestions(questionsList);
-                setTickerText(cleanTicker);
-                setTickerType(isAlert ? 'alert' : 'info');
-                setTimeout(() => handleAiSpeak(summaryRes.message), 1000);
+                // อัปเดต UI เฉพาะเมื่อยังเป็นภาษาปัจจุบัน
+                if (isCurrentEffect) {
+                    setSummary(summaryRes.message);
+                    setSuggestedQuestions(questionsList);
+                    setTickerText(cleanTicker);
+                    setTickerType(isAlert ? 'alert' : 'info');
+                    
+                    // ⭐ ใช้ speechTimeoutRef ตรงนี้ด้วย
+                    speechTimeoutRef.current = setTimeout(() => {
+                        if (isCurrentEffect) handleAiSpeak(summaryRes.message);
+                    }, 1000);
+                }
 
             } catch (err) {
                 console.error("Error refreshing on lang change:", err);
             } finally {
-                setSummaryLoading(false);
+                if (isCurrentEffect) setSummaryLoading(false);
             }
         };
 
         refreshAIContentOnLangChange();
+
+        // ⭐ Cleanup Function: ทำงานเมื่อ lang เปลี่ยน หรือ Component ถูกทำลาย
+        return () => {
+            isCurrentEffect = false; // บอกว่า Effect รอบนี้เก่าแล้ว ห้ามทำงานต่อ
+            stopAllVoices(); // หยุดเสียง และเคลียร์ timeout ทันที
+        };
+
     }, [lang]);
 
     const handleMenuChange = (id) => {
@@ -310,6 +338,11 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
             clearTimeout(talkTimerRef.current);
             talkTimerRef.current = null;
         }
+
+        if (speechTimeoutRef.current) {
+            clearTimeout(speechTimeoutRef.current);
+            speechTimeoutRef.current = null;
+        }
     };
 
     // 🔥 แก้ไข 1: ฟังก์ชันสั่งพูดเหลือแค่นี้พอ
@@ -324,6 +357,8 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
 
     const triggerAiChat = async (textInput) => {
         if(!textInput || !textInput.trim()) return;
+        const startLang = langRef.current;
+
         stopAllVoices();
         setSummaryLoading(true); 
         setSummary(""); 
@@ -332,8 +367,20 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
         try {
             const token = await getToken(); 
             const res = await dashboardService.chat(textInput, currentReportData || "", langRef.current, token); 
+
+            // 2. เช็ค: ถ้าเปลี่ยนภาษาแล้ว ให้หยุดเลย
+            if (startLang !== langRef.current) return;
+
             setSummary(res.message); 
-            handleAiSpeak(res.message);
+            setProcessing(false);       
+            setSummaryLoading(false);
+
+            // 3. ⭐ แก้ตรงนี้: เอา ref มารับ setTimeout เพื่อให้ stopAllVoices สั่งหยุดได้
+            speechTimeoutRef.current = setTimeout(() => {
+                 if (startLang === langRef.current) {
+                     handleAiSpeak(res.message);
+                 }
+            }, 300);
         } catch (error) { 
             setSummary("เกิดข้อผิดพลาด");
             handleAiSpeak("ระบบขัดข้อง", true); 
@@ -345,6 +392,9 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
 
     const handlePowerBIClick = async (event) => {
       if (event.detail && event.detail.dataPoints && event.detail.dataPoints.length > 0 && !isProcessing) {
+          
+          const startLang = langRef.current; // 1. จำภาษาตอนเริ่ม
+
           const dp = event.detail.dataPoints[0];
           const category = dp.identity[0]?.equals || "Unknown";
           const value = dp.values[0]?.formattedValue || "N/A";
@@ -353,20 +403,35 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
           setSummaryLoading(true);
           setSummary(""); 
           setProcessing(true);
-          if (window.speechSynthesis) window.speechSynthesis.cancel();
+          stopAllVoices(); // สั่งหยุดเสียงเก่าก่อน
           setAiState({ status: 'thinking', message: '', isVisible: true });
 
           try {
               const token = await getToken(); 
               const res = await dashboardService.getReaction({ name: category, uv: value }, chartTitle, langRef.current, token);
+              
+              // 2. เช็ค: ถ้าเปลี่ยนภาษาแล้ว ให้หยุด
+              if (startLang !== langRef.current) return;
+
               setSummary(res.message); 
-              handleAiSpeak(res.message);
+              
+              // 3. ⭐ แก้ตรงนี้: เอา ref มารับ setTimeout
+              speechTimeoutRef.current = setTimeout(() => {
+                  if (startLang === langRef.current) {
+                       handleAiSpeak(res.message);
+                  }
+              }, 300);
+
           } catch (error) {
-              setSummary("ไม่สามารถวิเคราะห์จุดที่เลือกได้");
-              handleAiSpeak("ขออภัยค่ะ ข้อมูลส่วนนี้ขัดข้อง", true);
+              if (startLang === langRef.current) {
+                  setSummary("ไม่สามารถวิเคราะห์จุดที่เลือกได้");
+                  handleAiSpeak("ขออภัยค่ะ ข้อมูลส่วนนี้ขัดข้อง", true);
+              }
           } finally {
-              setProcessing(false);
-              setSummaryLoading(false);
+              if (startLang === langRef.current) {
+                  setProcessing(false);
+                  setSummaryLoading(false);
+              }
           }
       }
     };
@@ -383,6 +448,8 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
         if (ignoreTypes.includes(visualDescriptor.type)) {
             return;
         }
+
+        const startLang = langRef.current;
     
         try {
             setSummaryLoading(true);  // สั่งให้กล่องข้อความหมุน
@@ -424,8 +491,19 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
             const token = await getToken(); 
             const res = await dashboardService.getReaction(null, result.data, lang, token);
             
+            if (startLang !== langRef.current) {
+                return; // จบงาน แยกย้าย ไม่ต้องพูด
+            }
+
             setSummary(res.message);
-            handleAiSpeak(res.message);
+            setProcessing(false);
+            setSummaryLoading(false);
+
+            setTimeout(() => {
+                if (startLang === langRef.current) {
+                    handleAiSpeak(res.message);
+                }
+            }, 300);
     
         } catch (error) {
             console.error("🔥 Error exporting data:", error);
