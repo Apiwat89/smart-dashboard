@@ -136,12 +136,42 @@ const CharacterZone = ({ status, text, lang, onSpeechEnd}) => {
           const speechConfig = sdk.SpeechConfig.fromAuthorizationToken(authData.token, authData.region);
           
           const voiceConfigs = {
-            'TH': { name: 'th-TH-PremwadeeNeural', style: 'cheerful', pitch: '+35%', rate: '-5%' },
-            'EN': { name: 'en-US-AvaNeural', style: 'cheerful', pitch: '+20%', rate: '+5%' },
-            'JP': { name: 'ja-JP-NanamiNeural', style: 'cheerful', pitch: '+10%', rate: '+5%' },
-            'CN': { name: 'zh-CN-XiaoxiaoNeural', style: 'cheerful', pitch: '+10%', rate: '+5%' },
-            'KR': { name: 'ko-KR-SunHiNeural', style: 'cheerful', pitch: '+10%', rate: '+5%' },
-            'VN': { name: 'vi-VN-HoaiMyNeural', style: 'cheerful', pitch: '+10%', rate: '+5%' }
+            'TH': { 
+              name: 'th-TH-NiwatNeural', 
+              style: 'default', // เสียงผู้ชายไทย (Niwat) ปัจจุบันยังไม่รองรับ style cheerful
+              pitch: '0%',      // เสียงผู้ชายปกติไม่ต้องดัน pitch สูงเหมือนผู้หญิง
+              rate: '-5%' 
+            },
+            'EN': { 
+              name: 'en-US-DavisNeural', 
+              style: 'cheerful', // Davis เป็นเสียงผู้ชายที่รองรับ cheerful
+              pitch: '0%', 
+              rate: '+5%' 
+            },
+            'JP': { 
+              name: 'ja-JP-KeitaNeural', 
+              style: 'default', // Keita เป็นเสียงมาตรฐานผู้ชายญี่ปุ่น
+              pitch: '0%', 
+              rate: '+5%' 
+            },
+            'CN': { 
+              name: 'zh-CN-YunxiNeural', 
+              style: 'default', // Yunxi เป็นเสียงผู้ชายจีนที่นิยมใช้ที่สุด
+              pitch: '0%', 
+              rate: '+5%' 
+            },
+            'KR': { 
+              name: 'ko-KR-InJoonNeural', 
+              style: 'default', // InJoon ไม่รองรับ style cheerful
+              pitch: '0%', 
+              rate: '+5%' 
+            },
+            'VN': { 
+              name: 'vi-VN-NamMinhNeural', 
+              style: 'default', // NamMinh เป็นเสียงผู้ชายเวียดนามมาตรฐาน
+              pitch: '0%', 
+              rate: '+5%' 
+            }
           };
           const config = voiceConfigs[lang] || voiceConfigs['TH'];
           speechConfig.speechSynthesisVoiceName = config.name;

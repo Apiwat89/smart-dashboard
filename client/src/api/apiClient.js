@@ -16,12 +16,12 @@ const client = axios.create({
 // Helper: จัดการข้อความ Error ตามภาษา
 const getErrorMsg = (lang) => {
   const messages = {
-    TH: "แย่จัง... ระบบมีปัญหาชั่วคราวค่ะ",
+    TH: "แย่จัง... ระบบมีปัญหาชั่วคราวครับ",
     EN: "Oops... System is unavailable.",
     JP: "システムエラーが発生しました。",
-    CN: "糟糕... 系统暂时出现问题。",       // จีน
-    KR: "죄송합니다... 시스템에 문제가 발생했습니다.", // เกาหลี
-    VN: "Rất tiếc... Hệ thống đang gặp sự cố.",    // เวียดนาม
+    CN: "糟糕... 系统暂时出现问题。",
+    KR: "죄송합니다... 시스템에 문제가 발생했습니다.",
+    VN: "Rất tiếc... Hệ thống đang gặp sự cố.", 
   };
   return messages[lang] || "System Error";
 };

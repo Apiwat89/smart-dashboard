@@ -25,7 +25,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     const isResizing = useRef(false);
     const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [menuList, setMenuList] = useState([]);
-    const [activePageId, setActivePageId] = useState("page_overview");
+    const [activePageId, setActivePageId] = useState("page1");
     const [isPlaying, setIsPlaying] = useState(false);
     const [autoPlayCountdown, setAutoPlayCountdown] = useState(600);
     const TIMER_DURATION = 600; 
@@ -85,26 +85,54 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
 
     useEffect(() => {
         const appMenu = [
+            // { 
+            // id: "page_overview", 
+            // title: "สถิติจังหวัด",             
+            // headerTitle: "สถิติน้ำท่วมในแต่ละจังหวัด", 
+            // icon: "LayoutDashboard", 
+            // pageName: "798ca254819667030432" 
+            // },
+            // { 
+            // id: "page_details", 
+            // title: "สถิติรายเดือน",            
+            // headerTitle: "สถิติน้ำท่วมของเดือนที่เกิดเหตุ", 
+            // icon: "Map", 
+            // pageName: "5b3cc48690823dd3da6d" 
+            // },
+            // { 
+            // id: "page_analysis", 
+            // title: "ความเสียหาย",              
+            // headerTitle: "ความเสียหายในแต่ละด้าน",   
+            // icon: "BarChart", 
+            // pageName: "e93c812d89901cad35c2" 
+            // }
             { 
-            id: "page_overview", 
-            title: "สถิติจังหวัด",             
-            headerTitle: "สถิติน้ำท่วมในแต่ละจังหวัด", 
+            id: "page1", 
+            title: "Page 1",             
+            headerTitle: "Page 1", 
             icon: "LayoutDashboard", 
-            pageName: "798ca254819667030432" 
+            pageName: "c15ef30d4a86ca6b320a" 
             },
             { 
-            id: "page_details", 
-            title: "สถิติรายเดือน",            
-            headerTitle: "สถิติน้ำท่วมของเดือนที่เกิดเหตุ", 
+            id: "Overview", 
+            title: "Overview",            
+            headerTitle: "Overview", 
             icon: "Map", 
-            pageName: "5b3cc48690823dd3da6d" 
+            pageName: "d375384f0184e24da79a" 
             },
             { 
-            id: "page_analysis", 
-            title: "ความเสียหาย",              
-            headerTitle: "ความเสียหายในแต่ละด้าน",   
+            id: "DeepDive", 
+            title: "Deep Dive",              
+            headerTitle: "Deep Dive Analysis",   
             icon: "BarChart", 
-            pageName: "e93c812d89901cad35c2" 
+            pageName: "897d3bf4477b8920faa3" 
+            },
+            { 
+            id: "Page2", 
+            title: "Page 2",              
+            headerTitle: "Page 2",   
+            icon: "BarChart", 
+            pageName: "0c34c73b5de44b6d83fc" 
             }
         ];
         setMenuList(appMenu);
@@ -420,7 +448,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
 
         const cacheKey = `${activePageId}_${lang}`;
         
-         // 1. ตรวจสอบ Cache (เหมือนเดิม)
+        // 1. ตรวจสอบ Cache (คงเดิม)
         if (dashboardCache[cacheKey]) {
             const cached = dashboardCache[cacheKey];
             setSummary(cached.summary);
@@ -440,91 +468,100 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
  
         try {
             const report = powerBIReportRef.current;
-            // ดึง Pages มาก่อนเพื่อหา Active Page
             const pages = await report.getPages();
             const pbiPage = pages.find(p => p.isActive);
-            // ดึง Visuals ทั้งหมดในหน้านี้มารอไว้เลย (ใช้ทั้งดึงเวลา และดึงข้อมูล)
             const visuals = await pbiPage.getVisuals();
             const activePage = menuList.find(p => p.id === activePageId);
 
             // =========================================================
-            // 🟢 ส่วนแก้ไขใหม่: ดึงเวลาจาก Card ที่ชื่อ System_Time_Stamp
+            // 🟢 ส่วนดึงเวลาจาก Card: System_Time_Stamp (คงเดิม)
             // =========================================================
             let formattedDate = "";
-                    
-            // 1. ค้นหา Card ที่เราแอบสร้างไว้ใน Power BI Desktop
             const timeVisual = visuals.find(v => v.title === 'System_Time_Stamp');
 
             if (timeVisual) {
                 try {
-                    // ถ้าเจอ ให้ดึงข้อมูล text ข้างในออกมา
                     const timeResult = await timeVisual.exportData(models.ExportDataType.Summarized);
-                    // ข้อมูลที่ได้มักจะมี \n ติดมา ให้ตัดทิ้ง
                     formattedDate = timeResult.data.replace(/^[^\d]+/, "").replace(/\n/g, "").trim();
-                    console.log(`⏰ Time found in ${activePageId}:`, formattedDate);
                 } catch (e) {
                     console.warn("Found time card but export failed:", e);
                 }
             }
 
-            // 2. Fallback: ถ้าหา Card ไม่เจอจริงๆ ให้ใช้เวลาปัจจุบัน (Render Time)
             if (!formattedDate) {
-                    console.warn("System_Time_Stamp card not found. Using local time.");
-                    const now = new Date();
-                    formattedDate = now.toLocaleDateString('th-TH') + " " + 
-                                    now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+                const now = new Date();
+                formattedDate = now.toLocaleDateString('th-TH') + " " + 
+                                now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
             }
  
             setPbiLastUpdate(formattedDate);
-            // =========================================================
  
-            // --- ส่วนดึงข้อมูล Visuals เพื่อส่ง AI (ปรับปรุงเล็กน้อย) ---
+            // =========================================================
+            // 🟡 ส่วนดึงข้อมูล Visuals: เพิ่มการกรองเพื่อป้องกัน Error 413/Token Limit
+            // =========================================================
             let allDataText = `ข้อมูลหน้า ${activePage?.title || 'ปัจจุบัน'} (อัปเดตเมื่อ: ${formattedDate}):\n`;
 
             for (const visual of visuals) {
-                // ข้ามตัวบอกเวลาที่เราสร้างเอง (ไม่ต้องส่งให้ AI ซ้ำ)
                 if (visual.title === 'System_Time_Stamp') continue;
 
                 if (visual.title && visual.type !== 'image' && visual.type !== 'textbox') {
                     try {
                         const result = await visual.exportData(models.ExportDataType.Summarized);
-                        allDataText += `\n- ${visual.title}:\n${result.data}\n`;
+                        
+                        // ⭐ คลีนข้อมูล: หาก Visual ไหนข้อมูลยาวเกิน 5,000 ตัวอักษร (เช่น ตารางใหญ่) ให้ตัดออก
+                        // เพื่อป้องกัน Error 413 (Payload Too Large) และ Gemini Token Limit
+                        const visualData = result.data.length > 5000 
+                            ? result.data.substring(0, 5000) + "... (ข้อมูลส่วนเกินถูกตัดออก)" 
+                            : result.data;
+
+                        allDataText += `\n- ${visual.title}:\n${visualData}\n`;
                     } catch (e) { console.warn(`Export failed for ${visual.title}`, e); }
                 }
             }
- 
-            setCurrentReportData(allDataText);
+
+            // 🛑 ตัวช่วยสุดท้าย: ตัดข้อมูลรวมทั้งหมดไม่ให้เกิน 25,000 ตัวอักษร
+            // เพื่อให้มั่นใจว่า API หลังบ้าน (Axios) และ AI จะไม่ Error
+            const finalPayload = allDataText.substring(0, 25000);
+            setCurrentReportData(finalPayload);
+            
             const token = await getToken(); 
  
+            // 🟢 ใช้ Promise.all เรียก API พร้อมกัน (คงเดิม)
             const [summaryRes, suggestRes, tickerRes] = await Promise.all([
-                dashboardService.getSummary(allDataText, lang, token),
-                dashboardService.chat("Suggest 10 short important questions...", allDataText, lang, token),
-                dashboardService.getNewsTicker(allDataText, lang, token)
+                dashboardService.getSummary(finalPayload, lang, token),
+                dashboardService.chat("Suggest 10 short important questions...", finalPayload, lang, token),
+                dashboardService.getNewsTicker(finalPayload, lang, token)
             ]);
  
             const finalQuestions = suggestRes.message.split('\n').filter(q => q.length > 5).slice(0, 10);
             const isAlert = tickerRes?.message?.toUpperCase().startsWith("ALERT:");
             const finalTickerText = tickerRes?.message?.replace(/^(ALERT:|INFO:)/i, "").trim() || "";
  
-            // ✅ บันทึกลง Cache
+            // ✅ บันทึกลง Cache (คงเดิม)
             dashboardCache[cacheKey] = {
                 summary: summaryRes.message,
                 suggestions: finalQuestions,
                 tickerText: finalTickerText,
                 tickerType: isAlert ? 'alert' : 'info',
-                rawData: allDataText,
-                lastUpdate: formattedDate // บันทึกเวลาที่ถูกต้องลง Cache
+                rawData: finalPayload,
+                lastUpdate: formattedDate 
             };
  
             setSummary(summaryRes.message);
             setSuggestedQuestions(finalQuestions);
             setTickerText(finalTickerText);
             setTickerType(isAlert ? 'alert' : 'info');
-            setTimeout(() => handleAiSpeak(summaryRes.message), 2000);
+            
+            // ⭐ ปรับเวลาหน่วงให้ Mascot พูดหลังจาก UI อัปเดตเสร็จ
+            setTimeout(() => handleAiSpeak(summaryRes.message), 1000);
  
         } catch (err) { 
             console.error("Report Rendered Error:", err);
             summarizedPageRef.current = null;
+            // แจ้งเตือนผู้ใช้หากเกิด Error 413
+            if (err.response?.status === 413) {
+                setSummary("ข้อมูลมีขนาดใหญ่เกินไป ระบบกำลังปรับจูนการดึงข้อมูล...");
+            }
         } finally { 
             setSummaryLoading(false); 
         }

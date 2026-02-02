@@ -22,7 +22,7 @@ const Sidebar = ({
       <div className="sidebar-header">
         <div className="logo">
           <img src="./logo.png" alt="Logo" />
-          <div>Insight Aura</div>
+          <div>EZ Summary</div>
         </div>
         <button onClick={toggle}>
           <Menu size={24} />

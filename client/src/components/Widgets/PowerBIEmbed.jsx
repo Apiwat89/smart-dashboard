@@ -22,7 +22,7 @@ const RealPowerBIEmbed = ({ eventHandlers, getEmbeddedComponent, onReportRendere
     subText: { color: '#666', fontSize: '14px' },
     button: {
       padding: '12px 24px', background: '#0078d4', color: 'white',
-      border: 'none', borderRadius: '4px', cursor: 'pointer',
+      border: 'none', borderRadius: '10px', cursor: 'pointer',
       fontSize: '16px', fontWeight: 'bold', boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
     }
   };
@@ -81,10 +81,18 @@ const RealPowerBIEmbed = ({ eventHandlers, getEmbeddedComponent, onReportRendere
   // --- Render States ---
   if (needsConsent) {
     return (
-      <div style={styles.centerBox}>
-        <div style={styles.errorText}>⚠️ กรุณายืนยันสิทธิ์เพื่อดูข้อมูล</div>
-        <div style={styles.subText}>เนื่องจากเป็นการเข้าใช้งานครั้งแรก ระบบต้องการการอนุญาตจากคุณ</div>
-        <button onClick={handleConsentLogin} style={styles.button}>
+      <div className="needs-consent-container" style={styles.centerBox}>
+        <div className="needs-consent-title" style={styles.errorText}>
+          ⚠️ กรุณายืนยันสิทธิ์เพื่อดูข้อมูล
+        </div>
+        <div className="needs-consent-subtext" style={styles.subText}>
+          เนื่องจากเป็นการเข้าใช้งานครั้งแรก ระบบต้องการการอนุญาตจากคุณ
+        </div>
+        <button 
+          onClick={handleConsentLogin} 
+          className="needs-consent-button" 
+          style={styles.button}
+        >
           👉 กดปุ่มนี้เพื่อยืนยัน (Authorize)
         </button>
       </div>

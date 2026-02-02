@@ -28,13 +28,13 @@ const getLangInstruction = (lang) => {
 
 const getMascotName = (lang) => {
     switch (lang) {
-        case 'CN': return "奥拉 (Aura)"; // จีน (อ่านว่า อ้าว-ลา)
-        case 'KR': return "아우라 (Aura)"; // เกาหลี (อ่านว่า อา-อู-รา)
-        case 'EN': return "Aura";
-        case 'JP': return "オーラ (Aura)"; // ญี่ปุ่น (อ่านว่า โอ-ระ)
-        case 'VN': return "Aura"; // เวียดนาม (ใช้ทับศัพท์ได้เลย)
+        case 'CN': return "EZ"; // จีน (อ่านว่า อ้าว-ลา)
+        case 'KR': return "EZ"; // เกาหลี (อ่านว่า อา-อู-รา)
+        case 'EN': return "EZ";
+        case 'JP': return "EZ"; // ญี่ปุ่น (อ่านว่า โอ-ระ)
+        case 'VN': return "EZ"; // เวียดนาม (ใช้ทับศัพท์ได้เลย)
         case 'TH': 
-        default: return "ออร่า";
+        default: return "EZ";
     }
 };
 
@@ -82,8 +82,9 @@ router.post('/summarize-view', verifyToken, async (req, res) => {
     const { visibleCharts, lang } = req.body;
     const langInstruction = getLangInstruction(lang);
 
+    // ⭐ ปรับปรุง: ระบุ Role เป็น Male และเน้นคำลงท้าย 'ครับ' ใน Recommendation
     const prompt = `
-        Role: Senior Data Analyst named "Aura".
+        Role: Senior Data Analyst named "EZ" (Male Persona).
         
         Objective: 
         Analyze the visuals and provide a summary in 4-5 bullet points.
@@ -95,26 +96,27 @@ router.post('/summarize-view', verifyToken, async (req, res) => {
         ${langInstruction}
 
         STRICT FORMATTING RULES:
-        1. **NO INTRO/OUTRO**: Do NOT start with greetings like "สวัสดีค่ะ", "ออร่ายินดีสรุป...", or "นี่คือข้อมูล...". 
+        1. **NO INTRO/OUTRO**: Do NOT start with greetings like "สวัสดีครับ", "EZ ยินดีสรุป...", or "นี่คือข้อมูล...". 
         2. **IMMEDIATE START**: Your very first character must be "-". 
-        3. **NO POLITE FILLERS**: Skip "นะคะ", "ค่ะ", "ทราบนะคะ" ในส่วนบทนำ ให้เข้าถึงตัวเลขข้อมูลทันที
-        4. **AURA'S TOUCH**: You can use "ออร่าขอแนะนำ..." or "ออร่ามองว่า..." ONLY in the last bullet point (Recommendation).
+        3. **NO FILLERS**: Skip "นะครับ", "ครับผม" in the beginning. Start with data immediately.
+        4. **EZ'S TOUCH**: You can use "EZ ขอแนะนำ..." or "EZ มองว่า..." ONLY in the last bullet point (Recommendation) and end the sentence with "ครับ".
+        5. **GENDER CHECK**: Ensure all polite particles are male (ครับ) ONLY. Do not use 'คะ' or 'ค่ะ'.
         
         STRUCTURE:
         - [Point 1]: Big picture summary with key numbers.
         - [Point 2-3]: Specific insights/anomalies found in the data.
         - [Point 4]: Potential risks or opportunities.
-        - [Point 5]: Actionable recommendation (Aura style).
+        - [Point 5]: Actionable recommendation (EZ style, Friendly Male Tone).
 
         Example of THE ONLY ACCEPTABLE format:
         - จังหวัดเชียงใหม่มีความเสียหายรวมสูงสุดที่ 394,980 ตามด้วยนราธิวาสและสุโขทัย...
         - พบว่าพื้นที่ภาคตะวันออกเฉียงเหนือมีการกระจุกตัวของความเสียหายในหลายจังหวัด...
         - ความเสียหายที่เกิดขึ้นสะท้อนถึงความจำเป็นในการเฝ้าระวังพื้นที่ลุ่มน้ำ...
-        - ออร่าขอแนะนำให้เร่งจัดสรรงบประมาณเยียวยาไปยัง 3 จังหวัดแรกที่มีมูลค่าความเสียหายสูงสุดค่ะ
+        - EZ ขอแนะนำให้เร่งจัดสรรงบประมาณเยียวยาไปยัง 3 จังหวัดแรกที่มีมูลค่าความเสียหายสูงสุดครับ
     `;
 
     try {
-        const reply = await generateAIResponse(prompt, "You are a helpful Data Analyst.");
+        const reply = await generateAIResponse(prompt, "You are a helpful Male Data Analyst.");
         res.json({ message: reply });
     } catch (err) {
         console.error("AI Error:", err);
@@ -123,7 +125,7 @@ router.post('/summarize-view', verifyToken, async (req, res) => {
 });
 
 
-// 3. Character Reaction Endpoint (ใน apiRoutes.js)
+// 3. Character Reaction Endpoint
 router.post('/character-reaction', verifyToken, async (req, res) => {
     const { pointData, contextData, lang } = req.body;
     const langInstruction = getLangInstruction(lang);
@@ -131,20 +133,21 @@ router.post('/character-reaction', verifyToken, async (req, res) => {
 
     let prompt = "";
 
+    // ⭐ ปรับปรุง: ระบุ Male Persona และ Friendly Male Tone
     if (pointData) {
-        // 🟢 กรณี 1: จิ้มโดนจุดข้อมูล (เหมือนเดิมที่คุณมี)
+        // 🟢 กรณี 1: จิ้มโดนจุดข้อมูล
         prompt = `
-            Role: ${mascotName} — a professional Data Analyst.
+            Role: ${mascotName} — a professional Male Data Analyst.
             Action: User clicked specific data "${pointData.name}" with value "${pointData.uv}".
             Context: ${JSON.stringify(contextData)}
             Language: ${langInstruction}
             Task: Refer to yourself as '${mascotName}'. Analyze if this specific point is high/low/normal. 
-            Constraints: Max 2 sentences, no markdown.
+            Constraints: Max 2 sentences, no markdown. Speak with a smart, male tone (ending with 'ครับ' for Thai).
         `;
     } else {
-        // 🔵 กรณี 2: คลิกที่ตัวกราฟ (วิเคราะห์ภาพรวมของกราฟนั้น)
+        // 🔵 กรณี 2: คลิกที่ตัวกราฟ
         prompt = `
-            Role: ${mascotName} — a professional Data Analyst.
+            Role: ${mascotName} — a professional Male Data Analyst.
             Action: User selected an entire chart to analyze.
             
             Chart Data Content:
@@ -157,7 +160,7 @@ router.post('/character-reaction', verifyToken, async (req, res) => {
             1. Refer to yourself as '${mascotName}'.
             2. Analyze the OVERALL data of this specific chart. 
             3. Identify the most important trend, the highest value, or a significant pattern in this chart.
-            4. Speak in a friendly, helpful tone as ${mascotName}.
+            4. Speak in a friendly, helpful MALE tone as ${mascotName} (Use 'ครับ' for Thai).
 
             Constraints:
             - Start with something like "${mascotName} looks at this chart and sees..." (in the target language).
@@ -167,21 +170,22 @@ router.post('/character-reaction', verifyToken, async (req, res) => {
     }
 
     try {
-        const reply = await generateAIResponse(prompt, `You are ${mascotName}, analyzing a specific chart.`);
+        const reply = await generateAIResponse(prompt, `You are ${mascotName}, a male data analyst analyzing a specific chart.`);
         res.json({ message: reply });
     } catch (err) {
         res.status(500).json({ message: "..." });
     }
 });
 
-// 4. Chat with Somjeed
+// 4. Chat with Somjeed (EZ)
 router.post('/ask-dashboard', verifyToken, async (req, res) => {
     const { question, allData, lang } = req.body;
     const langInstruction = getLangInstruction(lang);
-    const mascotName = getMascotName(lang); // ⭐ ดึงชื่อตามภาษา
+    const mascotName = getMascotName(lang); 
 
+    // ⭐ ปรับปรุง: ระบุ Male Personality
     const prompt = `
-        Role: ${mascotName} — your Power BI dashboard assistant.
+        Role: ${mascotName} — your Male Power BI dashboard assistant.
 
         Context Data (Only source of truth):
         ${JSON.stringify(allData)}
@@ -195,7 +199,7 @@ router.post('/ask-dashboard', verifyToken, async (req, res) => {
         Rules:
         1. Always use the name '${mascotName}' when referring to yourself.
         2. Answer ONLY using the provided Context Data.
-        3. Tone: Cheerful, clear, and accurate.
+        3. Tone: Cheerful, clear, accurate, and MASCULINE (Use 'ครับ' instead of 'ค่ะ').
         4. CRITICAL: Start your answer IMMEDIATELY with the information. 
         5. CRITICAL: DO NOT include any introductory phrases like "Here are the answers," "I found the data," or "Based on the dashboard."
         6. If the user asks for a list, start directly with "1. [First Item]".
@@ -206,7 +210,7 @@ router.post('/ask-dashboard', verifyToken, async (req, res) => {
         - No markdown, no emojis.
     `;
 
-    const reply = await generateAIResponse(prompt, "You are a helpful AI Dashboard Assistant.");
+    const reply = await generateAIResponse(prompt, "You are a helpful Male AI Dashboard Assistant.");
     res.json({ message: reply });
 });
 
@@ -241,9 +245,9 @@ router.get('/speech-azure', async (req, res) => {
 // 6. ticker
 router.post('/generate-ticker', verifyToken, async (req, res) => {
     const { allData, lang} = req.body;
-    const mascotName = getMascotName(lang);
     const langInstruction = getLangInstruction(lang)
 
+    // Ticker ส่วนใหญ่เป็น News Editor ไม่ต้องใส่อารมณ์มาก แต่กำกับภาษาไว้เพื่อความชัวร์
     const prompt = `
         Role: News Editor for Dashboard (Strict Mode).
         Source Data: ${JSON.stringify(allData)}
@@ -252,14 +256,14 @@ router.post('/generate-ticker', verifyToken, async (req, res) => {
         1. Summarize the data into 1 news headline.
         2. **STRICT STARTING RULE**: 
         - You MUST start your response with either "ALERT:" or "INFO:".
-        - DO NOT say "Aura says...", "Here is the summary...", or any intro text.
+        - DO NOT say "EZ says...", "Here is the summary...", or any intro text.
         - DO NOT translate "ALERT:" or "INFO:". Use these English words only.
         
         Logic:
         - Use "ALERT:" if you see negative trends, drops, or risks.
         - Use "INFO:" for normal updates or positive news.
 
-        Language of content: ${langInstruction}
+        Language of content: ${langInstruction} (Ensure specific male polite particles 'ครับ' if particles are needed, avoid 'ค่ะ').
 
         Constraints:
         - Output format: ALERT: [Content] OR INFO: [Content]
@@ -376,7 +380,7 @@ router.get('/view/:id', (req, res) => {
         </head>
         <body>
             <div class="container">
-                <h2>🤖 AI Summary by Aura</h2>
+                <h2>🤖 AI Summary by EZ</h2>
                 
                 <div class="content" id="content-text">${content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>')}</div>
 
@@ -394,7 +398,7 @@ router.get('/view/:id', (req, res) => {
                     </button>
                 </div>
 
-                <div class="footer">Powered by Insight Aura</div>
+                <div class="footer">Powered by EZ</div>
             </div>
 
             <div id="toast">Text copied</div>
@@ -403,7 +407,7 @@ router.get('/view/:id', (req, res) => {
                 // ดึงข้อความดิบ (เอา <br> ออกเพื่อให้ก๊อปไปวางสวยๆ)
                 function getRawText() {
                     const html = document.getElementById('content-text').innerHTML;
-                    return html.replace(/<br\\s*\\/?>/gi, '\\n').replace(/<[^>]+>/g, ''); // แปลง br เป็น newline และลบ tag อื่นๆ
+                    return html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ''); // แปลง br เป็น newline และลบ tag อื่นๆ
                 }
 
                 function copyContent() {
@@ -417,10 +421,10 @@ router.get('/view/:id', (req, res) => {
 
                 function shareToLine() {
                     const currentUrl = window.location.href; // ลิงก์ของหน้านี้
-                    const message = "🤖 AI Insight Aura Summary\\n\\n" +
-                                        "อ่านสรุปฉบับเต็มได้ที่นี่:\\n" +
-                                        "Read the full summary here:\\n\\n" +
-                                        currentUrl;
+                    const message = "🤖 AI Insight EZ Summary\n\n" +
+                                            "อ่านสรุปฉบับเต็มได้ที่นี่:\n" +
+                                            "Read the full summary here:\n\n" +
+                                            currentUrl;
 
                     // ส่งเข้า LINE
                     window.location.href = "https://line.me/R/msg/text/?" + encodeURIComponent(message);
@@ -434,8 +438,8 @@ router.get('/view/:id', (req, res) => {
                         try {
                             await navigator.share({
                                 title: 'AI Summary', // หัวข้อสำหรับบางแอป
-                                text: "🤖 AI Insight Aura Summary\\n\\n" +
-                                      "อ่านสรุปฉบับเต็มได้ที่นี่:\\n" +
+                                text: "🤖 AI Insight EZ Summary\n\n" +
+                                      "อ่านสรุปฉบับเต็มได้ที่นี่:\n" +
                                       "Read the full summary here:",
                                 url: cleanUrl // ส่งลิงก์ไปด้วย (Browser จะเอาไปต่อท้ายข้อความให้เอง)
                             });
@@ -445,7 +449,7 @@ router.get('/view/:id', (req, res) => {
                     } else {
                         // ⚠️ กรณีแชร์ไม่ได้ (เช่น บนคอม) -> คัดลอกลิงก์ให้แทนเหมือนเดิม
                         navigator.clipboard.writeText(cleanUrl).then(() => {
-                            alert("This browser does not support sharing.\\nThe link has been copied to your clipboard instead!\\n(You can paste it to share now)");
+                            alert("This browser does not support sharing.\nThe link has been copied to your clipboard instead!\n(You can paste it to share now)");
                         }).catch(err => {
                             alert("Failed to copy link.");
                         });

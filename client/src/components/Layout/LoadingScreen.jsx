@@ -3,7 +3,7 @@ import { Zap, Server, BrainCircuit } from 'lucide-react';
 
 const LOADING_TEXTS = [
   "กำลังเชื่อมต่อฐานข้อมูล...",
-  "กำลังปลุกน้องออร่า...",
+  "กำลังปลุกน้อง EZ...",
   "กำลังวิเคราะห์กราฟ...",
   "เตรียมความพร้อมระบบ AI...",
   "เข้าสู่ Dashboard..."
@@ -42,7 +42,7 @@ const LoadingScreen = () => {
         </div>
 
         {/* Text & Progress */}
-        <h2 className="loading-title">Insight Aura Dashboard</h2>
+        <h2 className="loading-title">EZ Dashboard</h2>
         <div className="loading-status">
           <span className="status-text key-anim">{LOADING_TEXTS[textIndex]}</span>
         </div>

@@ -764,10 +764,11 @@
       margin-left: 30px;
     }
     .sidebar .sidebar-header button {
-      width: 9.5rem !important;  
+      width: 7rem !important;  
       height: 4rem !important; 
       border-radius: 30px !important;
-      margin-right: 35px;
+      margin-right: 20px;
+      margin-left: 20px;
       border: 3px solid var(--border-color);
     }
     .sidebar .sidebar-header button:hover {
@@ -1120,4 +1121,7 @@
       margin-top: 80px;
     }
 
+    .needs-consent-title { font-size: 2rem !important; }
+    .needs-consent-subtext { font-size: 1.5rem !important; margin-top: 50px;}
+  .needs-consent-button { font-size: 1.7rem !important; padding: 40px 80px !important; border-radius: 50px !important; margin-top: 50px;}
   }

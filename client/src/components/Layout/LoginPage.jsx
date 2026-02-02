@@ -15,7 +15,7 @@ const LoginPage = ({ onLogin }) => {
             <div className="logo-badge">
               <img src="./logo.png" alt="Logo" />
             </div>
-            <h1>Insight Aura Dashboard</h1>
+            <h1>EZ Dashboard</h1>
             <p>
               ระบบวิเคราะห์ข้อมูลอัจฉริยะ พร้อมผู้ช่วย AI<br />
               ที่จะทำให้การตัดสินใจของคุณง่ายขึ้น
