@@ -308,12 +308,6 @@ router.get('/view/:id', (req, res) => {
         `);
     }
 
-    // ป้องกัน Backtick ในเนื้อหาทำ code พัง
-    const safeContent = content
-        .replace(/`/g, "'") // เปลี่ยน backtick ในเนื้อหาเป็น single quote
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\n/g, '<br/>');
-
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
@@ -324,21 +318,60 @@ router.get('/view/:id', (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
-                body { font-family: 'Sarabun', sans-serif; padding: 10px 10px; margin: 0; background: #f4f7f6; color: #333; }
+                body { font-family: 'Sarabun', sans-serif; padding: 0; margin: 0; background: #f4f7f6; color: #333; }
                 .container { max-width: 600px; margin: 20px auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); position: relative; }
                 h2 { color: #00c49f; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-top: 0; font-size: 1.4rem; }
                 .content { white-space: pre-line; font-size: 1rem; line-height: 1.7; color: #444; margin-bottom: 30px; }
                 strong { color: #008a70; font-weight: bold; }
                 
-                .action-bar { display: flex; gap: 10px; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
-                .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-family: 'Sarabun', sans-serif; font-weight: bold; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.1s; text-decoration: none; }
+                /* --- Action Buttons --- */
+                .action-bar {
+                    display: flex;
+                    gap: 10px;
+                    margin-top: 20px;
+                    border-top: 1px solid #eee;
+                    padding-top: 20px;
+                }
+                .btn {
+                    flex: 1;
+                    padding: 12px;
+                    border: none;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-family: 'Sarabun', sans-serif;
+                    font-weight: bold;
+                    font-size: 14px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    transition: transform 0.1s;
+                    text-decoration: none; /* สำหรับลิงก์ */
+                }
                 .btn:active { transform: scale(0.96); }
+                
                 .btn-copy { background: #e9ecef; color: #333; }
                 .btn-line { background: #06c755; color: white; }
                 .btn-share { background: #007bff; color: white; }
+
                 .footer { margin-top: 20px; text-align: center; font-size: 0.8rem; color: #ccc; }
                 
-                #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 50px; padding: 16px; position: fixed; z-index: 1; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 14px; }
+                /* Toast Notification */
+                #toast {
+                    visibility: hidden;
+                    min-width: 250px;
+                    background-color: #333;
+                    color: #fff;
+                    text-align: center;
+                    border-radius: 50px;
+                    padding: 16px;
+                    position: fixed;
+                    z-index: 1;
+                    left: 50%;
+                    bottom: 30px;
+                    transform: translateX(-50%);
+                    font-size: 14px;
+                }
                 #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
                 @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
                 @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
@@ -348,7 +381,7 @@ router.get('/view/:id', (req, res) => {
             <div class="container">
                 <h2>🤖 AI Summary by EZ</h2>
                 
-                <div class="content" id="content-text">${safeContent}</div>
+                <div class="content" id="content-text">${content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br/>')}</div>
 
                 <div class="action-bar">
                     <button class="btn btn-copy" onclick="copyContent()">
@@ -364,74 +397,61 @@ router.get('/view/:id', (req, res) => {
                     </button>
                 </div>
 
-                <div class="footer">Powered by EZ</div>
+                <div class="footer">Powered by EZ Dashboard</div>
             </div>
 
             <div id="toast">Text copied</div>
 
             <script>
-                // ✅ ใช้ตัวแปรนี้แทน \\n เพื่อป้องกัน Server แปลงโค้ดผิด
-                var NEWLINE = String.fromCharCode(10); 
-
+                // ดึงข้อความดิบ (เอา <br> ออกเพื่อให้ก๊อปไปวางสวยๆ)
                 function getRawText() {
-                    var html = document.getElementById('content-text').innerHTML;
-                    // Regex: เปลี่ยน <br> เป็น newline โดยใช้ escape sequence ที่ปลอดภัย
-                    return html.replace(/<br\\s*\\/?>/gi, NEWLINE).replace(/<[^>]+>/g, '');
+                    const html = document.getElementById('content-text').innerHTML;
+                    return html.replace(/<br\\s*\\/?>/gi, '\\n').replace(/<[^>]+>/g, ''); // แปลง br เป็น newline และลบ tag อื่นๆ
                 }
 
                 function copyContent() {
-                    try {
-                        var text = getRawText();
-                        // เช็คว่า Browser รองรับ Clipboard API ไหม (ต้องเป็น HTTPS หรือ localhost เท่านั้น)
-                        if (navigator.clipboard && navigator.clipboard.writeText) {
-                            navigator.clipboard.writeText(text).then(function() {
-                                showToast("Text copied");
-                            }).catch(function(err) {
-                                alert("Copy failed: " + err);
-                            });
-                        } else {
-                            // Fallback เก่าสำหรับบาง Browser
-                            var textArea = document.createElement("textarea");
-                            textArea.value = text;
-                            document.body.appendChild(textArea);
-                            textArea.select();
-                            document.execCommand("Copy");
-                            textArea.remove();
-                            showToast("Text copied (Fallback)");
-                        }
-                    } catch (e) {
-                        alert("Error copying: " + e.message);
-                    }
+                    const text = getRawText();
+                    navigator.clipboard.writeText(text).then(() => {
+                        showToast("Text copied");
+                    }).catch(err => {
+                        alert("Copy failed!");
+                    });
                 }
 
                 function shareToLine() {
-                    var currentUrl = window.location.href;
-                    var message = "🤖 AI Insight EZ Summary" + NEWLINE + NEWLINE +
-                                  "อ่านสรุปฉบับเต็มได้ที่นี่:" + NEWLINE +
-                                  "Read the full summary here:" + NEWLINE + NEWLINE +
-                                  currentUrl;
+                    const currentUrl = window.location.href; // ลิงก์ของหน้านี้
+                    const message = "🤖 AI Insight EZ Summary\\n\\n" +
+                                        "อ่านสรุปฉบับเต็มได้ที่นี่:\\n" +
+                                        "Read the full summary here:\\n\\n" +
+                                        currentUrl;
 
+                    // ส่งเข้า LINE
                     window.location.href = "https://line.me/R/msg/text/?" + encodeURIComponent(message);
                 }
 
                 async function nativeShare() {
-                    var cleanUrl = window.location.href.replace(/[?&]openExternalBrowser=1/, "");
+                    // 1. เตรียมลิงก์ (ลบพารามิเตอร์แปลกปลอมออก)
+                    const cleanUrl = window.location.href.replace(/[?&]openExternalBrowser=1/, "");
                     
                     if (navigator.share) {
                         try {
                             await navigator.share({
-                                title: 'AI Summary',
-                                text: "🤖 AI Insight EZ Summary" + NEWLINE + NEWLINE +
-                                      "อ่านสรุปฉบับเต็มได้ที่นี่:" + NEWLINE +
+                                title: 'AI Summary', // หัวข้อสำหรับบางแอป
+                                text: "🤖 AI Insight EZ Summary\\n\\n" +
+                                      "อ่านสรุปฉบับเต็มได้ที่นี่:\\n" +
                                       "Read the full summary here:",
-                                url: cleanUrl
+                                url: cleanUrl // ส่งลิงก์ไปด้วย (Browser จะเอาไปต่อท้ายข้อความให้เอง)
                             });
                         } catch (err) {
-                            console.log("Share canceled");
+                            // ผู้ใช้กดยกเลิก
                         }
                     } else {
-                        copyToClipboard(cleanUrl, "Link copied");
-                        alert("Link copied to clipboard!");
+                        // ⚠️ กรณีแชร์ไม่ได้ (เช่น บนคอม) -> คัดลอกลิงก์ให้แทนเหมือนเดิม
+                        navigator.clipboard.writeText(cleanUrl).then(() => {
+                            alert("This browser does not support sharing.\\nThe link has been copied to your clipboard instead!\\n(You can paste it to share now)");
+                        }).catch(err => {
+                            alert("Failed to copy link.");
+                        });
                     }
                 }
 
