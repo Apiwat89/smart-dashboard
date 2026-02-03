@@ -369,39 +369,67 @@ router.get('/view/:id', (req, res) => {
 
             <div id="toast">Text copied</div>
 
-            <script>
-                // ✅ ใช้ตัวแปรนี้แทน \\n เพื่อป้องกัน Server แปลงโค้ดผิด
+<script>
+                // ✅ ใช้ตัวแปรนี้แทน \n เพื่อป้องกัน Server แปลงโค้ดผิด
                 var NEWLINE = String.fromCharCode(10); 
 
-                function getRawText() {
-                    var html = document.getElementById('content-text').innerHTML;
-                    // Regex: เปลี่ยน <br> เป็น newline โดยใช้ escape sequence ที่ปลอดภัย
-                    return html.replace(/<br\\s*\\/?>/gi, NEWLINE).replace(/<[^>]+>/g, '');
-                }
-
-                function copyContent() {
+                // ✅ ฟังก์ชันกลางสำหรับการคัดลอก (ใช้ได้ทั้ง Text และ Link)
+                function copyToClipboard(text, successMsg) {
                     try {
-                        var text = getRawText();
-                        // เช็คว่า Browser รองรับ Clipboard API ไหม (ต้องเป็น HTTPS หรือ localhost เท่านั้น)
+                        // เช็คว่า Browser รองรับ Clipboard API ไหม (HTTPS/Localhost)
                         if (navigator.clipboard && navigator.clipboard.writeText) {
                             navigator.clipboard.writeText(text).then(function() {
-                                showToast("Text copied");
+                                showToast(successMsg);
                             }).catch(function(err) {
-                                alert("Copy failed: " + err);
+                                // ถ้า Clipboard API พัง ให้ลองใช้ Fallback
+                                fallbackCopy(text, successMsg);
                             });
                         } else {
-                            // Fallback เก่าสำหรับบาง Browser
-                            var textArea = document.createElement("textarea");
-                            textArea.value = text;
-                            document.body.appendChild(textArea);
-                            textArea.select();
-                            document.execCommand("Copy");
-                            textArea.remove();
-                            showToast("Text copied (Fallback)");
+                            // ใช้ Fallback ทันทีถ้าไม่รองรับ
+                            fallbackCopy(text, successMsg);
                         }
                     } catch (e) {
                         alert("Error copying: " + e.message);
                     }
+                }
+
+                // ฟังก์ชันสำรองสำหรับ Browser เก่า หรือกรณีไม่มี HTTPS
+                function fallbackCopy(text, successMsg) {
+                    var textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    
+                    // ซ่อน textarea ไม่ให้เกะกะ
+                    textArea.style.top = "0";
+                    textArea.style.left = "0";
+                    textArea.style.position = "fixed";
+
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+
+                    try {
+                        var successful = document.execCommand('copy');
+                        if (successful) {
+                            showToast(successMsg);
+                        } else {
+                            alert("Copy failed.");
+                        }
+                    } catch (err) {
+                        alert("Unable to copy.");
+                    }
+
+                    document.body.removeChild(textArea);
+                }
+
+                function getRawText() {
+                    var html = document.getElementById('content-text').innerHTML;
+                    return html.replace(/<br\s*\/?>/gi, NEWLINE).replace(/<[^>]+>/g, '');
+                }
+
+                // 👉 1. ปุ่ม Copy เนื้อหา: ส่งเนื้อหาไปคัดลอก
+                function copyContent() {
+                    var text = getRawText();
+                    copyToClipboard(text, "Text copied");
                 }
 
                 function shareToLine() {
@@ -414,6 +442,7 @@ router.get('/view/:id', (req, res) => {
                     window.location.href = "https://line.me/R/msg/text/?" + encodeURIComponent(message);
                 }
 
+                // 👉 2. ปุ่ม Share: ถ้าแชร์ไม่ได้ ให้คัดลอกลิงก์แทน
                 async function nativeShare() {
                     var cleanUrl = window.location.href.replace(/[?&]openExternalBrowser=1/, "");
                     
@@ -430,8 +459,9 @@ router.get('/view/:id', (req, res) => {
                             console.log("Share canceled");
                         }
                     } else {
-                        copyContent();
-                        alert("Browser sharing not supported. Link copied instead!");
+                        // ✅ แก้ตรงนี้ครับ: ส่ง cleanUrl (ลิงก์) ไปคัดลอกแทนข้อความ
+                        copyToClipboard(cleanUrl, "Link copied");
+                        alert("Browser sharing not supported.\nThe link has been copied to your clipboard!");
                     }
                 }
 
