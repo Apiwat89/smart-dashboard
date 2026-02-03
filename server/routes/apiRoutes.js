@@ -319,60 +319,22 @@ router.get('/view/:id', (req, res) => {
             <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&display=swap" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
             <style>
+                /* ... (CSS ส่วนเดิมของคุณ ใช้ได้แล้ว ไม่ต้องแก้) ... */
                 body { font-family: 'Sarabun', sans-serif; padding: 10px 10px; margin: 0; background: #f4f7f6; color: #333; }
                 .container { max-width: 600px; margin: 20px auto; background: white; padding: 25px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); position: relative; }
                 h2 { color: #00c49f; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; margin-top: 0; font-size: 1.4rem; }
                 .content { white-space: pre-line; font-size: 1rem; line-height: 1.7; color: #444; margin-bottom: 30px; }
                 strong { color: #008a70; font-weight: bold; }
                 
-                /* --- Action Buttons --- */
-                .action-bar {
-                    display: flex;
-                    gap: 10px;
-                    margin-top: 20px;
-                    border-top: 1px solid #eee;
-                    padding-top: 20px;
-                }
-                .btn {
-                    flex: 1;
-                    padding: 12px;
-                    border: none;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    font-family: 'Sarabun', sans-serif;
-                    font-weight: bold;
-                    font-size: 14px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 8px;
-                    transition: transform 0.1s;
-                    text-decoration: none; /* สำหรับลิงก์ */
-                }
+                .action-bar { display: flex; gap: 10px; margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px; }
+                .btn { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-family: 'Sarabun', sans-serif; font-weight: bold; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; transition: transform 0.1s; text-decoration: none; }
                 .btn:active { transform: scale(0.96); }
-                
                 .btn-copy { background: #e9ecef; color: #333; }
                 .btn-line { background: #06c755; color: white; }
                 .btn-share { background: #007bff; color: white; }
-
                 .footer { margin-top: 20px; text-align: center; font-size: 0.8rem; color: #ccc; }
                 
-                /* Toast Notification */
-                #toast {
-                    visibility: hidden;
-                    min-width: 250px;
-                    background-color: #333;
-                    color: #fff;
-                    text-align: center;
-                    border-radius: 50px;
-                    padding: 16px;
-                    position: fixed;
-                    z-index: 1;
-                    left: 50%;
-                    bottom: 30px;
-                    transform: translateX(-50%);
-                    font-size: 14px;
-                }
+                #toast { visibility: hidden; min-width: 250px; background-color: #333; color: #fff; text-align: center; border-radius: 50px; padding: 16px; position: fixed; z-index: 1; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 14px; }
                 #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
                 @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
                 @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
@@ -404,55 +366,59 @@ router.get('/view/:id', (req, res) => {
             <div id="toast">Text copied</div>
 
             <script>
-                // ดึงข้อความดิบ (เอา <br> ออกเพื่อให้ก๊อปไปวางสวยๆ)
                 function getRawText() {
                     const html = document.getElementById('content-text').innerHTML;
-                    return html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, ''); // แปลง br เป็น newline และลบ tag อื่นๆ
+                    // 🔥 แก้ไข 1: เพิ่ม Backslash ที่ Regex และตัว \n
+                    return html.replace(/<br\\s*\\/?>/gi, '\\n').replace(/<[^>]+>/g, '');
                 }
 
                 function copyContent() {
                     const text = getRawText();
-                    navigator.clipboard.writeText(text).then(() => {
-                        showToast("Text copied");
-                    }).catch(err => {
-                        alert("Copy failed!");
-                    });
+                    // หมายเหตุ: clipboard API ต้องใช้บน HTTPS หรือ localhost เท่านั้น
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(() => {
+                            showToast("Text copied");
+                        }).catch(err => {
+                            // Fallback ถ้า copy ไม่ได้
+                            alert("Copy failed or not supported");
+                        });
+                    } else {
+                        alert("Clipboard API not supported (Require HTTPS)");
+                    }
                 }
 
                 function shareToLine() {
-                    const currentUrl = window.location.href; // ลิงก์ของหน้านี้
-                    const message = "🤖 AI Insight EZ Summary\n\n" +
-                                            "อ่านสรุปฉบับเต็มได้ที่นี่:\n" +
-                                            "Read the full summary here:\n\n" +
-                                            currentUrl;
+                    const currentUrl = window.location.href;
+                    const text = getRawText();
+                    // 🔥 แก้ไข 2: ใช้ \\n แทน \n เพื่อป้องกัน Error
+                    const message = "🤖 AI Insight EZ Summary\\n\\n" +
+                                    "อ่านสรุปฉบับเต็มได้ที่นี่:\\n" +
+                                    "Read the full summary here:\\n\\n" +
+                                    currentUrl;
 
-                    // ส่งเข้า LINE
                     window.location.href = "https://line.me/R/msg/text/?" + encodeURIComponent(message);
                 }
 
                 async function nativeShare() {
-                    // 1. เตรียมลิงก์ (ลบพารามิเตอร์แปลกปลอมออก)
                     const cleanUrl = window.location.href.replace(/[?&]openExternalBrowser=1/, "");
                     
                     if (navigator.share) {
                         try {
                             await navigator.share({
-                                title: 'AI Summary', // หัวข้อสำหรับบางแอป
-                                text: "🤖 AI Insight EZ Summary\n\n" +
-                                      "อ่านสรุปฉบับเต็มได้ที่นี่:\n" +
+                                title: 'AI Summary',
+                                // 🔥 แก้ไข 3: ใช้ \\n แทน \n
+                                text: "🤖 AI Insight EZ Summary\\n\\n" +
+                                      "อ่านสรุปฉบับเต็มได้ที่นี่:\\n" +
                                       "Read the full summary here:",
-                                url: cleanUrl // ส่งลิงก์ไปด้วย (Browser จะเอาไปต่อท้ายข้อความให้เอง)
+                                url: cleanUrl
                             });
                         } catch (err) {
-                            // ผู้ใช้กดยกเลิก
+                            console.log("Share canceled");
                         }
                     } else {
-                        // ⚠️ กรณีแชร์ไม่ได้ (เช่น บนคอม) -> คัดลอกลิงก์ให้แทนเหมือนเดิม
-                        navigator.clipboard.writeText(cleanUrl).then(() => {
-                            alert("This browser does not support sharing.\nThe link has been copied to your clipboard instead!\n(You can paste it to share now)");
-                        }).catch(err => {
-                            alert("Failed to copy link.");
-                        });
+                        // Fallback กรณี Browser ไม่รองรับ Share
+                        copyContent(); 
+                        alert("Browser sharing not supported. Link copied instead!");
                     }
                 }
 

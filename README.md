@@ -187,3 +187,13 @@ npm run dev
 - เพิ่ม `client/vite.config.js` proxy เพื่อส่งต่อ `/api` ไปที่ `http://localhost:3000`
 - สร้าง `server/.env.example` และเพิ่ม `.env` ใน `.gitignore` เพื่อลดความเสี่ยงในการเผยคีย์
 - เพิ่มสคริปต์ root-level (`start:all`) โดยใช้แพ็กเกจ `concurrently` เพื่อรัน client และ server พร้อมกัน
+
+วิธีที่ 1: เพิ่มที่เก็บใหม่ (เก็บไว้ 2 ที่พร้อมกัน)
+git remote -v
+git remote add new-repo <URL_ของ_Repo_ใหม่>
+git push -u new-repo main
+
+วิธีที่ 2: เปลี่ยนที่เก็บถาวร (ย้ายบ้าน)
+git remote set-url origin <URL_ของ_Repo_ใหม่>
+git remote -v
+git push -u origin main
