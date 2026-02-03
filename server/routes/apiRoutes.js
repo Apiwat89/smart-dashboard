@@ -3,7 +3,7 @@ const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios'); 
-const { generateAIResponse } = require('../services/aiService');
+const { generateAIResponse, logCacheHit} = require('../services/aiService');
 const { fetchAzureSpeechToken, generateElevenLabsSpeech } = require('../services/speechService');
 const verifyToken = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
@@ -42,6 +42,16 @@ const summaryStore = {};
 
 // --- Endpoints ---
 
+router.post('/log-cache', (req, res) => {
+    // ⭐ รับ action, input, output เพิ่ม
+    const { reqId, pageId, savedTokens, savedTime, lang, action, input, output } = req.body; 
+    
+    // ส่งต่อให้ Service
+    logCacheHit({ reqId, pageId, savedTokens, savedTime, lang, action, input, output });
+    
+    res.json({ status: 'ok' });
+});
+
 // config
 router.get('/auth-config', (req, res) => {
     try {
@@ -79,7 +89,7 @@ router.get('/dashboard-data', verifyToken, async (req, res) => {
 
 // 2. AI Summarize View
 router.post('/summarize-view', verifyToken, async (req, res) => {
-    const { visibleCharts, lang } = req.body;
+    const { visibleCharts, lang, pageId } = req.body; // 👈 รับ pageId เพิ่ม
     const langInstruction = getLangInstruction(lang);
 
     // ⭐ ปรับปรุง: ระบุ Role เป็น Male และเน้นคำลงท้าย 'ครับ' ใน Recommendation
@@ -116,8 +126,19 @@ router.post('/summarize-view', verifyToken, async (req, res) => {
     `;
 
     try {
-        const reply = await generateAIResponse(prompt, "You are a helpful Male Data Analyst.");
-        res.json({ message: reply });
+        // 👇 เรียกใช้แบบใหม่ ส่ง logContext ไปด้วย
+        const result = await generateAIResponse(prompt, "You are a helpful Male Data Analyst.", {
+            action: 'summarize_view',
+            pageId: pageId,
+            lang: lang
+        });
+
+        // 👇 ส่งกลับทั้ง message, id, usage
+        res.json({ 
+            message: result.text, 
+            id: result.id, 
+            usage: result.usage 
+        });
     } catch (err) {
         console.error("AI Error:", err);
         res.status(500).json({ message: "Analysis currently unavailable." });
@@ -127,7 +148,7 @@ router.post('/summarize-view', verifyToken, async (req, res) => {
 
 // 3. Character Reaction Endpoint
 router.post('/character-reaction', verifyToken, async (req, res) => {
-    const { pointData, contextData, lang } = req.body;
+    const { pointData, contextData, lang, pageId } = req.body; // 👈 รับ pageId
     const langInstruction = getLangInstruction(lang);
     const mascotName = getMascotName(lang); 
 
@@ -170,8 +191,17 @@ router.post('/character-reaction', verifyToken, async (req, res) => {
     }
 
     try {
-        const reply = await generateAIResponse(prompt, `You are ${mascotName}, a male data analyst analyzing a specific chart.`);
-        res.json({ message: reply });
+        const result = await generateAIResponse(prompt, `You are ${mascotName}...`, {
+            action: 'character_reaction',
+            pageId: pageId,
+            lang: lang
+        });
+        
+        res.json({ 
+            message: result.text,
+            id: result.id,
+            usage: result.usage
+        });
     } catch (err) {
         res.status(500).json({ message: "..." });
     }
@@ -179,7 +209,7 @@ router.post('/character-reaction', verifyToken, async (req, res) => {
 
 // 4. Chat with Somjeed (EZ)
 router.post('/ask-dashboard', verifyToken, async (req, res) => {
-    const { question, allData, lang } = req.body;
+    const { question, allData, lang, pageId } = req.body; // 👈 รับ pageId
     const langInstruction = getLangInstruction(lang);
     const mascotName = getMascotName(lang); 
 
@@ -210,8 +240,21 @@ router.post('/ask-dashboard', verifyToken, async (req, res) => {
         - No markdown, no emojis.
     `;
 
-    const reply = await generateAIResponse(prompt, "You are a helpful Male AI Dashboard Assistant.");
-    res.json({ message: reply });
+    try {
+        const result = await generateAIResponse(prompt, "You are a helpful Male AI Dashboard Assistant.", {
+            action: 'chat_ask',
+            pageId: pageId,
+            lang: lang
+        });
+
+        res.json({ 
+            message: result.text,
+            id: result.id,
+            usage: result.usage
+        });
+    } catch (err) {
+        res.status(500).json({ message: "Error" });
+    }
 });
 
 // 5. Get Speech Token
@@ -244,7 +287,7 @@ router.get('/speech-azure', async (req, res) => {
 
 // 6. ticker
 router.post('/generate-ticker', verifyToken, async (req, res) => {
-    const { allData, lang} = req.body;
+    const { allData, lang, pageId } = req.body; // 👈 รับ pageId
     const langInstruction = getLangInstruction(lang)
 
     // Ticker ส่วนใหญ่เป็น News Editor ไม่ต้องใส่อารมณ์มาก แต่กำกับภาษาไว้เพื่อความชัวร์
@@ -271,10 +314,19 @@ router.post('/generate-ticker', verifyToken, async (req, res) => {
     `;
 
     try {
-        const reply = await generateAIResponse(prompt, "You are a professional News Summarizer.");
-        res.json({ message: reply });
+        const result = await generateAIResponse(prompt, "You are a professional News Summarizer.", {
+            action: 'generate_ticker',
+            pageId: pageId,
+            lang: lang
+        });
+        
+        res.json({ 
+            message: result.text,
+            id: result.id,
+            usage: result.usage
+        });
     } catch (err) {
-        res.status(500).json({ error: "AI failed to generate ticker" });
+        res.status(500).json({ error: "AI failed" });
     }
 });
 

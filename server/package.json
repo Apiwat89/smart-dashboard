@@ -25,6 +25,7 @@
     "openai": "^6.9.1",
     "passport": "^0.7.0",
     "passport-azure-ad": "^4.3.5",
+    "sqlite3": "^5.1.7",
     "uuid": "^9.0.1"
   }
 }

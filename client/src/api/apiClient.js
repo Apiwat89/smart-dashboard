@@ -5,8 +5,8 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // ตั้งค่า Client Instance
 const client = axios.create({
-  // baseURL: `/api`, 
-  baseURL: `${BASE_URL}/api`, 
+  baseURL: `/api`, 
+  // baseURL: `${BASE_URL}/api`, 
   timeout: 30000, 
   headers: {
     'Content-Type': 'application/json',
@@ -55,31 +55,57 @@ export const dashboardService = {
     }
   },
 
-  // 2. สรุปข้อมูล (Summarize)
-  getSummary: async (charts, lang, token) => {
+  // ✅ 1. เพิ่มฟังก์ชันยิง Log Cache (ยิงแล้วลืม ไม่ต้องรอ return)
+  logCacheHit: async (data) => {
     try {
-      const res = await client.post('/summarize-view', { visibleCharts: charts, lang }, getAuthConfig(token));
-      return { message: res.data.message, isError: false };
+      // data = { reqId, pageId, savedTokens, savedTime }
+      await client.post('/log-cache', data);
+    } catch (e) {
+      console.error("Log Cache Failed:", e);
+    }
+  },
+
+  // ✅ 2. ปรับแก้ให้ Return Object ตัวเต็ม (message, id, usage)
+  getSummary: async (charts, lang, token, pageId) => { // รับ pageId เพิ่ม
+    try {
+      const res = await client.post('/summarize-view', { visibleCharts: charts, lang, pageId }, getAuthConfig(token));
+      // ส่งกลับทั้งก้อน เพื่อให้ App.jsx เอาไปเก็บ Cache
+      return { 
+        message: res.data.message, 
+        id: res.data.id, 
+        usage: res.data.usage,
+        isError: false 
+      };
     } catch (e) {
       return { message: getErrorMsg(lang), isError: true };
     }
   },
 
   // 3. ปฏิกิริยาตัวละคร (Reaction)
-  getReaction: async (point, context, lang, token) => {
+  getReaction: async (point, context, lang, token, pageId) => {
     try {
-      const res = await client.post('/character-reaction', { pointData: point, contextData: context, lang }, getAuthConfig(token));
-      return { message: res.data.message, isError: false };
+      const res = await client.post('/character-reaction', { pointData: point, contextData: context, lang, pageId }, getAuthConfig(token));
+      return { 
+        message: res.data.message,
+        id: res.data.id,
+        usage: res.data.usage, 
+        isError: false 
+      };
     } catch (e) {
       return { message: getErrorMsg(lang), isError: true };
     }
   },
 
   // 4. ถาม-ตอบ AI
-  chat: async (question, allData, lang, token) => {
+  chat: async (question, allData, lang, token, pageId) => {
     try {
-      const res = await client.post('/ask-dashboard', { question, allData, lang }, getAuthConfig(token));
-      return { message: res.data.message, isError: false };
+      const res = await client.post('/ask-dashboard', { question, allData, lang, pageId }, getAuthConfig(token));
+      return { 
+        message: res.data.message,
+        id: res.data.id,
+        usage: res.data.usage,
+        isError: false 
+      };
     } catch (e) {
       return { message: getErrorMsg(lang), isError: true };
     }
@@ -108,12 +134,15 @@ export const dashboardService = {
   },
 
   // 6. News Ticker
-  getNewsTicker: async (allData, lang, token) => {
+  getNewsTicker: async (allData, lang, token, pageId) => {
     try {
-      const res = await client.post('/generate-ticker', { allData, lang }, getAuthConfig(token));
-      return res.data;
+      const res = await client.post('/generate-ticker', { allData, lang, pageId }, getAuthConfig(token));
+      return {
+        message: res.data.message,
+        id: res.data.id,      // รับ ID
+        usage: res.data.usage // รับ Token Usage
+      };
     } catch (e) {
-      console.error("Ticker API Error", e);
       return { message: "เชื่อมต่อข้อมูลระบบข่าวขัดข้อง..." };
     }
   },

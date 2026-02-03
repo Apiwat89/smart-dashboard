@@ -50,6 +50,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     const langRef = useRef(lang);
     const summarizedPageRef = useRef(null);
     const speechTimeoutRef = useRef(null);
+    const lastInteractionRef = useRef(0);
 
     const isAiBusy = aiState.status !== 'idle' || isProcessing;
 
@@ -197,19 +198,16 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
 
     // Effect สำหรับเปลี่ยนภาษา: ทำงานเมื่อค่า lang เปลี่ยน โดยใช้ข้อมูลเดิม
     useEffect(() => {
-        // สร้างตัวแปรเช็คว่า Effect นี้ยังเป็นปัจจุบันอยู่ไหม (ป้องกัน Race Condition)
         let isCurrentEffect = true;
-
-        // สั่งหยุดเสียงทันทีเมื่อมีการเปลี่ยนภาษา
         stopAllVoices();
-
         setAiState(prev => ({ ...prev, status: 'thinking', message: '' }));
 
         const refreshAIContentOnLangChange = async () => {
             if (!currentReportData) return;
 
-            // 🟢 1. ตรวจสอบ Cache
             const cacheKey = `${activePageId}_${lang}`;
+            
+            // ✅ CASE 1: Cache Hit
             if (dashboardCache[cacheKey]) {
                 const cached = dashboardCache[cacheKey];
                 
@@ -219,15 +217,54 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                     setTickerText(cached.tickerText);
                     setTickerType(cached.tickerType);
                     
-                    // ⭐ ใช้ speechTimeoutRef เก็บ ID ไว้ เพื่อให้ยกเลิกได้ถ้าเปลี่ยนภาษาอีกรอบ
                     speechTimeoutRef.current = setTimeout(() => {
                         if (isCurrentEffect) handleAiSpeak(cached.summary);
                     }, 500);
+
+                    // 📡 1. Log Summary (แบบเต็ม)
+                    dashboardService.logCacheHit({
+                        reqId: cached.reqId, 
+                        pageId: activePageId,
+                        savedTokens: cached.tokenUsage || 0,
+                        savedTime: cached.originalTime || 0,
+                        lang: lang,
+                        action: 'summarize_view',      // ✨ ระบุ Action เดิม
+                        input: cached.rawData,         // ✨ ระบุข้อมูล Input เดิม
+                        output: cached.summary         // ✨ ระบุคำตอบ AI เดิม
+                    });
+
+                    // 📡 2. Log Chat Suggestions
+                    if (cached.suggestionsReqId) {
+                        dashboardService.logCacheHit({
+                            reqId: cached.suggestionsReqId,
+                            pageId: activePageId,
+                            savedTokens: cached.suggestionsTokenUsage || 0,
+                            savedTime: 0,
+                            lang: lang,
+                            action: 'chat_ask',        // ✨
+                            input: "Suggest 10 short important questions...", 
+                            output: cached.suggestions.join('\n') // ✨ แปลง Array กลับเป็น Text
+                        });
+                    }
+
+                    // 📡 3. Log Ticker
+                    if (cached.tickerReqId) {
+                        dashboardService.logCacheHit({
+                            reqId: cached.tickerReqId,
+                            pageId: activePageId,
+                            savedTokens: cached.tickerTokenUsage || 0,
+                            savedTime: 0,
+                            lang: lang,
+                            action: 'generate_ticker', // ✨
+                            input: cached.rawData,
+                            output: cached.tickerText  // ✨
+                        });
+                    }
                 }
                 return; 
             }
 
-            // 🔵 2. ยิง API ใหม่
+            // ✅ CASE 2: New Request
             if (isCurrentEffect) {
                 setSummaryLoading(true);
                 setTickerText("AI กำลังอัปเดตภาษา...");
@@ -236,57 +273,59 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
 
             try {
                 const token = await getToken();
-                
-                // เช็คอีกรอบก่อนยิง API (เผื่อเปลี่ยนภาษาระหว่างรอ token)
                 if (!isCurrentEffect) return;
 
+                const startTime = Date.now();
+
                 const [summaryRes, suggestRes, tickerRes] = await Promise.all([
-                    dashboardService.getSummary(currentReportData, lang, token),
-                    dashboardService.chat("Suggest 10 short important questions...", currentReportData, lang, token),
-                    dashboardService.getNewsTicker(currentReportData, lang, token)
+                    dashboardService.getSummary(currentReportData, lang, token, activePageId),
+                    dashboardService.chat("Suggest 10 questions...", currentReportData, lang, token, activePageId),
+                    dashboardService.getNewsTicker(currentReportData, lang, token, activePageId)
                 ]);
 
-                // ... (Logic จัดการข้อมูล เหมือนเดิม) ...
-                const questionsList = suggestRes.message.split('\n').filter(line => /^\d+\./.test(line.trim())).map(q => q.replace(/^\d+\.\s*/, '').trim()).slice(0, 10);
-                const isAlert = tickerRes.message.toUpperCase().startsWith("ALERT:");
-                const cleanTicker = tickerRes.message.replace(/^(ALERT:|INFO:)/i, "").trim();
+                const duration = Date.now() - startTime;
 
+                const questionsList = suggestRes.message.split('\n').filter(line => /^\d+\./.test(line.trim())).map(q => q.replace(/^\d+\.\s*/, '').trim()).slice(0, 10);
+                const isAlert = tickerRes.message?.toUpperCase().startsWith("ALERT:");
+                const cleanTicker = tickerRes.message?.replace(/^(ALERT:|INFO:)/i, "").trim();
+
+                // 💾 เก็บลง Cache (ต้องเก็บ ID ของ Chat และ Ticker ด้วย ✨)
                 dashboardCache[cacheKey] = {
                     summary: summaryRes.message,
                     suggestions: questionsList,
                     tickerText: cleanTicker,
                     tickerType: isAlert ? 'alert' : 'info',
-                    rawData: currentReportData
+                    rawData: currentReportData,
+                    
+                    // Main Summary Log Info
+                    reqId: summaryRes.id,
+                    tokenUsage: summaryRes.usage?.total_tokens || 0,
+                    originalTime: duration,
+
+                    // Chat Suggestions Log Info (เพิ่มใหม่ ✨)
+                    suggestionsReqId: suggestRes.id,
+                    suggestionsTokenUsage: suggestRes.usage?.total_tokens || 0,
+
+                    // Ticker Log Info (เพิ่มใหม่ ✨)
+                    tickerReqId: tickerRes.id,
+                    tickerTokenUsage: tickerRes.usage?.total_tokens || 0
                 };
 
-                // อัปเดต UI เฉพาะเมื่อยังเป็นภาษาปัจจุบัน
                 if (isCurrentEffect) {
                     setSummary(summaryRes.message);
                     setSuggestedQuestions(questionsList);
                     setTickerText(cleanTicker);
                     setTickerType(isAlert ? 'alert' : 'info');
-                    
-                    // ⭐ ใช้ speechTimeoutRef ตรงนี้ด้วย
                     speechTimeoutRef.current = setTimeout(() => {
                         if (isCurrentEffect) handleAiSpeak(summaryRes.message);
                     }, 1000);
                 }
-
-            } catch (err) {
-                console.error("Error refreshing on lang change:", err);
-            } finally {
-                if (isCurrentEffect) setSummaryLoading(false);
-            }
+            } catch (err) { console.error(err); } 
+            finally { if (isCurrentEffect) setSummaryLoading(false); }
         };
 
         refreshAIContentOnLangChange();
-
-        // ⭐ Cleanup Function: ทำงานเมื่อ lang เปลี่ยน หรือ Component ถูกทำลาย
-        return () => {
-            isCurrentEffect = false; // บอกว่า Effect รอบนี้เก่าแล้ว ห้ามทำงานต่อ
-            stopAllVoices(); // หยุดเสียง และเคลียร์ timeout ทันที
-        };
-
+        return () => { isCurrentEffect = false; stopAllVoices(); };
     }, [lang]);
 
     const handleMenuChange = (id) => {
@@ -358,28 +397,25 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     const triggerAiChat = async (textInput) => {
         if(!textInput || !textInput.trim()) return;
         const startLang = langRef.current;
-
         stopAllVoices();
-        setSummaryLoading(true); 
-        setSummary(""); 
-        setProcessing(true);
+        setSummaryLoading(true); setSummary(""); setProcessing(true);
         setAiState({ status: 'thinking', message: '', isVisible: true });
         try {
             const token = await getToken(); 
-            const res = await dashboardService.chat(textInput, currentReportData || "", langRef.current, token); 
+            // ⏱️ จับเวลา (Server จับให้แล้ว แต่ถ้าอยากรู้เวลาฝั่ง Client ก็จับตรงนี้)
+            const res = await dashboardService.chat(textInput, currentReportData || "", langRef.current, token, activePageId); 
 
-            // 2. เช็ค: ถ้าเปลี่ยนภาษาแล้ว ให้หยุดเลย
             if (startLang !== langRef.current) return;
 
             setSummary(res.message); 
             setProcessing(false);       
             setSummaryLoading(false);
 
-            // 3. ⭐ แก้ตรงนี้: เอา ref มารับ setTimeout เพื่อให้ stopAllVoices สั่งหยุดได้
+            // *หมายเหตุ: Chat ไม่ได้เก็บลง dashboardCache ใหญ่ เพราะคำถามเปลี่ยนตลอด
+            // แต่ Server จะ Log ว่าเป็น Action: 'chat' และเสีย Token ตามจริงอัตโนมัติจากฝั่ง Backend
+
             speechTimeoutRef.current = setTimeout(() => {
-                 if (startLang === langRef.current) {
-                     handleAiSpeak(res.message);
-                 }
+                if (startLang === langRef.current) handleAiSpeak(res.message);
             }, 300);
         } catch (error) { 
             setSummary("เกิดข้อผิดพลาด");
@@ -391,6 +427,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     };
 
     const handlePowerBIClick = async (event) => {
+        lastInteractionRef.current = Date.now();
       if (event.detail && event.detail.dataPoints && event.detail.dataPoints.length > 0 && !isProcessing) {
           
           const startLang = langRef.current; // 1. จำภาษาตอนเริ่ม
@@ -408,7 +445,13 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
 
           try {
               const token = await getToken(); 
-              const res = await dashboardService.getReaction({ name: category, uv: value }, chartTitle, langRef.current, token);
+              const res = await dashboardService.getReaction(
+                { name: category, uv: value }, 
+                chartTitle, 
+                langRef.current, 
+                token, 
+                activePageId // 👈 เติมตรงนี้ครับ
+            );
               
               // 2. เช็ค: ถ้าเปลี่ยนภาษาแล้ว ให้หยุด
               if (startLang !== langRef.current) return;
@@ -437,6 +480,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     };
 
     const handleVisualClick = async (event) => {
+        lastInteractionRef.current = Date.now();
         // 1. รับแค่ "ป้ายชื่อ" มาก่อน
         const visualDescriptor = event.detail.visual;
         console.log("🖱️ User clicked on:", visualDescriptor.name, visualDescriptor.type);
@@ -489,7 +533,13 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     
             // 5. ส่งข้อมูลไปให้ AI
             const token = await getToken(); 
-            const res = await dashboardService.getReaction(null, result.data, lang, token);
+            const res = await dashboardService.getReaction(
+                null, 
+                result.data, 
+                langRef.current, // 👈 แก้ตรงนี้
+                token,
+                activePageId
+            );
             
             if (startLang !== langRef.current) {
                 return; // จบงาน แยกย้าย ไม่ต้องพูด
@@ -499,7 +549,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
             setProcessing(false);
             setSummaryLoading(false);
 
-            setTimeout(() => {
+            speechTimeoutRef.current = setTimeout(() => {
                 if (startLang === langRef.current) {
                     handleAiSpeak(res.message);
                 }
@@ -522,11 +572,21 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     };
       
     const handleReportRendered = async () => {
-        if (!powerBIReportRef.current) return;
-
-        const cacheKey = `${activePageId}_${lang}`;
+        const timeSinceLastClick = Date.now() - lastInteractionRef.current;
+        if (timeSinceLastClick < 3000) {
+            console.log("✋ Blocked Auto-Summary due to recent user click.");
+            return; 
+        }
         
-        // 1. ตรวจสอบ Cache (คงเดิม)
+        stopAllVoices();
+
+        if (!powerBIReportRef.current) return;
+        if (isProcessing) return;
+
+        const currentLang = langRef.current;
+        const cacheKey = `${activePageId}_${currentLang}`;
+        
+        // ✅ CASE 1: Cache Hit
         if (dashboardCache[cacheKey]) {
             const cached = dashboardCache[cacheKey];
             setSummary(cached.summary);
@@ -536,107 +596,144 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
             setCurrentReportData(cached.rawData);
             setPbiLastUpdate(cached.lastUpdate || ""); 
             summarizedPageRef.current = activePageId;
-            setTimeout(() => handleAiSpeak(cached.summary), 500);
+            
+            speechTimeoutRef.current = setTimeout(() => handleAiSpeak(cached.summary), 500);
+
+            // 📡 1. Log Summary (แบบเต็ม)
+            dashboardService.logCacheHit({
+                reqId: cached.reqId,
+                pageId: activePageId,
+                savedTokens: cached.tokenUsage || 0,
+                savedTime: cached.originalTime || 0,
+                lang: currentLang,
+                action: 'summarize_view',      // ✨
+                input: cached.rawData,         // ✨
+                output: cached.summary         // ✨
+            });
+
+            // 📡 2. Log Chat Suggestions
+            if (cached.suggestionsReqId) {
+                dashboardService.logCacheHit({
+                    reqId: cached.suggestionsReqId,
+                    pageId: activePageId,
+                    savedTokens: cached.suggestionsTokenUsage || 0,
+                    savedTime: 0, 
+                    lang: currentLang,
+                    action: 'chat_ask',        // ✨
+                    input: "Suggest 10 short important questions...",
+                    output: cached.suggestions.join('\n')
+                });
+            }
+
+            // 📡 3. Log Ticker
+            if (cached.tickerReqId) {
+                dashboardService.logCacheHit({
+                    reqId: cached.tickerReqId,
+                    pageId: activePageId,
+                    savedTokens: cached.tickerTokenUsage || 0,
+                    savedTime: 0,
+                    lang: currentLang,
+                    action: 'generate_ticker', // ✨
+                    input: cached.rawData,
+                    output: cached.tickerText
+                });
+            }
+
             return;
         }
- 
+
+        // ✅ CASE 2: New Request
         summarizedPageRef.current = activePageId; 
         setAiState(prev => ({ ...prev, status: 'thinking', message: '' }));
         setSummaryLoading(true);
- 
+
         try {
+            // ... (Code การดึงข้อมูล Power BI เหมือนเดิมทุกอย่าง) ...
             const report = powerBIReportRef.current;
             const pages = await report.getPages();
             const pbiPage = pages.find(p => p.isActive);
             const visuals = await pbiPage.getVisuals();
             const activePage = menuList.find(p => p.id === activePageId);
 
-            // =========================================================
-            // 🟢 ส่วนดึงเวลาจาก Card: System_Time_Stamp (คงเดิม)
-            // =========================================================
             let formattedDate = "";
             const timeVisual = visuals.find(v => v.title === 'System_Time_Stamp');
-
             if (timeVisual) {
                 try {
                     const timeResult = await timeVisual.exportData(models.ExportDataType.Summarized);
                     formattedDate = timeResult.data.replace(/^[^\d]+/, "").replace(/\n/g, "").trim();
-                } catch (e) {
-                    console.warn("Found time card but export failed:", e);
-                }
+                } catch (e) { console.warn("Found time card but export failed:", e); }
             }
-
             if (!formattedDate) {
                 const now = new Date();
-                formattedDate = now.toLocaleDateString('th-TH') + " " + 
-                                now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+                formattedDate = now.toLocaleDateString('th-TH') + " " + now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
             }
- 
             setPbiLastUpdate(formattedDate);
- 
-            // =========================================================
-            // 🟡 ส่วนดึงข้อมูล Visuals: เพิ่มการกรองเพื่อป้องกัน Error 413/Token Limit
-            // =========================================================
-            let allDataText = `ข้อมูลหน้า ${activePage?.title || 'ปัจจุบัน'} (อัปเดตเมื่อ: ${formattedDate}):\n`;
 
+            let allDataText = `ข้อมูลหน้า ${activePage?.title || 'ปัจจุบัน'} (อัปเดตเมื่อ: ${formattedDate}):\n`;
             for (const visual of visuals) {
                 if (visual.title === 'System_Time_Stamp') continue;
-
                 if (visual.title && visual.type !== 'image' && visual.type !== 'textbox') {
                     try {
                         const result = await visual.exportData(models.ExportDataType.Summarized);
-                        
-                        // ⭐ คลีนข้อมูล: หาก Visual ไหนข้อมูลยาวเกิน 5,000 ตัวอักษร (เช่น ตารางใหญ่) ให้ตัดออก
-                        // เพื่อป้องกัน Error 413 (Payload Too Large) และ Gemini Token Limit
                         const visualData = result.data.length > 5000 
                             ? result.data.substring(0, 5000) + "... (ข้อมูลส่วนเกินถูกตัดออก)" 
                             : result.data;
-
                         allDataText += `\n- ${visual.title}:\n${visualData}\n`;
                     } catch (e) { console.warn(`Export failed for ${visual.title}`, e); }
                 }
             }
 
-            // 🛑 ตัวช่วยสุดท้าย: ตัดข้อมูลรวมทั้งหมดไม่ให้เกิน 25,000 ตัวอักษร
-            // เพื่อให้มั่นใจว่า API หลังบ้าน (Axios) และ AI จะไม่ Error
             const finalPayload = allDataText.substring(0, 25000);
             setCurrentReportData(finalPayload);
             
             const token = await getToken(); 
- 
-            // 🟢 ใช้ Promise.all เรียก API พร้อมกัน (คงเดิม)
+            const startTime = Date.now();
+
             const [summaryRes, suggestRes, tickerRes] = await Promise.all([
-                dashboardService.getSummary(finalPayload, lang, token),
-                dashboardService.chat("Suggest 10 short important questions...", finalPayload, lang, token),
-                dashboardService.getNewsTicker(finalPayload, lang, token)
+                dashboardService.getSummary(finalPayload, currentLang, token, activePageId),
+                dashboardService.chat("Suggest 10 questions...", finalPayload, currentLang, token, activePageId),
+                dashboardService.getNewsTicker(finalPayload, currentLang, token, activePageId)
             ]);
- 
+
+            const duration = Date.now() - startTime;
             const finalQuestions = suggestRes.message.split('\n').filter(q => q.length > 5).slice(0, 10);
             const isAlert = tickerRes?.message?.toUpperCase().startsWith("ALERT:");
             const finalTickerText = tickerRes?.message?.replace(/^(ALERT:|INFO:)/i, "").trim() || "";
- 
-            // ✅ บันทึกลง Cache (คงเดิม)
+
+            // 🔴 แก้ไขจุดนี้: เก็บข้อมูลลง Cache ให้ครบ 3 ส่วน
             dashboardCache[cacheKey] = {
+                // ส่วนเนื้อหา (Content)
                 summary: summaryRes.message,
                 suggestions: finalQuestions,
                 tickerText: finalTickerText,
                 tickerType: isAlert ? 'alert' : 'info',
                 rawData: finalPayload,
-                lastUpdate: formattedDate 
+                lastUpdate: formattedDate,
+                
+                // 1. ข้อมูล Log ของ Summary (พระเอก)
+                reqId: summaryRes.id,
+                tokenUsage: summaryRes.usage?.total_tokens || 0,
+                originalTime: duration,
+
+                // 2. ข้อมูล Log ของ Chat Suggestions (ตัวประกอบ 1) -- ต้องเพิ่มตรงนี้!
+                suggestionsReqId: suggestRes.id,
+                suggestionsTokenUsage: suggestRes.usage?.total_tokens || 0,
+
+                // 3. ข้อมูล Log ของ Ticker (ตัวประกอบ 2) -- ต้องเพิ่มตรงนี้!
+                tickerReqId: tickerRes.id,
+                tickerTokenUsage: tickerRes.usage?.total_tokens || 0
             };
- 
+            
             setSummary(summaryRes.message);
             setSuggestedQuestions(finalQuestions);
             setTickerText(finalTickerText);
             setTickerType(isAlert ? 'alert' : 'info');
             
-            // ⭐ ปรับเวลาหน่วงให้ Mascot พูดหลังจาก UI อัปเดตเสร็จ
-            setTimeout(() => handleAiSpeak(summaryRes.message), 1000);
- 
+            speechTimeoutRef.current = setTimeout(() => handleAiSpeak(summaryRes.message), 1000);
+
         } catch (err) { 
             console.error("Report Rendered Error:", err);
             summarizedPageRef.current = null;
-            // แจ้งเตือนผู้ใช้หากเกิด Error 413
             if (err.response?.status === 413) {
                 setSummary("ข้อมูลมีขนาดใหญ่เกินไป ระบบกำลังปรับจูนการดึงข้อมูล...");
             }
