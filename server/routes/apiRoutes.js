@@ -420,7 +420,7 @@ router.get('/view/:id', (req, res) => {
 
                 function shareToLine() {
                     const currentUrl = window.location.href; // ลิงก์ของหน้านี้
-                    const message = "🤖 AI Insight EZ Summary\\n\\n" +
+                    const message = "🤖 AI Summary By EZ\\n\\n" +
                                         "อ่านสรุปฉบับเต็มได้ที่นี่:\\n" +
                                         "Read the full summary here:\\n\\n" +
                                         currentUrl;
@@ -437,7 +437,7 @@ router.get('/view/:id', (req, res) => {
                         try {
                             await navigator.share({
                                 title: 'AI Summary', // หัวข้อสำหรับบางแอป
-                                text: "🤖 AI Insight EZ Summary\\n\\n" +
+                                text: "🤖 AI Summary By EZ\\n\\n" +
                                       "อ่านสรุปฉบับเต็มได้ที่นี่:\\n" +
                                       "Read the full summary here:",
                                 url: cleanUrl // ส่งลิงก์ไปด้วย (Browser จะเอาไปต่อท้ายข้อความให้เอง)
