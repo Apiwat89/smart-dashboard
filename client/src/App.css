@@ -166,9 +166,9 @@
    }
    
    /* Styles เดิมของ Sidebar */
-   .logo { font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 1rem; color: var(--primary-green); display: flex; align-items: center; gap: 12px;}
-   .logo img { width: 25%; border-radius: 16px;}
-   .sidebar-header button { background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); border-radius: 8px; padding: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; font-size: 1.2rem; }
+   .logo { font-family: 'Poppins', sans-serif; font-weight: 700; font-size: 1rem; color: var(--primary-green); display: flex; align-items: center; gap: 5px;}
+   .sidebar-header video {width: 25%; }
+   .sidebar-header button { background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); border-radius: 8px; padding: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; font-size: 1.2rem;}
    .sidebar-header button:hover { border-color: var(--primary-green); color: var(--primary-green); background: rgba(0, 196, 159, 0.1); }
    .menu-item { display: flex; align-items: center; gap: 12px; padding: 12px 15px; margin-bottom: 4px; border-radius: 10px; color: var(--text-muted); cursor: pointer; white-space: nowrap; transition: 0.2s; }
    .menu-item:hover { background: var(--bg-hover); color: var(--primary-green); }
@@ -451,7 +451,7 @@
    .loading-content { position: relative; display: flex; flex-direction: column; align-items: center; z-index: 10; }
    .logo-wrapper { position: relative; width: 120px; height: 120px; display: flex; justify-content: center; align-items: center; margin-bottom: 30px; }
    .icon-box { width: 80px; height: 80px; border-radius: 24px; display: flex; justify-content: center; align-items: center;z-index: 5; animation: floatLogo 3s ease-in-out infinite; }
-   .icon-box img {  border-radius: 24px; width: 100%; }
+   .icon-box video { width: 100%; height: '100%';}
    .spin-ring { position: absolute; border-radius: 50%; border: 2px solid transparent; }
    .ring-1 { width: 100%; height: 100%; border-top-color: #00c49f; border-left-color: #00c49f; opacity: 0.5; animation: spin 2s linear infinite; }
    .ring-2 { width: 140%; height: 140%; border-bottom-color: #0078d4; border-right-color: #0078d4; opacity: 0.3; animation: spin 3s linear infinite reverse; }
@@ -471,7 +471,7 @@
    .login-visual { flex: 1.2; background: linear-gradient(135deg, #00c49f 0%, #059669 100%); position: relative; display: flex; flex-direction: column; justify-content: center; padding: 60px; color: white; }
    .visual-content { position: relative; z-index: 2; }
    .logo-badge { width: 60px; height: 60px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 25px; backdrop-filter: blur(10px); }
-   .logo-badge img { width: 100%; border-radius: 16px; }
+   .logo-badge video { width: 110%; border-radius: 16px; }
    .login-visual h1 { font-size: 1.8rem; margin: 0 0 15px 0; line-height: 1.2; }
    .login-visual p { font-size: 1rem; opacity: 0.9; font-weight: 300; line-height: 1.6; margin-bottom: 40px; }
    .feature-list { display: flex; flex-direction: column; gap: 15px; }
@@ -759,9 +759,9 @@
       border-bottom: 3px solid var(--border-color);
     }
     .sidebar .sidebar-header .logo {
-      font-size: 55px;
-      gap: 50px !important;
-      margin-left: 30px;
+      font-size: 1.8rem;
+      gap: 20px !important;
+      margin-left: 20px;
     }
     .sidebar .sidebar-header button {
       width: 7rem !important;  
@@ -1057,9 +1057,7 @@
     .logo-wrapper {
       width: 400px; height: 400px;
     }
-    .icon-box img {
-      width: 300px;
-    }
+    .icon-box { width: 300px; height: 300px; }
     .orbit-icon {
       width: 100px;
       height: 100px;

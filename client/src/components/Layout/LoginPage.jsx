@@ -13,7 +13,13 @@ const LoginPage = ({ onLogin }) => {
         <div className="login-visual">
           <div className="visual-content">
             <div className="logo-badge">
-              <img src="./logo.png" alt="Logo" />
+              <video 
+                src="./logo.mp4" 
+                autoPlay 
+                loop 
+                muted 
+                playsInline
+              />
             </div>
             <h1>EZ Dashboard</h1>
             <p>

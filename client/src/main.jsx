@@ -22,8 +22,8 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 const bootstrap = async () => {
   try {
     // 2. ดึง Config จาก Server
-    const response = await fetch(`/api/auth-config`);
-    // const response = await fetch(`${BASE_URL}/api/auth-config`);
+    // const response = await fetch(`/api/auth-config`);
+    const response = await fetch(`${BASE_URL}/api/auth-config`);
     
     if (!response.ok) throw new Error("โหลด Config ไม่สำเร็จ");
     

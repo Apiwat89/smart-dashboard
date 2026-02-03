@@ -21,8 +21,14 @@ const Sidebar = ({
       {/* Header */}
       <div className="sidebar-header">
         <div className="logo">
-          <img src="./logo.png" alt="Logo" />
-          <div>EZ Summary</div>
+          <video 
+              src="./logo.mp4" 
+              autoPlay 
+              loop 
+              muted 
+              playsInline 
+            />
+          <div>EZ Dashboard</div>
         </div>
         <button onClick={toggle}>
           <Menu size={24} />
