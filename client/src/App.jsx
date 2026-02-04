@@ -221,43 +221,60 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                         if (isCurrentEffect) handleAiSpeak(cached.summary);
                     }, 500);
 
-                    // 📡 1. Log Summary (แบบเต็ม)
+                    // 📡 1. Log Summary (อันนี้ถูกแล้ว)
                     dashboardService.logCacheHit({
-                        reqId: cached.reqId, 
+                        reqId: cached.reqId,
                         pageId: activePageId,
-                        savedTokens: cached.tokenUsage || 0,
-                        savedTime: cached.originalTime || 0,
-                        lang: lang,
-                        action: 'summarize_view',      // ✨ ระบุ Action เดิม
-                        input: cached.rawData,         // ✨ ระบุข้อมูล Input เดิม
-                        output: cached.summary         // ✨ ระบุคำตอบ AI เดิม
+                        savedTokens: cached.summaryUsage?.total,
+                        savedTime: cached.originalTime || 0, // ✅ มีเวลา
+                        lang: lang, // หรือ lang
+                        action: 'summarize_view',
+                        input: cached.summaryPrompt, 
+                        output: cached.summary,
+                        inputToken: cached.summaryUsage?.input,
+                        outputToken: cached.summaryUsage?.output,
+                        totalToken: cached.summaryUsage?.total
                     });
 
-                    // 📡 2. Log Chat Suggestions
+                    // 📡 2. Log Chat Suggestions (แก้เวลาตรงนี้)
                     if (cached.suggestionsReqId) {
                         dashboardService.logCacheHit({
                             reqId: cached.suggestionsReqId,
                             pageId: activePageId,
-                            savedTokens: cached.suggestionsTokenUsage || 0,
-                            savedTime: 0,
-                            lang: lang,
-                            action: 'chat_ask',        // ✨
-                            input: "Suggest 10 short important questions...", 
-                            output: cached.suggestions.join('\n') // ✨ แปลง Array กลับเป็น Text
+                            savedTokens: cached.suggestionsUsage?.total,
+                            
+                            // ⭐ แก้จาก 0 เป็น cached.originalTime (เพราะมันทำงานพร้อมกัน ประหยัดเวลาเท่ากัน)
+                            savedTime: cached.originalTime || 0, 
+                            
+                            lang: lang, // หรือ lang
+                            action: 'chat_ask',
+                            input: cached.suggestionsPrompt, 
+                            output: cached.suggestions.join('\n'),
+                            inputToken: cached.suggestionsUsage?.input,
+                            outputToken: cached.suggestionsUsage?.output,
+                            totalToken: cached.suggestionsUsage?.total
                         });
                     }
 
-                    // 📡 3. Log Ticker
+                    // 📡 3. Log Ticker (แก้เวลาตรงนี้)
                     if (cached.tickerReqId) {
+                        const prefix = cached.tickerType === 'alert' ? "ALERT: " : "INFO: ";
+                        const originalOutput = prefix + cached.tickerText;
                         dashboardService.logCacheHit({
                             reqId: cached.tickerReqId,
                             pageId: activePageId,
-                            savedTokens: cached.tickerTokenUsage || 0,
-                            savedTime: 0,
-                            lang: lang,
-                            action: 'generate_ticker', // ✨
-                            input: cached.rawData,
-                            output: cached.tickerText  // ✨
+                            savedTokens: cached.tickerUsage?.total,
+                            
+                            // ⭐ แก้จาก 0 เป็น cached.originalTime
+                            savedTime: cached.originalTime || 0,
+                            
+                            lang: lang, // หรือ lang
+                            action: 'generate_ticker',
+                            input: cached.tickerPrompt,
+                            output: originalOutput,
+                            inputToken: cached.tickerUsage?.input,
+                            outputToken: cached.tickerUsage?.output,
+                            totalToken: cached.tickerUsage?.total
                         });
                     }
                 }
@@ -297,18 +314,33 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                     tickerType: isAlert ? 'alert' : 'info',
                     rawData: currentReportData,
                     
-                    // Main Summary Log Info
+                    // 1. Summary Info
                     reqId: summaryRes.id,
-                    tokenUsage: summaryRes.usage?.total_tokens || 0,
+                    summaryUsage: {
+                        input: summaryRes.usage?.input_tokens || 0,      // ขาเข้า
+                        output: summaryRes.usage?.output_tokens || 0, // ขาออก
+                        total: summaryRes.usage?.total_tokens || 0        // รวม
+                    },
                     originalTime: duration,
+                    summaryPrompt: summaryRes.input, // ⭐ เก็บ Prompt ตัวเต็มไว้
 
-                    // Chat Suggestions Log Info (เพิ่มใหม่ ✨)
+                    // 2. Suggestions Info
                     suggestionsReqId: suggestRes.id,
-                    suggestionsTokenUsage: suggestRes.usage?.total_tokens || 0,
+                    suggestionsUsage: {
+                        input: suggestRes.usage?.input_tokens || 0,      // ขาเข้า
+                        output: suggestRes.usage?.output_tokens || 0,    // ขาออก
+                        total: suggestRes.usage?.total_tokens || 0       // รวม
+                    },
+                    suggestionsPrompt: suggestRes.input, // ⭐ เก็บ Prompt ตัวเต็มไว้
 
-                    // Ticker Log Info (เพิ่มใหม่ ✨)
+                    // 3. Ticker Info
                     tickerReqId: tickerRes.id,
-                    tickerTokenUsage: tickerRes.usage?.total_tokens || 0
+                    tickerUsage: {
+                        input: tickerRes.usage?.input_tokens || 0,      // ขาเข้า
+                        output: tickerRes.usage?.output_tokens || 0, // ขาออก
+                        total: tickerRes.usage?.total_tokens || 0        // รวม
+                    },
+                    tickerPrompt: tickerRes.input // ⭐ เก็บ Prompt ตัวเต็มไว้
                 };
 
                 if (isCurrentEffect) {
@@ -450,7 +482,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                 chartTitle, 
                 langRef.current, 
                 token, 
-                activePageId // 👈 เติมตรงนี้ครับ
+                activePageId, // 👈 เติมตรงนี้ครับ
             );
               
               // 2. เช็ค: ถ้าเปลี่ยนภาษาแล้ว ให้หยุด
@@ -599,43 +631,60 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
             
             speechTimeoutRef.current = setTimeout(() => handleAiSpeak(cached.summary), 500);
 
-            // 📡 1. Log Summary (แบบเต็ม)
+            // 📡 1. Log Summary (อันนี้ถูกแล้ว)
             dashboardService.logCacheHit({
                 reqId: cached.reqId,
                 pageId: activePageId,
-                savedTokens: cached.tokenUsage || 0,
-                savedTime: cached.originalTime || 0,
-                lang: currentLang,
-                action: 'summarize_view',      // ✨
-                input: cached.rawData,         // ✨
-                output: cached.summary         // ✨
+                savedTokens: cached.summaryUsage?.total,
+                savedTime: cached.originalTime || 0, // ✅ มีเวลา
+                lang: currentLang, // หรือ lang
+                action: 'summarize_view',
+                input: cached.summaryPrompt, 
+                output: cached.summary,
+                inputToken: cached.summaryUsage?.input,
+                outputToken: cached.summaryUsage?.output,
+                totalToken: cached.summaryUsage?.total
             });
 
-            // 📡 2. Log Chat Suggestions
+            // 📡 2. Log Chat Suggestions (แก้เวลาตรงนี้)
             if (cached.suggestionsReqId) {
                 dashboardService.logCacheHit({
                     reqId: cached.suggestionsReqId,
                     pageId: activePageId,
-                    savedTokens: cached.suggestionsTokenUsage || 0,
-                    savedTime: 0, 
-                    lang: currentLang,
-                    action: 'chat_ask',        // ✨
-                    input: "Suggest 10 short important questions...",
-                    output: cached.suggestions.join('\n')
+                    savedTokens: cached.suggestionsUsage?.total,
+                    
+                    // ⭐ แก้จาก 0 เป็น cached.originalTime (เพราะมันทำงานพร้อมกัน ประหยัดเวลาเท่ากัน)
+                    savedTime: cached.originalTime || 0, 
+                    
+                    lang: currentLang, // หรือ lang
+                    action: 'chat_ask',
+                    input: cached.suggestionsPrompt, 
+                    output: cached.suggestions.join('\n'),
+                    inputToken: cached.suggestionsUsage?.input,
+                    outputToken: cached.suggestionsUsage?.output,
+                    totalToken: cached.suggestionsUsage?.total
                 });
             }
 
-            // 📡 3. Log Ticker
+            // 📡 3. Log Ticker (แก้เวลาตรงนี้)
             if (cached.tickerReqId) {
+                const prefix = cached.tickerType === 'alert' ? "ALERT: " : "INFO: ";
+                const originalOutput = prefix + cached.tickerText;
                 dashboardService.logCacheHit({
                     reqId: cached.tickerReqId,
                     pageId: activePageId,
-                    savedTokens: cached.tickerTokenUsage || 0,
-                    savedTime: 0,
-                    lang: currentLang,
-                    action: 'generate_ticker', // ✨
-                    input: cached.rawData,
-                    output: cached.tickerText
+                    savedTokens: cached.tickerUsage?.total,
+                    
+                    // ⭐ แก้จาก 0 เป็น cached.originalTime
+                    savedTime: cached.originalTime || 0,
+                    
+                    lang: currentLang, // หรือ lang
+                    action: 'generate_ticker',
+                    input: cached.tickerPrompt,
+                    output: originalOutput,
+                    inputToken: cached.tickerUsage?.input,
+                    outputToken: cached.tickerUsage?.output,
+                    totalToken: cached.tickerUsage?.total
                 });
             }
 
@@ -700,28 +749,40 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
             const isAlert = tickerRes?.message?.toUpperCase().startsWith("ALERT:");
             const finalTickerText = tickerRes?.message?.replace(/^(ALERT:|INFO:)/i, "").trim() || "";
 
-            // 🔴 แก้ไขจุดนี้: เก็บข้อมูลลง Cache ให้ครบ 3 ส่วน
             dashboardCache[cacheKey] = {
-                // ส่วนเนื้อหา (Content)
                 summary: summaryRes.message,
                 suggestions: finalQuestions,
                 tickerText: finalTickerText,
                 tickerType: isAlert ? 'alert' : 'info',
-                rawData: finalPayload,
-                lastUpdate: formattedDate,
+                rawData: currentReportData,
                 
-                // 1. ข้อมูล Log ของ Summary (พระเอก)
+                // 1. Summary Info
                 reqId: summaryRes.id,
-                tokenUsage: summaryRes.usage?.total_tokens || 0,
+                summaryUsage: {
+                    input: summaryRes.usage?.input_tokens || 0,      // ขาเข้า
+                    output: summaryRes.usage?.output_tokens || 0, // ขาออก
+                    total: summaryRes.usage?.total_tokens || 0        // รวม
+                },
                 originalTime: duration,
+                summaryPrompt: summaryRes.input, // ⭐ เก็บ Prompt ตัวเต็มไว้
 
-                // 2. ข้อมูล Log ของ Chat Suggestions (ตัวประกอบ 1) -- ต้องเพิ่มตรงนี้!
+                // 2. Suggestions Info
                 suggestionsReqId: suggestRes.id,
-                suggestionsTokenUsage: suggestRes.usage?.total_tokens || 0,
+                suggestionsUsage: {
+                    input: suggestRes.usage?.input_tokens || 0,      // ขาเข้า
+                    output: suggestRes.usage?.output_tokens || 0, // ขาออก
+                    total: suggestRes.usage?.total_tokens || 0        // รวม
+                },
+                suggestionsPrompt: suggestRes.input, // ⭐ เก็บ Prompt ตัวเต็มไว้
 
-                // 3. ข้อมูล Log ของ Ticker (ตัวประกอบ 2) -- ต้องเพิ่มตรงนี้!
+                // 3. Ticker Info
                 tickerReqId: tickerRes.id,
-                tickerTokenUsage: tickerRes.usage?.total_tokens || 0
+                tickerUsage: {
+                    input: tickerRes.usage?.input_tokens || 0,      // ขาเข้า
+                    output: tickerRes.usage?.output_tokens || 0, // ขาออก
+                    total: tickerRes.usage?.total_tokens || 0        // รวม
+                },
+                tickerPrompt: tickerRes.input // ⭐ เก็บ Prompt ตัวเต็มไว้
             };
             
             setSummary(summaryRes.message);

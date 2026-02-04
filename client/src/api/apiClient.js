@@ -5,8 +5,8 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // ตั้งค่า Client Instance
 const client = axios.create({
-  baseURL: `/api`, 
-  // baseURL: `${BASE_URL}/api`, 
+  // baseURL: `/api`, 
+  baseURL: `${BASE_URL}/api`, 
   timeout: 30000, 
   headers: {
     'Content-Type': 'application/json',
@@ -74,7 +74,8 @@ export const dashboardService = {
         message: res.data.message, 
         id: res.data.id, 
         usage: res.data.usage,
-        isError: false 
+        input: res.data.input,
+        isError: false
       };
     } catch (e) {
       return { message: getErrorMsg(lang), isError: true };
@@ -89,6 +90,7 @@ export const dashboardService = {
         message: res.data.message,
         id: res.data.id,
         usage: res.data.usage, 
+        input: res.data.input,
         isError: false 
       };
     } catch (e) {
@@ -104,6 +106,7 @@ export const dashboardService = {
         message: res.data.message,
         id: res.data.id,
         usage: res.data.usage,
+        input: res.data.input,
         isError: false 
       };
     } catch (e) {
@@ -140,7 +143,8 @@ export const dashboardService = {
       return {
         message: res.data.message,
         id: res.data.id,      // รับ ID
-        usage: res.data.usage // รับ Token Usage
+        usage: res.data.usage, // รับ Token Usage
+        input: res.data.input
       };
     } catch (e) {
       return { message: "เชื่อมต่อข้อมูลระบบข่าวขัดข้อง..." };

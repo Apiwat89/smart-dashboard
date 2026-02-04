@@ -43,11 +43,11 @@ const summaryStore = {};
 // --- Endpoints ---
 
 router.post('/log-cache', (req, res) => {
-    // ⭐ รับ action, input, output เพิ่ม
-    const { reqId, pageId, savedTokens, savedTime, lang, action, input, output } = req.body; 
+    // ⭐ เพิ่ม: action, input, output
+    const { pageId, savedTokens, savedTime, lang, action, input, output, inputToken, outputToken, totalToken} = req.body; 
     
     // ส่งต่อให้ Service
-    logCacheHit({ reqId, pageId, savedTokens, savedTime, lang, action, input, output });
+    logCacheHit({ pageId, savedTokens, savedTime, lang, action, input, output, inputToken, outputToken, totalToken});
     
     res.json({ status: 'ok' });
 });
@@ -89,7 +89,7 @@ router.get('/dashboard-data', verifyToken, async (req, res) => {
 
 // 2. AI Summarize View
 router.post('/summarize-view', verifyToken, async (req, res) => {
-    const { visibleCharts, lang, pageId } = req.body; // 👈 รับ pageId เพิ่ม
+    const { visibleCharts, lang, pageId, sessionId } = req.body; // 👈 รับ pageId เพิ่ม
     const langInstruction = getLangInstruction(lang);
 
     // ⭐ ปรับปรุง: ระบุ Role เป็น Male และเน้นคำลงท้าย 'ครับ' ใน Recommendation
@@ -130,14 +130,15 @@ router.post('/summarize-view', verifyToken, async (req, res) => {
         const result = await generateAIResponse(prompt, "You are a helpful Male Data Analyst.", {
             action: 'summarize_view',
             pageId: pageId,
-            lang: lang
+            lang: lang,
         });
 
         // 👇 ส่งกลับทั้ง message, id, usage
         res.json({ 
             message: result.text, 
             id: result.id, 
-            usage: result.usage 
+            usage: result.usage,
+            input: result.input
         });
     } catch (err) {
         console.error("AI Error:", err);
@@ -148,7 +149,7 @@ router.post('/summarize-view', verifyToken, async (req, res) => {
 
 // 3. Character Reaction Endpoint
 router.post('/character-reaction', verifyToken, async (req, res) => {
-    const { pointData, contextData, lang, pageId } = req.body; // 👈 รับ pageId
+    const { pointData, contextData, lang, pageId, sessionId } = req.body; // 👈 รับ pageId
     const langInstruction = getLangInstruction(lang);
     const mascotName = getMascotName(lang); 
 
@@ -200,7 +201,8 @@ router.post('/character-reaction', verifyToken, async (req, res) => {
         res.json({ 
             message: result.text,
             id: result.id,
-            usage: result.usage
+            usage: result.usage,
+            input: result.input
         });
     } catch (err) {
         res.status(500).json({ message: "..." });
@@ -209,7 +211,7 @@ router.post('/character-reaction', verifyToken, async (req, res) => {
 
 // 4. Chat with Somjeed (EZ)
 router.post('/ask-dashboard', verifyToken, async (req, res) => {
-    const { question, allData, lang, pageId } = req.body; // 👈 รับ pageId
+    const { question, allData, lang, pageId, sessionId } = req.body; // 👈 รับ pageId
     const langInstruction = getLangInstruction(lang);
     const mascotName = getMascotName(lang); 
 
@@ -250,7 +252,8 @@ router.post('/ask-dashboard', verifyToken, async (req, res) => {
         res.json({ 
             message: result.text,
             id: result.id,
-            usage: result.usage
+            usage: result.usage,
+            input: result.input
         });
     } catch (err) {
         res.status(500).json({ message: "Error" });
@@ -287,7 +290,7 @@ router.get('/speech-azure', async (req, res) => {
 
 // 6. ticker
 router.post('/generate-ticker', verifyToken, async (req, res) => {
-    const { allData, lang, pageId } = req.body; // 👈 รับ pageId
+    const { allData, lang, pageId, sessionId } = req.body; // 👈 รับ pageId
     const langInstruction = getLangInstruction(lang)
 
     // Ticker ส่วนใหญ่เป็น News Editor ไม่ต้องใส่อารมณ์มาก แต่กำกับภาษาไว้เพื่อความชัวร์
@@ -323,7 +326,8 @@ router.post('/generate-ticker', verifyToken, async (req, res) => {
         res.json({ 
             message: result.text,
             id: result.id,
-            usage: result.usage
+            usage: result.usage,
+            input: result.input
         });
     } catch (err) {
         res.status(500).json({ error: "AI failed" });
