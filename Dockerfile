@@ -45,4 +45,4 @@ ENV PORT=8080
 EXPOSE 8080
 
 # คำสั่งกดปุ่ม Start Server
-CMD ["node", "server/server.js"]
+CMD ["node", "server.js"]
