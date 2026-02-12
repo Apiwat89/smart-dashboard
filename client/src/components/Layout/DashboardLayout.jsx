@@ -16,29 +16,20 @@ const DashboardLayout = ({
   onMenuClick,
   onLogout,
   pageTitle,
-  notifications,
   theme, toggleTheme,
-  // ⭐ รับ props เพิ่ม
   isPlaying, togglePlay, autoPlayCountdown,
-  newsText,      // ⭐ รับข้อความข่าวเข้ามา
-  newsType,       // ⭐ รับประเภทข่าว (alert/info)
-  onCapture, isCapturing,
-  rightPanelWidth,     // ⭐ รับเพิ่ม
-  onResizerMouseDown,  // ⭐ รับเพิ่ม
-  isTimerWaiting,
+  newsText,    
+  newsType,   
+  rightPanelWidth,    
+  onResizerMouseDown, 
   lastUpdated
 }) => {
   return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', overflow: 'hidden' }}>
           <div 
-            /* 🚩 เพิ่มคลาส sidebar-closed เพื่อให้ CSS Media Query ทำงาน */
             className={`app-container ${isSidebarCollapsed ? 'sidebar-closed' : ''}`}
             style={{ 
-              display: 'grid',
-              /* 🚩 ส่งค่าการลากขยายผ่านตัวแปร CSS แทนการล็อค Grid Template */
-              '--dynamic-right-width': `${rightPanelWidth}px`,
-              
-              /* ใช้ตัวแปร CSS แทนตัวเลข 72px/240px เพื่อให้จอ TV ขยายสเกลได้ */
+              display: 'grid', '--dynamic-right-width': `${rightPanelWidth}px`,
               gridTemplateColumns: `var(--current-sidebar-width, ${isSidebarCollapsed ? '72px' : '240px'}) 1fr auto var(--dynamic-right-width)`,
               gridTemplateAreas: '"sidebar header header header" "sidebar main resizer right"',
             }}
@@ -46,25 +37,20 @@ const DashboardLayout = ({
         <Sidebar 
             isCollapsed={isSidebarCollapsed} 
             toggle={toggleSidebar} 
-            menuItems={menuItems} // ⭐ เช็คบรรทัดนี้ว่ามีไหม
+            menuItems={menuItems} 
             activePageId={activePageId}
             onMenuClick={onMenuClick}
             onLogout={onLogout} 
         />
 
-        {/* ⭐ ส่งต่อให้ Header */}
         <Header 
             user={user} 
             title={pageTitle} 
-            notifications={notifications}
             theme={theme}
             toggleTheme={toggleTheme}
-            isPlaying={isPlaying}     // 👈 ส่งไป
-            togglePlay={togglePlay}   // 👈 ส่งไป
-            autoPlayCountdown={autoPlayCountdown}
-            onCapture={onCapture}     // 👈 ส่งต่อ
-            isCapturing={isCapturing} // 👈 ส่งต่อ
-            isTimerWaiting={isTimerWaiting}
+            isPlaying={isPlaying}     
+            togglePlay={togglePlay}   
+            autoPlayCountdown={autoPlayCountdown}    
             lastUpdated={lastUpdated}
         />
 

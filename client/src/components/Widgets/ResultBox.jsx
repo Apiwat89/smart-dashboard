@@ -5,8 +5,8 @@ import { dashboardService } from '../../api/apiClient';
 
 const ResultBox = ({ text, isLoading, onRefresh }) => {
   const [showQR, setShowQR] = useState(false);
-  const [qrUrl, setQrUrl] = useState(""); // ตัวแปรเก็บ Link ที่ได้จาก Server
-  const [isGenerating, setIsGenerating] = useState(false); // สถานะตอนกำลังคุยกับ Server
+  const [qrUrl, setQrUrl] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false); 
 
   // Helper: Format Bold Text (**...**)
   const formatText = (inputText) => {
@@ -90,17 +90,10 @@ const ResultBox = ({ text, isLoading, onRefresh }) => {
                 
                 <div className="qr-wrapper" style={{ 
                         width: "100%", 
-                        
-                        // 🔥 สูตรลับ: กำหนดความกว้างเป็น 35% ของความสูงจอ (35vh)
-                        // ถ้าจอทีวี (สูง 1080px) -> QR จะกว้างประมาณ 380px (ใหญ่สะใจ)
-                        // ถ้าจอคอม (สูง 768px) -> QR จะกว้างประมาณ 270px (กำลังดี)
                         maxWidth: "35vh",  
-                        
                         margin: "0 auto" 
                     }}>
-                      {/* ✅ ใช้ qrUrl ที่เป็น Link สั้นๆ จาก Server 
-                        QR Code จะโล่งสะอาดตา สแกนง่ายมาก
-                      */}
+                      
                     <QRCode 
                         value={qrUrl} 
                         size={256} 

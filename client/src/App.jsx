@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import './App.css';
 import { Dashboard, models } from 'powerbi-client';
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
@@ -9,41 +9,82 @@ import ResultBox from './components/Widgets/ResultBox';
 import LoginPage from './components/Layout/LoginPage';
 import { dashboardService } from './api/apiClient';
 
+// --- Global Variables & Constants ---
+
+// ตัวแปรเก็บ Cache ระดับ Global (ไม่หายเมื่อ Re-render)
 const dashboardCache = {};
 
+// รายการเมนูหลักของระบบ
+const APP_MENU = [
+    // แต่ละหน้าจะต้องแมปกับ Page Name ใน Power BI ด้วย จะอยู่หลัง key ของ reports เช่น https://app.powerbi.com/groups/me/reports/me/**********/
+    { 
+        id: "one", 
+        title: "สถิติจังหวัด", 
+        headerTitle: "สถิติน้ำท่วมในแต่ละจังหวัด", 
+        icon: "LayoutDashboard", 
+        pageName: "798ca254819667030432" 
+    },
+    { 
+        id: "two", 
+        title: "สถิติรายเดือน", 
+        headerTitle: "สถิติน้ำท่วมของเดือนที่เกิดเหตุ", 
+        icon: "Map", 
+        pageName: "5b3cc48690823dd3da6d" 
+    },
+    { 
+        id: "three", 
+        title: "ความเสียหาย", 
+        headerTitle: "ความเสียหายในแต่ละด้าน", 
+        icon: "BarChart", 
+        pageName: "e93c812d89901cad35c2" 
+    }
+];
+
 function App({ loginRequest, powerBIRequest, TokenID }) {
-    // --- State & Hooks ---
-    const [tickerText, setTickerText] = useState("กำลังเชื่อมต่อ Power BI...");
-    const [pbiLastUpdate, setPbiLastUpdate] = useState("อัพเดตล่าสุด...");
-    const [tickerType, setTickerType] = useState("info");
-    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+    
+    // --- 1. Authentication & User State ---
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
-    const [isAppReady, setAppReady] = useState(false);
+    const activeAccount = accounts[0];
+    const [isUnauthorized, setIsUnauthorized] = useState(false);
     const [userAvatar, setUserAvatar] = useState(null);
+    const [ClientID, setClientID] = useState(null);
+
+    // --- 2. UI & Layout State ---
+    const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+    const [isAppReady, setAppReady] = useState(false);
+    const [showStartButton, setShowStartButton] = useState(false);
+    const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [rightPanelWidth, setRightPanelWidth] = useState(window.innerWidth > 2500 ? 1100 : 380);
     const isResizing = useRef(false);
-    const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
-    const [menuList, setMenuList] = useState([]);
-    const [activePageId, setActivePageId] = useState("page_overview");
+
+    // --- 3. Dashboard Control State ---
+    const [activePageId, setActivePageId] = useState(APP_MENU[0].id);
+    const [pbiLastUpdate, setPbiLastUpdate] = useState("อัพเดตล่าสุด...");
+    const [currentReportData, setCurrentReportData] = useState(null);
+    
+    // --- 4. Player & Timer State ---
     const [isPlaying, setIsPlaying] = useState(false);
-    const [autoPlayCountdown, setAutoPlayCountdown] = useState(600);
     const TIMER_DURATION = 600; 
+    const [autoPlayCountdown, setAutoPlayCountdown] = useState(600);
+    const [countdown, setCountdown] = useState(0);
+
+    // --- 5. AI & Data State ---
     const [lang, setLang] = useState('TH');
     const [aiState, setAiState] = useState({ status: 'idle', message: '', isVisible: false });
     const [isProcessing, setProcessing] = useState(false);
-    const [countdown, setCountdown] = useState(0);
-    const [question, setQuestion] = useState("");
-    const [suggestedQuestions, setSuggestedQuestions] = useState([]);
-    const [currentReportData, setCurrentReportData] = useState(null);
     const [summary, setSummary] = useState("รอข้อมูลจาก Power BI...");
     const [isSummaryLoading, setSummaryLoading] = useState(false);
-    const [notifications, setNotifications] = useState([]);
-    const [isUnauthorized, setIsUnauthorized] = useState(false);
-    const [showStartButton, setShowStartButton] = useState(false);
-    const [ClientID, setClientID] = useState(null);
+    
+    // Chat & Questions
+    const [question, setQuestion] = useState("");
+    const [suggestedQuestions, setSuggestedQuestions] = useState([]);
+    
+    // Ticker News
+    const [tickerText, setTickerText] = useState("กำลังเชื่อมต่อ Power BI...");
+    const [tickerType, setTickerType] = useState("info");
 
-    // Refs
+    // --- 6. Refs ---
     const scrollRef = useRef(null); 
     const talkTimerRef = useRef(null);
     const powerBIReportRef = useRef(null);    
@@ -52,20 +93,414 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     const speechTimeoutRef = useRef(null);
     const lastInteractionRef = useRef(0);
 
-    const isAiBusy = aiState.status !== 'idle' || isProcessing;
-
-    // --- Logic ---
-    const activeAccount = accounts[0];
+    // คำนวณข้อมูลผู้ใช้งาน (Memoized)
     const userInfo = useMemo(() => {
         if (!activeAccount) return { name: "Guest", displayRole: "Guest" };
         const name = activeAccount.name || "User";
-        const rolesFromAzure = activeAccount.idTokenClaims?.roles || [];
-        let finalDisplayRole = rolesFromAzure.length > 0 ? rolesFromAzure.join(" | ") : "General User";
-        return { name: name, displayRole: finalDisplayRole };
+        const roles = activeAccount.idTokenClaims?.roles || [];
+        return { name: name, displayRole: roles.length > 0 ? roles.join(" | ") : "General User" };
     }, [activeAccount]);
 
-    // --- Effects ---
+    const isAiBusy = aiState.status !== 'idle' || isProcessing;
+    const currentPage = APP_MENU.find(p => p.id === activePageId);
 
+    // --- Helper Functions ---
+
+    // ฟังก์ชันขอ Token จาก Azure AD
+    const getToken = async () => {
+        if (!activeAccount) return null;
+        try {
+            const response = await instance.acquireTokenSilent({ 
+                account: activeAccount, 
+                scopes: [`${TokenID}/.default`] 
+            });
+            return response.accessToken;
+        } catch (error) { return null; }
+    };
+
+    // ฟังก์ชันหยุดเสียงพูดและ Timer ทั้งหมด
+    const stopAllVoices = useCallback(() => {
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+        if (talkTimerRef.current) {
+            clearTimeout(talkTimerRef.current);
+            talkTimerRef.current = null;
+        }
+        if (speechTimeoutRef.current) {
+            clearTimeout(speechTimeoutRef.current);
+            speechTimeoutRef.current = null;
+        }
+    }, []);
+
+    // ฟังก์ชันจัดการการพูดของ AI
+    const handleAiSpeak = (text, isError = false) => {
+        stopAllVoices(); 
+        if (isError) {
+            setAiState({ status: 'error', message: text, isVisible: true });
+            return;
+        }
+        setAiState({ status: 'talking', message: text, isVisible: true });
+    };
+
+    // ฟังก์ชันบันทึก Log การใช้งาน Cache ไปยัง Backend
+    const logUsageToBackend = async (cachedData, actionType) => {
+        
+        const getTokens = (usage) => {
+            if (!usage) return { input: 0, output: 0, total: 0 };
+            return {
+                input: usage.prompt_tokens || usage.input_tokens || 0,
+                output: usage.completion_tokens || usage.output_tokens || 0,
+                total: usage.total_tokens || 0
+            };
+        };
+
+        let payload = {
+            pageId: activePageId,
+            lang: lang,
+            action: actionType,
+            processing: cachedData.originalTime || 0, 
+            savedTime: cachedData.originalTime || 0,
+        };
+
+        if (actionType === 'summarize_view') {
+            const t = getTokens(cachedData.summaryUsage); 
+            payload = { 
+                ...payload, 
+                reqId: cachedData.reqId,
+                input: cachedData.summaryPrompt, 
+                output: cachedData.summary, 
+                inputToken: t.input, 
+                outputToken: t.output,
+                totalToken: t.total, 
+                savedTokens: t.total 
+            };
+        } else if (actionType === 'generate_questions') {
+            const t = getTokens(cachedData.suggestionsUsage); 
+            payload = { 
+                ...payload, 
+                reqId: cachedData.suggestionsReqId,
+                input: cachedData.suggestionsPrompt, 
+                output: cachedData.suggestions.join('\n'), 
+                inputToken: t.input, 
+                outputToken: t.output,
+                totalToken: t.total, 
+                savedTokens: t.total
+            };
+        } else if (actionType === 'generate_ticker') {
+            const t = getTokens(cachedData.tickerUsage); 
+            const prefix = cachedData.tickerType === 'alert' ? "ALERT: " : "INFO: ";
+            payload = { 
+                ...payload, 
+                reqId: cachedData.tickerReqId,
+                input: cachedData.tickerPrompt, 
+                output: prefix + cachedData.tickerText, 
+                inputToken: t.input, 
+                outputToken: t.output,
+                totalToken: t.total, 
+                savedTokens: t.total
+            };
+        }
+
+        await dashboardService.logCacheHit(payload);
+    };
+
+    // --- Event Handlers (Logic) ---
+
+    // จัดการการย่อขยาย Sidebar
+    const startResizing = () => {
+        isResizing.current = true;
+        document.addEventListener("mousemove", handleMouseMove);
+        document.addEventListener("mouseup", stopResizing);
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+    };
+
+    const handleMouseMove = (e) => {
+        if (!isResizing.current) return;
+        const newWidth = window.innerWidth - e.clientX;
+        const maxLimit = window.innerWidth > 2500 ? 1500 : 600; 
+        if (newWidth > 200 && newWidth < maxLimit) {
+            setRightPanelWidth(newWidth);
+        }
+    };
+
+    const stopResizing = () => {
+        isResizing.current = false;
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", stopResizing);
+        document.body.style.cursor = "default";
+        document.body.style.userSelect = "auto";
+    };
+
+    // จัดการเมื่อกดถาม Chat AI
+    const triggerAiChat = async (textInput) => {
+        if(!textInput || !textInput.trim()) return;
+        const startLang = langRef.current;
+        stopAllVoices();
+        
+        setSummaryLoading(true); 
+        setSummary(""); 
+        setProcessing(true);
+        setAiState({ status: 'thinking', message: '', isVisible: true });
+
+        try {
+            const token = await getToken(); 
+            const res = await dashboardService.chat(textInput, currentReportData || "", langRef.current, token, activePageId); 
+
+            if (startLang !== langRef.current) return;
+
+            setSummary(res.message); 
+            setProcessing(false);       
+            setSummaryLoading(false);
+
+            speechTimeoutRef.current = setTimeout(() => {
+                if (startLang === langRef.current) handleAiSpeak(res.message);
+            }, 300);
+        } catch (error) { 
+            setSummary("เกิดข้อผิดพลาด");
+            handleAiSpeak("ระบบขัดข้อง", true); 
+        } finally { 
+            setProcessing(false); 
+            setSummaryLoading(false); 
+        }
+    };
+
+    // จัดการเมื่อคลิกที่จุดข้อมูลใน Power BI
+    const handlePowerBIClick = async (event) => {
+        lastInteractionRef.current = Date.now();
+        if (event.detail?.dataPoints?.length > 0 && !isProcessing) {
+            const startLang = langRef.current;
+            const dp = event.detail.dataPoints[0];
+            const category = dp.identity[0]?.equals || "Unknown";
+            const value = dp.values[0]?.formattedValue || "N/A";
+            const chartTitle = event.detail.visual.title || "กราฟ"; 
+
+            setSummaryLoading(true);
+            setSummary(""); 
+            setProcessing(true);
+            stopAllVoices();
+            setAiState({ status: 'thinking', message: '', isVisible: true });
+
+            try {
+                const token = await getToken(); 
+                const res = await dashboardService.getReaction(
+                    { name: category, uv: value }, chartTitle, langRef.current, token, activePageId
+                );
+                
+                if (startLang !== langRef.current) return;
+
+                setSummary(res.message); 
+                speechTimeoutRef.current = setTimeout(() => {
+                    if (startLang === langRef.current) handleAiSpeak(res.message);
+                }, 300);
+
+            } catch (error) {
+                if (startLang === langRef.current) {
+                    setSummary("ไม่สามารถวิเคราะห์จุดที่เลือกได้");
+                    handleAiSpeak("ขออภัยครับ ข้อมูลส่วนนี้ขัดข้อง", true);
+                }
+            } finally {
+                if (startLang === langRef.current) {
+                    setProcessing(false);
+                    setSummaryLoading(false);
+                }
+            }
+        }
+    };
+
+    // จัดการเมื่อคลิกที่ตัว Visual (กราฟ) เพื่ออ่านข้อมูลทั้งกราฟ
+    const handleVisualClick = async (event) => {
+        lastInteractionRef.current = Date.now();
+        const visualDescriptor = event.detail.visual;
+        
+        if (isProcessing) return;
+
+        // กรอง Visual ที่ไม่ต้องการอ่าน
+        const ignoreTypes = ['image', 'textbox', 'basicShape', 'shape', 'actionButton'];
+        if (ignoreTypes.includes(visualDescriptor.type)) return;
+
+        const startLang = langRef.current;
+
+        try {
+            setSummaryLoading(true);
+            setSummary("");
+            setProcessing(true);
+            setAiState({ status: 'thinking', message: 'Analyzing chart data...', isVisible: true });
+    
+            const report = powerBIReportRef.current;
+            const pages = await report.getPages();
+            const activePage = pages.find(p => p.isActive);
+            const visuals = await activePage.getVisuals();
+            const targetVisual = visuals.find(v => v.name === visualDescriptor.name);
+    
+            if (!targetVisual) throw new Error("Visual not found");
+    
+            let result;
+            try {
+                result = await targetVisual.exportData(models.ExportDataType.Summarized);
+            } catch (err) {
+                result = await targetVisual.exportData(models.ExportDataType.Underlying, { rows: 50 });
+            }
+    
+            const token = await getToken(); 
+            const res = await dashboardService.getReaction(null, result.data, langRef.current, token, activePageId);
+            
+            if (startLang !== langRef.current) return;
+
+            setSummary(res.message);
+            setProcessing(false);
+            setSummaryLoading(false);
+
+            speechTimeoutRef.current = setTimeout(() => {
+                if (startLang === langRef.current) handleAiSpeak(res.message);
+            }, 300);
+    
+        } catch (error) {
+            if (error.message?.includes("Invalid export")) {
+                 setSummary("กราฟชนิดนี้ไม่รองรับการอ่านข้อมูลครับ");
+            } else {
+                 setSummary("ไม่สามารถอ่านข้อมูลจากกราฟนี้ได้ครับ");
+            }
+        } finally {
+            setProcessing(false);
+            setSummaryLoading(false);
+        }
+    };
+
+    // ฟังก์ชันหลัก: ดึงข้อมูลและสร้างสรุปหน้า Dashboard
+    const handleReportRendered = async () => {
+        // ป้องกันการทำงานซ้ำซ้อนถ้าผู้ใช้เพิ่งคลิกไป
+        if (Date.now() - lastInteractionRef.current < 3000) return;
+        
+        stopAllVoices();
+        if (!powerBIReportRef.current || isProcessing) return;
+
+        const currentLang = langRef.current;
+        const cacheKey = `${activePageId}_${currentLang}`;
+        
+        // 1. ตรวจสอบ Cache
+        if (dashboardCache[cacheKey]) {
+            const cached = dashboardCache[cacheKey];
+            setSummary(cached.summary);
+            setSuggestedQuestions(cached.suggestions);
+            setTickerText(cached.tickerText);
+            setTickerType(cached.tickerType);
+            setCurrentReportData(cached.rawData);
+            setPbiLastUpdate(cached.lastUpdate || ""); 
+            summarizedPageRef.current = activePageId;
+            
+            speechTimeoutRef.current = setTimeout(() => handleAiSpeak(cached.summary), 500);
+
+            // ส่ง Log การใช้ Cache ไป Backend
+            await logUsageToBackend(cached, 'summarize_view');
+            if (cached.suggestionsReqId) await logUsageToBackend(cached, 'generate_questions');
+            if (cached.tickerReqId) await logUsageToBackend(cached, 'generate_ticker');
+            
+            return;
+        }
+
+        // 2. ถ้าไม่มี Cache: ดึงข้อมูลใหม่
+        summarizedPageRef.current = activePageId; 
+        setAiState(prev => ({ ...prev, status: 'thinking', message: '' }));
+        setSummaryLoading(true);
+
+        try {
+            const report = powerBIReportRef.current;
+            const pages = await report.getPages();
+            const pbiPage = pages.find(p => p.isActive);
+            const visuals = await pbiPage.getVisuals();
+            const activePageObj = APP_MENU.find(p => p.id === activePageId);
+
+            // ดึงเวลาอัพเดต
+            let formattedDate = "";
+            const timeVisual = visuals.find(v => v.title === 'System_Time_Stamp');
+            if (timeVisual) {
+                try {
+                    const timeResult = await timeVisual.exportData(models.ExportDataType.Summarized);
+                    formattedDate = timeResult.data.replace(/^[^\d]+/, "").replace(/\n/g, "").trim();
+                } catch (e) {}
+            }
+            if (!formattedDate) {
+                const now = new Date();
+                formattedDate = now.toLocaleDateString('th-TH') + " " + now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+            }
+            setPbiLastUpdate(formattedDate);
+
+            // รวบรวมข้อมูลจากกราฟทั้งหมด
+            let allDataText = `ข้อมูลหน้า ${activePageObj?.title || 'ปัจจุบัน'} (อัปเดตเมื่อ: ${formattedDate}):\n`;
+            for (const visual of visuals) {
+                if (visual.title === 'System_Time_Stamp') continue;
+                if (visual.title && visual.type !== 'image' && visual.type !== 'textbox') {
+                    try {
+                        const result = await visual.exportData(models.ExportDataType.Summarized);
+                        const visualData = result.data.length > 5000 
+                            ? result.data.substring(0, 5000) + "... (ตัดข้อมูลส่วนเกิน)" 
+                            : result.data;
+                        allDataText += `\n- ${visual.title}:\n${visualData}\n`;
+                    } catch (e) {}
+                }
+            }
+
+            const finalPayload = allDataText.substring(0, 25000);
+            setCurrentReportData(finalPayload);
+            
+            const token = await getToken(); 
+            const startTime = Date.now();
+
+            // เรียก API พร้อมกัน 3 ตัว
+            const [summaryRes, suggestRes, tickerRes] = await Promise.all([
+                dashboardService.getSummary(finalPayload, currentLang, token, activePageId),
+                dashboardService.chat("Suggest 10 questions...", finalPayload, currentLang, token, activePageId),
+                dashboardService.getNewsTicker(finalPayload, currentLang, token, activePageId)
+            ]);
+
+            const duration = Date.now() - startTime;
+            const finalQuestions = suggestRes.message.split('\n').filter(q => q.length > 5).slice(0, 10);
+            const isAlert = tickerRes?.message?.toUpperCase().startsWith("ALERT:");
+            const finalTickerText = tickerRes?.message?.replace(/^(ALERT:|INFO:)/i, "").trim() || "";
+
+            // บันทึกลง Cache
+            dashboardCache[cacheKey] = {
+                summary: summaryRes.message,
+                suggestions: finalQuestions,
+                tickerText: finalTickerText,
+                tickerType: isAlert ? 'alert' : 'info',
+                rawData: currentReportData,
+                
+                // เก็บข้อมูล Usage สำหรับ Log
+                reqId: summaryRes.id,
+                summaryUsage: summaryRes.usage,
+                originalTime: duration,
+                summaryPrompt: summaryRes.input,
+
+                suggestionsReqId: suggestRes.id,
+                suggestionsUsage: suggestRes.usage,
+                suggestionsPrompt: suggestRes.input,
+
+                tickerReqId: tickerRes.id,
+                tickerUsage: tickerRes.usage,
+                tickerPrompt: tickerRes.input
+            };
+            
+            setSummary(summaryRes.message);
+            setSuggestedQuestions(finalQuestions);
+            setTickerText(finalTickerText);
+            setTickerType(isAlert ? 'alert' : 'info');
+            
+            speechTimeoutRef.current = setTimeout(() => handleAiSpeak(summaryRes.message), 1000);
+
+        } catch (err) { 
+            summarizedPageRef.current = null;
+            if (err.response?.status === 413) {
+                setSummary("ข้อมูลมีขนาดใหญ่เกินไป ระบบกำลังปรับจูนการดึงข้อมูล...");
+            }
+        } finally { 
+            setSummaryLoading(false); 
+        }
+    };
+
+    // --- Effects (Life Cycle) ---
+
+    // 1. Initial Data Fetching
     useEffect(() => {
         const fetch = async () => {
             const res = await dashboardService.getClientID();
@@ -73,73 +508,21 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
         }; fetch();
     }, []);
 
+    // 2. Check Authorization
     useEffect(() => {
-        if (isAuthenticated & userInfo.displayRole === "General User") {
+        if (isAuthenticated && userInfo.displayRole === "General User") {
             setIsUnauthorized(true);
         }
     }, [isAuthenticated, userInfo]);
 
+    // 3. Theme & Language Ref Update
     useEffect(() => { langRef.current = lang; }, [lang]);
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);
         localStorage.setItem('theme', theme); 
     }, [theme]);
 
-    useEffect(() => {
-        const appMenu = [
-            { 
-            id: "page_overview", 
-            title: "สถิติจังหวัด",             
-            headerTitle: "สถิติน้ำท่วมในแต่ละจังหวัด", 
-            icon: "LayoutDashboard", 
-            pageName: "798ca254819667030432" 
-            },
-            { 
-            id: "page_details", 
-            title: "สถิติรายเดือน",            
-            headerTitle: "สถิติน้ำท่วมของเดือนที่เกิดเหตุ", 
-            icon: "Map", 
-            pageName: "5b3cc48690823dd3da6d" 
-            },
-            { 
-            id: "page_analysis", 
-            title: "ความเสียหาย",              
-            headerTitle: "ความเสียหายในแต่ละด้าน",   
-            icon: "BarChart", 
-            pageName: "e93c812d89901cad35c2" 
-            }
-            // { 
-            // id: "page1", 
-            // title: "Page 1",             
-            // headerTitle: "Page 1", 
-            // icon: "LayoutDashboard", 
-            // pageName: "c15ef30d4a86ca6b320a" 
-            // },
-            // { 
-            // id: "Overview", 
-            // title: "Overview",            
-            // headerTitle: "Overview", 
-            // icon: "Map", 
-            // pageName: "d375384f0184e24da79a" 
-            // },
-            // { 
-            // id: "DeepDive", 
-            // title: "Deep Dive",              
-            // headerTitle: "Deep Dive Analysis",   
-            // icon: "BarChart", 
-            // pageName: "897d3bf4477b8920faa3" 
-            // },
-            // { 
-            // id: "Page2", 
-            // title: "Page 2",              
-            // headerTitle: "Page 2",   
-            // icon: "BarChart", 
-            // pageName: "0c34c73b5de44b6d83fc" 
-            // }
-        ];
-        setMenuList(appMenu);
-    }, []);
-
+    // 4. Auto-Start Timer
     useEffect(() => {
         if (isAuthenticated) {
             const timer = setTimeout(() => { 
@@ -150,53 +533,52 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
         }
     }, [isAuthenticated]);
 
+    // 5. Fetch Profile Photo
     useEffect(() => {
-      const fetchProfilePhoto = async () => {
-        if (!isAuthenticated || !activeAccount) return;
-        try {
-          const tokenResponse = await instance.acquireTokenSilent({ ...loginRequest, account: activeAccount, scopes: ["User.Read"] });
-          const response = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
-            headers: { Authorization: `Bearer ${tokenResponse.accessToken}` }
-          });
-          if (response.ok) {
-            const blob = await response.blob();
-            const url = URL.createObjectURL(blob);
-            setUserAvatar(url);
-          }
-        } catch (error) { console.error("Error fetching profile photo:", error); }
-      };
-      fetchProfilePhoto();
-    }, [isAuthenticated, activeAccount, instance]);
+        const fetchProfilePhoto = async () => {
+            if (!isAuthenticated || !activeAccount) return;
+            try {
+                const tokenResponse = await instance.acquireTokenSilent({ ...loginRequest, account: activeAccount, scopes: ["User.Read"] });
+                const response = await fetch("https://graph.microsoft.com/v1.0/me/photo/$value", {
+                    headers: { Authorization: `Bearer ${tokenResponse.accessToken}` }
+                });
+                if (response.ok) {
+                    const blob = await response.blob();
+                    setUserAvatar(URL.createObjectURL(blob));
+                }
+            } catch (error) { console.error("Error fetching photo", error); }
+        };
+        fetchProfilePhoto();
+    }, [isAuthenticated, activeAccount, instance, loginRequest]);
 
+    // 6. Auto Play Logic
     useEffect(() => {
         let interval;
-        if (isPlaying && menuList.length > 0) {
+        if (isPlaying && APP_MENU.length > 0) {
           if (isAiBusy) {
-              // ถ้ายุ่ง ให้หยุดนับ (Reset เวลา)
               setAutoPlayCountdown(TIMER_DURATION);
           } else {
-              // ถ้าว่าง ให้นับต่อ
               interval = setInterval(() => {
                 setAutoPlayCountdown(prev => (prev <= 0 ? 0 : prev - 1));
               }, 1000);
           }
         }
         return () => clearInterval(interval);
-    }, [isPlaying, menuList, isAiBusy, TIMER_DURATION]);
+    }, [isPlaying, isAiBusy, TIMER_DURATION]);
 
     useEffect(() => {
         if (isPlaying && autoPlayCountdown === 0) {
             stopAllVoices();
             setActivePageId((currentId) => {
-                const currentIndex = menuList.findIndex(item => item.id === currentId);
-                const nextIndex = (currentIndex + 1) % menuList.length;
-                return menuList[nextIndex].id;
+                const currentIndex = APP_MENU.findIndex(item => item.id === currentId);
+                const nextIndex = (currentIndex + 1) % APP_MENU.length;
+                return APP_MENU[nextIndex].id;
             });
             setAutoPlayCountdown(TIMER_DURATION);
         }
-    }, [autoPlayCountdown, isPlaying, menuList, TIMER_DURATION]);
+    }, [autoPlayCountdown, isPlaying, TIMER_DURATION, stopAllVoices]);
 
-    // Effect สำหรับเปลี่ยนภาษา: ทำงานเมื่อค่า lang เปลี่ยน โดยใช้ข้อมูลเดิม
+    // 7. Handle Language Change (Re-fetch AI)
     useEffect(() => {
         let isCurrentEffect = true;
         stopAllVoices();
@@ -204,84 +586,29 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
 
         const refreshAIContentOnLangChange = async () => {
             if (!currentReportData) return;
-
             const cacheKey = `${activePageId}_${lang}`;
             
-            // ✅ CASE 1: Cache Hit
+            // Check Cache
             if (dashboardCache[cacheKey]) {
                 const cached = dashboardCache[cacheKey];
-                
                 if (isCurrentEffect) {
                     setSummary(cached.summary);
                     setSuggestedQuestions(cached.suggestions);
                     setTickerText(cached.tickerText);
                     setTickerType(cached.tickerType);
-                    
                     speechTimeoutRef.current = setTimeout(() => {
                         if (isCurrentEffect) handleAiSpeak(cached.summary);
                     }, 500);
-
-                    // 📡 1. Log Summary (อันนี้ถูกแล้ว)
-                    dashboardService.logCacheHit({
-                        reqId: cached.reqId,
-                        pageId: activePageId,
-                        savedTokens: cached.summaryUsage?.total,
-                        savedTime: cached.originalTime || 0, // ✅ มีเวลา
-                        lang: lang, // หรือ lang
-                        action: 'summarize_view',
-                        input: cached.summaryPrompt, 
-                        output: cached.summary,
-                        inputToken: cached.summaryUsage?.input,
-                        outputToken: cached.summaryUsage?.output,
-                        totalToken: cached.summaryUsage?.total
-                    });
-
-                    // 📡 2. Log Chat Suggestions (แก้เวลาตรงนี้)
-                    if (cached.suggestionsReqId) {
-                        dashboardService.logCacheHit({
-                            reqId: cached.suggestionsReqId,
-                            pageId: activePageId,
-                            savedTokens: cached.suggestionsUsage?.total,
-                            
-                            // ⭐ แก้จาก 0 เป็น cached.originalTime (เพราะมันทำงานพร้อมกัน ประหยัดเวลาเท่ากัน)
-                            savedTime: cached.originalTime || 0, 
-                            
-                            lang: lang, // หรือ lang
-                            action: 'chat_ask',
-                            input: cached.suggestionsPrompt, 
-                            output: cached.suggestions.join('\n'),
-                            inputToken: cached.suggestionsUsage?.input,
-                            outputToken: cached.suggestionsUsage?.output,
-                            totalToken: cached.suggestionsUsage?.total
-                        });
-                    }
-
-                    // 📡 3. Log Ticker (แก้เวลาตรงนี้)
-                    if (cached.tickerReqId) {
-                        const prefix = cached.tickerType === 'alert' ? "ALERT: " : "INFO: ";
-                        const originalOutput = prefix + cached.tickerText;
-                        dashboardService.logCacheHit({
-                            reqId: cached.tickerReqId,
-                            pageId: activePageId,
-                            savedTokens: cached.tickerUsage?.total,
-                            
-                            // ⭐ แก้จาก 0 เป็น cached.originalTime
-                            savedTime: cached.originalTime || 0,
-                            
-                            lang: lang, // หรือ lang
-                            action: 'generate_ticker',
-                            input: cached.tickerPrompt,
-                            output: originalOutput,
-                            inputToken: cached.tickerUsage?.input,
-                            outputToken: cached.tickerUsage?.output,
-                            totalToken: cached.tickerUsage?.total
-                        });
-                    }
+                    
+                    // Log Usage
+                    await logUsageToBackend(cached, 'summarize_view');
+                    if (cached.suggestionsReqId) await logUsageToBackend(cached, 'generate_questions');
+                    if (cached.tickerReqId) await logUsageToBackend(cached, 'generate_ticker');
                 }
-                return; 
+                return;
             }
 
-            // ✅ CASE 2: New Request
+            // Fetch New Data
             if (isCurrentEffect) {
                 setSummaryLoading(true);
                 setTickerText("AI กำลังอัปเดตภาษา...");
@@ -293,7 +620,6 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                 if (!isCurrentEffect) return;
 
                 const startTime = Date.now();
-
                 const [summaryRes, suggestRes, tickerRes] = await Promise.all([
                     dashboardService.getSummary(currentReportData, lang, token, activePageId),
                     dashboardService.chat("Suggest 10 questions...", currentReportData, lang, token, activePageId),
@@ -301,12 +627,11 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                 ]);
 
                 const duration = Date.now() - startTime;
-
                 const questionsList = suggestRes.message.split('\n').filter(line => /^\d+\./.test(line.trim())).map(q => q.replace(/^\d+\.\s*/, '').trim()).slice(0, 10);
                 const isAlert = tickerRes.message?.toUpperCase().startsWith("ALERT:");
                 const cleanTicker = tickerRes.message?.replace(/^(ALERT:|INFO:)/i, "").trim();
 
-                // 💾 เก็บลง Cache (ต้องเก็บ ID ของ Chat และ Ticker ด้วย ✨)
+                // Save to Cache
                 dashboardCache[cacheKey] = {
                     summary: summaryRes.message,
                     suggestions: questionsList,
@@ -314,33 +639,18 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                     tickerType: isAlert ? 'alert' : 'info',
                     rawData: currentReportData,
                     
-                    // 1. Summary Info
                     reqId: summaryRes.id,
-                    summaryUsage: {
-                        input: summaryRes.usage?.input_tokens || 0,      // ขาเข้า
-                        output: summaryRes.usage?.output_tokens || 0, // ขาออก
-                        total: summaryRes.usage?.total_tokens || 0        // รวม
-                    },
+                    summaryUsage: summaryRes.usage,
                     originalTime: duration,
-                    summaryPrompt: summaryRes.input, // ⭐ เก็บ Prompt ตัวเต็มไว้
+                    summaryPrompt: summaryRes.input,
 
-                    // 2. Suggestions Info
                     suggestionsReqId: suggestRes.id,
-                    suggestionsUsage: {
-                        input: suggestRes.usage?.input_tokens || 0,      // ขาเข้า
-                        output: suggestRes.usage?.output_tokens || 0,    // ขาออก
-                        total: suggestRes.usage?.total_tokens || 0       // รวม
-                    },
-                    suggestionsPrompt: suggestRes.input, // ⭐ เก็บ Prompt ตัวเต็มไว้
+                    suggestionsUsage: suggestRes.usage,
+                    suggestionsPrompt: suggestRes.input,
 
-                    // 3. Ticker Info
                     tickerReqId: tickerRes.id,
-                    tickerUsage: {
-                        input: tickerRes.usage?.input_tokens || 0,      // ขาเข้า
-                        output: tickerRes.usage?.output_tokens || 0, // ขาออก
-                        total: tickerRes.usage?.total_tokens || 0        // รวม
-                    },
-                    tickerPrompt: tickerRes.input // ⭐ เก็บ Prompt ตัวเต็มไว้
+                    tickerUsage: tickerRes.usage,
+                    tickerPrompt: tickerRes.input
                 };
 
                 if (isCurrentEffect) {
@@ -360,460 +670,9 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
         return () => { isCurrentEffect = false; stopAllVoices(); };
     }, [lang]);
 
-    const handleMenuChange = (id) => {
-        setActivePageId(id);
-        if (isPlaying) setAutoPlayCountdown(TIMER_DURATION);
-    };
-
-    // --- Handlers ---
-    const startResizing = (e) => {
-        isResizing.current = true;
-        document.addEventListener("mousemove", handleMouseMove);
-        document.addEventListener("mouseup", stopResizing);
-        document.body.style.cursor = "col-resize";
-        document.body.style.userSelect = "none";
-    };
-    const handleMouseMove = (e) => {
-        if (!isResizing.current) return;
-        const newWidth = window.innerWidth - e.clientX;
-        
-        // 🚩 ขยายขีดจำกัดการลากให้กว้างขึ้นสำหรับจอ 4K
-        const maxLimit = window.innerWidth > 2500 ? 1500 : 600; 
-        
-        if (newWidth > 200 && newWidth < maxLimit) {
-            setRightPanelWidth(newWidth);
-        }
-    };
-    const stopResizing = () => {
-        isResizing.current = false;
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", stopResizing);
-        document.body.style.cursor = "default";
-        document.body.style.userSelect = "auto";
-    };
-
-    const getToken = async () => {
-        if (!activeAccount) return null;
-        try {
-            const response = await instance.acquireTokenSilent({ 
-                account: activeAccount, 
-                scopes: [`${TokenID}/.default`] 
-            });
-            return response.accessToken;
-        } catch (error) { return null; }
-    };
-
-    const stopAllVoices = () => {
-        if (window.speechSynthesis) window.speechSynthesis.cancel();
-        if (talkTimerRef.current) {
-            clearTimeout(talkTimerRef.current);
-            talkTimerRef.current = null;
-        }
-
-        if (speechTimeoutRef.current) {
-            clearTimeout(speechTimeoutRef.current);
-            speechTimeoutRef.current = null;
-        }
-    };
-
-    // 🔥 แก้ไข 1: ฟังก์ชันสั่งพูดเหลือแค่นี้พอ
-    const handleAiSpeak = (text, isError = false) => {
-      stopAllVoices(); 
-      if (isError) {
-          setAiState({ status: 'error', message: text, isVisible: true });
-          return;
-      }
-      setAiState({ status: 'talking', message: text, isVisible: true });
-    };
-
-    const triggerAiChat = async (textInput) => {
-        if(!textInput || !textInput.trim()) return;
-        const startLang = langRef.current;
-        stopAllVoices();
-        setSummaryLoading(true); setSummary(""); setProcessing(true);
-        setAiState({ status: 'thinking', message: '', isVisible: true });
-        try {
-            const token = await getToken(); 
-            // ⏱️ จับเวลา (Server จับให้แล้ว แต่ถ้าอยากรู้เวลาฝั่ง Client ก็จับตรงนี้)
-            const res = await dashboardService.chat(textInput, currentReportData || "", langRef.current, token, activePageId); 
-
-            if (startLang !== langRef.current) return;
-
-            setSummary(res.message); 
-            setProcessing(false);       
-            setSummaryLoading(false);
-
-            // *หมายเหตุ: Chat ไม่ได้เก็บลง dashboardCache ใหญ่ เพราะคำถามเปลี่ยนตลอด
-            // แต่ Server จะ Log ว่าเป็น Action: 'chat' และเสีย Token ตามจริงอัตโนมัติจากฝั่ง Backend
-
-            speechTimeoutRef.current = setTimeout(() => {
-                if (startLang === langRef.current) handleAiSpeak(res.message);
-            }, 300);
-        } catch (error) { 
-            setSummary("เกิดข้อผิดพลาด");
-            handleAiSpeak("ระบบขัดข้อง", true); 
-        } finally { 
-            setProcessing(false); 
-            setSummaryLoading(false); 
-        }
-    };
-
-    const handlePowerBIClick = async (event) => {
-        lastInteractionRef.current = Date.now();
-      if (event.detail && event.detail.dataPoints && event.detail.dataPoints.length > 0 && !isProcessing) {
-          
-          const startLang = langRef.current; // 1. จำภาษาตอนเริ่ม
-
-          const dp = event.detail.dataPoints[0];
-          const category = dp.identity[0]?.equals || "Unknown";
-          const value = dp.values[0]?.formattedValue || "N/A";
-          const chartTitle = event.detail.visual.title || "กราฟ"; 
-
-          setSummaryLoading(true);
-          setSummary(""); 
-          setProcessing(true);
-          stopAllVoices(); // สั่งหยุดเสียงเก่าก่อน
-          setAiState({ status: 'thinking', message: '', isVisible: true });
-
-          try {
-              const token = await getToken(); 
-              const res = await dashboardService.getReaction(
-                { name: category, uv: value }, 
-                chartTitle, 
-                langRef.current, 
-                token, 
-                activePageId, // 👈 เติมตรงนี้ครับ
-            );
-              
-              // 2. เช็ค: ถ้าเปลี่ยนภาษาแล้ว ให้หยุด
-              if (startLang !== langRef.current) return;
-
-              setSummary(res.message); 
-              
-              // 3. ⭐ แก้ตรงนี้: เอา ref มารับ setTimeout
-              speechTimeoutRef.current = setTimeout(() => {
-                  if (startLang === langRef.current) {
-                       handleAiSpeak(res.message);
-                  }
-              }, 300);
-
-          } catch (error) {
-              if (startLang === langRef.current) {
-                  setSummary("ไม่สามารถวิเคราะห์จุดที่เลือกได้");
-                  handleAiSpeak("ขออภัยค่ะ ข้อมูลส่วนนี้ขัดข้อง", true);
-              }
-          } finally {
-              if (startLang === langRef.current) {
-                  setProcessing(false);
-                  setSummaryLoading(false);
-              }
-          }
-      }
-    };
-
-    const handleVisualClick = async (event) => {
-        lastInteractionRef.current = Date.now();
-        // 1. รับแค่ "ป้ายชื่อ" มาก่อน
-        const visualDescriptor = event.detail.visual;
-        console.log("🖱️ User clicked on:", visualDescriptor.name, visualDescriptor.type);
-    
-        if (isProcessing) return;
-
-        // 🛑 เพิ่ม: ดักจับพวกที่ไม่ใช่กราฟ (เช่น รูปภาพ, กล่องข้อความ) จะได้ไม่ต้องเสียเวลาดึง
-        const ignoreTypes = ['image', 'textbox', 'basicShape', 'shape', 'actionButton'];
-        if (ignoreTypes.includes(visualDescriptor.type)) {
-            return;
-        }
-
-        const startLang = langRef.current;
-    
-        try {
-            setSummaryLoading(true);  // สั่งให้กล่องข้อความหมุน
-            setSummary("");           // ลบข้อความเก่าทิ้งไปก่อน
-
-            setProcessing(true);
-            setAiState({ status: 'thinking', message: 'Analyzing chart data...', isVisible: true });
-    
-            // 2. เริ่มปฏิบัติการ "ค้นหาตัวจริง"
-            const report = powerBIReportRef.current;
-            const pages = await report.getPages();
-            const activePage = pages.find(p => p.isActive);
-            const visuals = await activePage.getVisuals();
-    
-            // 3. หาตัวกราฟที่มีชื่อตรงกัน
-            const targetVisual = visuals.find(v => v.name === visualDescriptor.name);
-    
-            if (!targetVisual) {
-                throw new Error("❌ หาตัวกราฟจริงไม่เจอในหน้านี้");
-            }
-    
-            // 4. สั่งดึงข้อมูลจากตัวจริง
-            let result;
-            try {
-                // พยายามดึงข้อมูลสรุปก่อน (ใช้ models จะชัวร์กว่าพิมพ์ string เอง)
-                result = await targetVisual.exportData(models.ExportDataType.Summarized);
-                console.log("✅ Exported Summarized");
-            } catch (err) {
-                console.warn("Summarized failed, trying Underlying...");
-                
-                // 🟢 แก้ไขจุดสำคัญ: ต้องใส่ { rows: 100 } เพื่อจำกัดข้อมูล ไม่ให้โหลดหนักจนพัง
-                result = await targetVisual.exportData(models.ExportDataType.Underlying, { rows: 50 });
-                console.log("✅ Exported Underlying");
-            }
-    
-            console.log("📦 Data exported:", result.data);
-    
-            // 5. ส่งข้อมูลไปให้ AI
-            const token = await getToken(); 
-            const res = await dashboardService.getReaction(
-                null, 
-                result.data, 
-                langRef.current, // 👈 แก้ตรงนี้
-                token,
-                activePageId
-            );
-            
-            if (startLang !== langRef.current) {
-                return; // จบงาน แยกย้าย ไม่ต้องพูด
-            }
-
-            setSummary(res.message);
-            setProcessing(false);
-            setSummaryLoading(false);
-
-            speechTimeoutRef.current = setTimeout(() => {
-                if (startLang === langRef.current) {
-                    handleAiSpeak(res.message);
-                }
-            }, 300);
-    
-        } catch (error) {
-            console.error("🔥 Error exporting data:", error);
-            
-            // ดัก Error เฉพาะเคสที่เจอบ่อย
-            if (error.message && error.message.includes("Invalid export data request")) {
-                 setSummary("กราฟชนิดนี้ไม่รองรับการอ่านข้อมูลค่ะ");
-            } else {
-                 setSummary("ไม่สามารถอ่านข้อมูลจากกราฟนี้ได้ค่ะ");
-            }
-
-        } finally {
-            setProcessing(false);
-            setSummaryLoading(false); // อย่าลืมปิดตัวโหลด text ด้วย
-        }
-    };
-      
-    const handleReportRendered = async () => {
-        const timeSinceLastClick = Date.now() - lastInteractionRef.current;
-        if (timeSinceLastClick < 3000) {
-            console.log("✋ Blocked Auto-Summary due to recent user click.");
-            return; 
-        }
-        
-        stopAllVoices();
-
-        if (!powerBIReportRef.current) return;
-        if (isProcessing) return;
-
-        const currentLang = langRef.current;
-        const cacheKey = `${activePageId}_${currentLang}`;
-        
-        // ✅ CASE 1: Cache Hit
-        if (dashboardCache[cacheKey]) {
-            const cached = dashboardCache[cacheKey];
-            setSummary(cached.summary);
-            setSuggestedQuestions(cached.suggestions);
-            setTickerText(cached.tickerText);
-            setTickerType(cached.tickerType);
-            setCurrentReportData(cached.rawData);
-            setPbiLastUpdate(cached.lastUpdate || ""); 
-            summarizedPageRef.current = activePageId;
-            
-            speechTimeoutRef.current = setTimeout(() => handleAiSpeak(cached.summary), 500);
-
-            // 📡 1. Log Summary (อันนี้ถูกแล้ว)
-            dashboardService.logCacheHit({
-                reqId: cached.reqId,
-                pageId: activePageId,
-                savedTokens: cached.summaryUsage?.total,
-                savedTime: cached.originalTime || 0, // ✅ มีเวลา
-                lang: currentLang, // หรือ lang
-                action: 'summarize_view',
-                input: cached.summaryPrompt, 
-                output: cached.summary,
-                inputToken: cached.summaryUsage?.input,
-                outputToken: cached.summaryUsage?.output,
-                totalToken: cached.summaryUsage?.total
-            });
-
-            // 📡 2. Log Chat Suggestions (แก้เวลาตรงนี้)
-            if (cached.suggestionsReqId) {
-                dashboardService.logCacheHit({
-                    reqId: cached.suggestionsReqId,
-                    pageId: activePageId,
-                    savedTokens: cached.suggestionsUsage?.total,
-                    
-                    // ⭐ แก้จาก 0 เป็น cached.originalTime (เพราะมันทำงานพร้อมกัน ประหยัดเวลาเท่ากัน)
-                    savedTime: cached.originalTime || 0, 
-                    
-                    lang: currentLang, // หรือ lang
-                    action: 'chat_ask',
-                    input: cached.suggestionsPrompt, 
-                    output: cached.suggestions.join('\n'),
-                    inputToken: cached.suggestionsUsage?.input,
-                    outputToken: cached.suggestionsUsage?.output,
-                    totalToken: cached.suggestionsUsage?.total
-                });
-            }
-
-            // 📡 3. Log Ticker (แก้เวลาตรงนี้)
-            if (cached.tickerReqId) {
-                const prefix = cached.tickerType === 'alert' ? "ALERT: " : "INFO: ";
-                const originalOutput = prefix + cached.tickerText;
-                dashboardService.logCacheHit({
-                    reqId: cached.tickerReqId,
-                    pageId: activePageId,
-                    savedTokens: cached.tickerUsage?.total,
-                    
-                    // ⭐ แก้จาก 0 เป็น cached.originalTime
-                    savedTime: cached.originalTime || 0,
-                    
-                    lang: currentLang, // หรือ lang
-                    action: 'generate_ticker',
-                    input: cached.tickerPrompt,
-                    output: originalOutput,
-                    inputToken: cached.tickerUsage?.input,
-                    outputToken: cached.tickerUsage?.output,
-                    totalToken: cached.tickerUsage?.total
-                });
-            }
-
-            return;
-        }
-
-        // ✅ CASE 2: New Request
-        summarizedPageRef.current = activePageId; 
-        setAiState(prev => ({ ...prev, status: 'thinking', message: '' }));
-        setSummaryLoading(true);
-
-        try {
-            // ... (Code การดึงข้อมูล Power BI เหมือนเดิมทุกอย่าง) ...
-            const report = powerBIReportRef.current;
-            const pages = await report.getPages();
-            const pbiPage = pages.find(p => p.isActive);
-            const visuals = await pbiPage.getVisuals();
-            const activePage = menuList.find(p => p.id === activePageId);
-
-            let formattedDate = "";
-            const timeVisual = visuals.find(v => v.title === 'System_Time_Stamp');
-            if (timeVisual) {
-                try {
-                    const timeResult = await timeVisual.exportData(models.ExportDataType.Summarized);
-                    formattedDate = timeResult.data.replace(/^[^\d]+/, "").replace(/\n/g, "").trim();
-                } catch (e) { console.warn("Found time card but export failed:", e); }
-            }
-            if (!formattedDate) {
-                const now = new Date();
-                formattedDate = now.toLocaleDateString('th-TH') + " " + now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
-            }
-            setPbiLastUpdate(formattedDate);
-
-            let allDataText = `ข้อมูลหน้า ${activePage?.title || 'ปัจจุบัน'} (อัปเดตเมื่อ: ${formattedDate}):\n`;
-            for (const visual of visuals) {
-                if (visual.title === 'System_Time_Stamp') continue;
-                if (visual.title && visual.type !== 'image' && visual.type !== 'textbox') {
-                    try {
-                        const result = await visual.exportData(models.ExportDataType.Summarized);
-                        const visualData = result.data.length > 5000 
-                            ? result.data.substring(0, 5000) + "... (ข้อมูลส่วนเกินถูกตัดออก)" 
-                            : result.data;
-                        allDataText += `\n- ${visual.title}:\n${visualData}\n`;
-                    } catch (e) { console.warn(`Export failed for ${visual.title}`, e); }
-                }
-            }
-
-            const finalPayload = allDataText.substring(0, 25000);
-            setCurrentReportData(finalPayload);
-            
-            const token = await getToken(); 
-            const startTime = Date.now();
-
-            const [summaryRes, suggestRes, tickerRes] = await Promise.all([
-                dashboardService.getSummary(finalPayload, currentLang, token, activePageId),
-                dashboardService.chat("Suggest 10 questions...", finalPayload, currentLang, token, activePageId),
-                dashboardService.getNewsTicker(finalPayload, currentLang, token, activePageId)
-            ]);
-
-            const duration = Date.now() - startTime;
-            const finalQuestions = suggestRes.message.split('\n').filter(q => q.length > 5).slice(0, 10);
-            const isAlert = tickerRes?.message?.toUpperCase().startsWith("ALERT:");
-            const finalTickerText = tickerRes?.message?.replace(/^(ALERT:|INFO:)/i, "").trim() || "";
-
-            dashboardCache[cacheKey] = {
-                summary: summaryRes.message,
-                suggestions: finalQuestions,
-                tickerText: finalTickerText,
-                tickerType: isAlert ? 'alert' : 'info',
-                rawData: currentReportData,
-                
-                // 1. Summary Info
-                reqId: summaryRes.id,
-                summaryUsage: {
-                    input: summaryRes.usage?.input_tokens || 0,      // ขาเข้า
-                    output: summaryRes.usage?.output_tokens || 0, // ขาออก
-                    total: summaryRes.usage?.total_tokens || 0        // รวม
-                },
-                originalTime: duration,
-                summaryPrompt: summaryRes.input, // ⭐ เก็บ Prompt ตัวเต็มไว้
-
-                // 2. Suggestions Info
-                suggestionsReqId: suggestRes.id,
-                suggestionsUsage: {
-                    input: suggestRes.usage?.input_tokens || 0,      // ขาเข้า
-                    output: suggestRes.usage?.output_tokens || 0, // ขาออก
-                    total: suggestRes.usage?.total_tokens || 0        // รวม
-                },
-                suggestionsPrompt: suggestRes.input, // ⭐ เก็บ Prompt ตัวเต็มไว้
-
-                // 3. Ticker Info
-                tickerReqId: tickerRes.id,
-                tickerUsage: {
-                    input: tickerRes.usage?.input_tokens || 0,      // ขาเข้า
-                    output: tickerRes.usage?.output_tokens || 0, // ขาออก
-                    total: tickerRes.usage?.total_tokens || 0        // รวม
-                },
-                tickerPrompt: tickerRes.input // ⭐ เก็บ Prompt ตัวเต็มไว้
-            };
-            
-            setSummary(summaryRes.message);
-            setSuggestedQuestions(finalQuestions);
-            setTickerText(finalTickerText);
-            setTickerType(isAlert ? 'alert' : 'info');
-            
-            speechTimeoutRef.current = setTimeout(() => handleAiSpeak(summaryRes.message), 1000);
-
-        } catch (err) { 
-            console.error("Report Rendered Error:", err);
-            summarizedPageRef.current = null;
-            if (err.response?.status === 413) {
-                setSummary("ข้อมูลมีขนาดใหญ่เกินไป ระบบกำลังปรับจูนการดึงข้อมูล...");
-            }
-        } finally { 
-            setSummaryLoading(false); 
-        }
-    };
-
-    const handleSpeechEnd = React.useCallback(() => {
-        setAiState(prev => ({ ...prev, status: 'idle' }));
-    }, []);
+    // --- Main Render ---
 
     const handleLogin = () => instance.loginRedirect(loginRequest);
-
-    const handleStartApp = () => {
-        setShowStartButton(false);
-        setAppReady(true);
-    };
-
     const handleLogout = () => {
         stopAllVoices(); 
         localStorage.clear(); sessionStorage.clear();
@@ -821,7 +680,6 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
         instance.logoutRedirect({ postLogoutRedirectUri: currentUrl, account: activeAccount })
         .catch(e => { window.location.href = currentUrl; });
     };
-    const handleHeaderSearch = (text) => { setQuestion(text); triggerAiChat(text); };
 
     if (!isAuthenticated) return <LoginPage onLogin={handleLogin} />;
     
@@ -830,7 +688,6 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
             <div className='AccessDenied'>
                 <h1>🚫 Access Denied</h1>
                 <p>คุณไม่มีสิทธิ์เข้าใช้งานระบบ (Role: {userInfo.displayRole})</p>
-                <p>กรุณาติดต่อผู้ดูแลระบบ เพื่อขอสิทธิ์ในการเข้าใช้งานระบบ</p>
                 <button onClick={handleLogout}>ออกจากระบบ</button>
             </div>
         );
@@ -839,37 +696,10 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     if (!isAppReady) {
         return (
             <div style={{ position: 'relative', width: '100vw', height: '100vh' }}>
-                {/* โชว์ Loading Screen เป็นพื้นหลังไว้ก่อน */}
                 <LoadingScreen /> 
-                
-                {/* ถ้าโหลดเสร็จแล้ว (ครบ 5.5 วิ) ให้ขึ้นปุ่มกด */}
                 {showStartButton && (
-                    <div style={{
-                        position: 'absolute',
-                        top: 0, left: 0, width: '100%', height: '100%',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        backgroundColor: 'rgba(0,0,0,0.4)', // ฉากดำจางๆ
-                        zIndex: 10000,
-                        animation: 'fadeIn 0.5s'
-                    }}>
-                        <button 
-                            onClick={handleStartApp}
-                            style={{
-                                padding: '15px 40px',
-                                fontSize: '1.5rem',
-                                fontWeight: 'bold',
-                                color: 'white',
-                                background: 'linear-gradient(135deg, #00c49f 0%, #0078d4 100%)',
-                                border: 'none',
-                                borderRadius: '50px',
-                                cursor: 'pointer',
-                                boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
-                                transition: 'transform 0.2s',
-                                marginTop: '35%'
-                            }}
-                            onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
-                            onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
-                        >
+                    <div className="start-button-overlay">
+                        <button onClick={() => { setShowStartButton(false); setAppReady(true); }} className="start-button">
                             คลิกเพื่อเข้าสู่ระบบ
                         </button>
                     </div>
@@ -878,33 +708,39 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
         );
     }
 
-    const currentPage = menuList.find(p => p.id === activePageId);
-
     return (
         <DashboardLayout
-            lastUpdated={pbiLastUpdate}
-            menuItems={menuList}
-            activePageId={activePageId}
-            onMenuClick={handleMenuChange}
-            onLogout={handleLogout} 
-            rightPanelWidth={rightPanelWidth}
-            onResizerMouseDown={startResizing}
+            // Layout Props
             user={{ name: userInfo.name, role: userInfo.displayRole, avatar: userAvatar }}
+            pageTitle={currentPage ? (currentPage.headerTitle || currentPage.title) : "Smart Dashboard"}
+            lastUpdated={pbiLastUpdate}
+            
+            // Sidebar Props
+            menuItems={APP_MENU}
+            activePageId={activePageId}
+            onMenuClick={(id) => { setActivePageId(id); if (isPlaying) setAutoPlayCountdown(TIMER_DURATION); }}
+            onLogout={handleLogout} 
             isSidebarCollapsed={isSidebarCollapsed}
             toggleSidebar={() => setSidebarCollapsed(!isSidebarCollapsed)}
+            
+            // Layout Controls
+            rightPanelWidth={rightPanelWidth}
+            onResizerMouseDown={startResizing}
             scrollRef={scrollRef} 
-            onSearch={handleHeaderSearch}
-            pageTitle={currentPage ? (currentPage.headerTitle || currentPage.title) : "Smart Dashboard"}
+            theme={theme}
+            toggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
 
-            notifications={notifications}
+            // Player Props
             isPlaying={isPlaying}
             togglePlay={() => setIsPlaying(!isPlaying)}
             autoPlayCountdown={autoPlayCountdown}
-            theme={theme}
-            isTimerWaiting={isAiBusy}
-            toggleTheme={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+
+            // Search & News
+            onSearch={(text) => { setQuestion(text); triggerAiChat(text); }}
             newsText={tickerText}
             newsType={tickerType}
+
+            // Right Panel Content
             rightPanelProps={{
                 aiState: { ...aiState, isVisible: (aiState.status === 'talking' || aiState.status === 'thinking') ? true : aiState.isVisible },
                 countdown,
@@ -915,7 +751,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                 currentLang: lang, 
                 setCurrentLang: setLang, 
                 isProcessing,
-                onSpeechEnd: handleSpeechEnd,
+                onSpeechEnd: () => setAiState(prev => ({ ...prev, status: 'idle' })),
                 suggestedQuestions: suggestedQuestions,
                 onSelectQuestion: (q) => { setSummaryLoading(true); setSummary(""); triggerAiChat(q); },
                 summaryWidget: (
@@ -925,14 +761,9 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                                 isLoading={isSummaryLoading} 
                                 onRefresh={() => { 
                                     const cacheKey = `${activePageId}_${lang}`;
-                                    if (dashboardCache[cacheKey]) {
-                                        delete dashboardCache[cacheKey];
-                                    }
-                                    
-                                    // ล้างหน้าจอให้ขาวสะอาดก่อนโหลดใหม่
+                                    if (dashboardCache[cacheKey]) delete dashboardCache[cacheKey];
                                     setSummary("");
                                     setSuggestedQuestions([]);
-                                    
                                     summarizedPageRef.current = null; 
                                     handleReportRendered(); 
                                 }}

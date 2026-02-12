@@ -11,7 +11,6 @@ const RealPowerBIEmbed = ({ eventHandlers, getEmbeddedComponent, onReportRendere
   const [errorMessage, setErrorMessage] = useState("");
   const reportRef = useRef(null);
 
-  // Styles
   const styles = {
     container: { height: '100%', width: '100%' },
     centerBox: {

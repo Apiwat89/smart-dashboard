@@ -31,18 +31,18 @@ const RightPanel = ({
   }, [isSuggestOpen]);
 
   const UI_TEXT = {
-    TH: { title: "คำถามที่น่าสนใจ ✨", loading: "กำลังคิดคำถาม..." },
-    EN: { title: "Interesting Questions ✨", loading: "Thinking..." },
-    JP: { title: "おすすめの質問 ✨", loading: "考え中..." },
-    CN: { title: "有趣的提问 ✨", loading: "正在思考..." },
-    KR: { title: "흥미로운 질문 ✨", loading: "생각 중..." },
-    VN: { title: "Câu hỏi thú vị ✨", loading: "Đang suy nghĩ..." }
+    TH: { title: "คำถามที่น่าสนใจ", loading: "กำลังคิดคำถาม..." },
+    EN: { title: "Interesting Questions", loading: "Thinking..." },
+    JP: { title: "おすすめの質問", loading: "考え中..." },
+    CN: { title: "有趣的提问", loading: "正在思考..." },
+    KR: { title: "흥미로운 질문", loading: "생각 중..." },
+    VN: { title: "Câu hỏi thú vị", loading: "Đang suy nghĩ..." }
   };
 
   const questionsListRef = useRef(null);
   const scrollQuestions = (direction) => {
     if (questionsListRef.current) {
-      const scrollAmount = window.innerWidth > 2500 ? 200 : 100; // ระยะเลื่อน (จอ TV จะเลื่อนไกลกว่า)
+      const scrollAmount = window.innerWidth > 2500 ? 200 : 100; // ปรับขนาดการเลื่อนตามขนาดหน้าจอ
       questionsListRef.current.scrollBy({
         top: direction === 'down' ? scrollAmount : -scrollAmount,
         behavior: 'smooth'
@@ -60,6 +60,7 @@ const RightPanel = ({
         overflow: 'visible'
       }}
     >
+
       {/* 1. Language Switcher */}
       <div className="lang-switcher-row">
         <Globe size={14} color="#94a3b8" style={{ marginRight: '4px' }} />
@@ -109,11 +110,9 @@ const RightPanel = ({
               <button 
                 key={idx} 
                 className="question-item"
-                
-                // ⭐⭐⭐ แก้ตรงนี้ครับ: เปลี่ยนให้มันทำ 2 อย่างพร้อมกัน
                 onClick={() => {
-                    onSelectQuestion(q);      // 1. ส่งคำถามไปให้ App.jsx ทำงาน
-                    setIsSuggestOpen(false);  // 2. สั่งปิดกล่อง Popup ตัวเองทันที
+                    onSelectQuestion(q);     
+                    setIsSuggestOpen(false);  
                 }}
                 
               >

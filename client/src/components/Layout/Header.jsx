@@ -12,17 +12,13 @@ const Header = ({
   user,
   title,
   lastUpdated,
-  notifications = [],
   theme,
   toggleTheme,
   isPlaying,
   togglePlay,
-  autoPlayCountdown,
-  isTimerWaiting
+  autoPlayCountdown
 }) => {
-  const [showNotif, setShowNotif] = useState(false);
 
-  // Styles Object (แยกออกมาเพื่อให้ JSX สะอาดขึ้น)
   const styles = {
     header: {
       position: 'relative',
@@ -83,15 +79,10 @@ const Header = ({
       width: '20px',
     }
   };
-  
-  const getTimerColor = () => {
-      if (isPlaying) return '#00c49f';      // 🟢 สีเขียว: กำลังเดิน (Playing)
-      return '#64748b';                     // ⚪ สีเทา: หยุด (Paused)
-  };
-  const timerColor = getTimerColor();
 
   return (
     <header className="header" style={styles.header}>
+
       {/* 1. Title Section */}
       <div className="header-title-section" style={{ flex: 1 }}>
         <h2 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text-main)', fontWeight: 600 }}>
@@ -127,15 +118,6 @@ const Header = ({
           {theme === 'dark' ? <Sun className='ThemeSun' size={20} /> : <Moon className='ThemeMoon' size={20} />}
         </button>
 
-        {/* Notifications */}
-        {/* <button
-          onClick={() => setShowNotif(!showNotif)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', marginRight: '15px', color: 'var(--text-muted)', position: 'relative', display: 'flex', alignItems: 'center' }}
-        >
-          <Bell size={22} />
-          {notifications.length > 0 && <span style={styles.notifBadge} />}
-        </button> */}
-
         {/* User Profile */}
         <div className='user-profile-box' style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', lineHeight: '1.3', marginRight: '12px' }}>
           <span className='user-name' style={{ fontWeight: '600', fontSize: '0.9rem', color: 'var(--text-main)' }}>{user?.name}</span>
@@ -150,9 +132,6 @@ const Header = ({
         />
       </div>
 
-      {showNotif && (
-        <NotificationDropdown notifications={notifications} onClose={() => setShowNotif(false)} />
-      )}
     </header>
   );
 };

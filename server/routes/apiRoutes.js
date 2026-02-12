@@ -2,23 +2,18 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-const axios = require('axios'); 
 const { generateAIResponse, logCacheHit} = require('../services/aiService');
-const { fetchAzureSpeechToken, generateElevenLabsSpeech } = require('../services/speechService');
+const { fetchAzureSpeechToken } = require('../services/speechService');
 const verifyToken = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 
 // Helper Functions
-const getDashboardData = () => {
-    const dataPath = path.join(__dirname, '../data/dashboardData.json');
-    const rawData = fs.readFileSync(dataPath, 'utf-8');
-    return JSON.parse(rawData);
-};
 
+// ฟังก์ชันเลือกคำสั่งภาษาสำหรับ AI
 const getLangInstruction = (lang) => {
     switch (lang) {
-        case 'CN': return "Respond in Simplified Chinese (Natural, Polite, Professional)."; // เพิ่มจีน
-        case 'KR': return "Respond in Korean (Natural, Polite, Professional)."; // เพิ่มเกาหลี
+        case 'CN': return "Respond in Simplified Chinese (Natural, Polite, Professional)."; 
+        case 'KR': return "Respond in Korean (Natural, Polite, Professional)."; 
         case 'EN': return "Respond in English (Natural, Polite, Professional).";
         case 'JP': return "Respond in Japanese (Natural, Polite, Professional).";
         case 'VN': return "Respond in Vietnamese (Natural, Polite, Professional).";
@@ -26,33 +21,25 @@ const getLangInstruction = (lang) => {
     }
 };
 
+// ฟังก์ชันดึงชื่อ Mascot ตามภาษา
 const getMascotName = (lang) => {
-    switch (lang) {
-        case 'CN': return "EZ"; // จีน (อ่านว่า อ้าว-ลา)
-        case 'KR': return "EZ"; // เกาหลี (อ่านว่า อา-อู-รา)
-        case 'EN': return "EZ";
-        case 'JP': return "EZ"; // ญี่ปุ่น (อ่านว่า โอ-ระ)
-        case 'VN': return "EZ"; // เวียดนาม (ใช้ทับศัพท์ได้เลย)
-        case 'TH': 
-        default: return "EZ";
-    }
+    // สามารถปรับเปลี่ยนชื่อตามภาษาได้ที่นี่
+    return "EZ"; 
 };
 
+// หน่วยความจำชั่วคราวสำหรับเก็บ Summary (In-Memory Store)
 const summaryStore = {};
 
-// --- Endpoints ---
+// --- API Endpoints ---
 
+// 1. บันทึก Log การใช้งาน Cache
 router.post('/log-cache', (req, res) => {
-    // ⭐ เพิ่ม: action, input, output
-    const { pageId, savedTokens, savedTime, lang, action, input, output, inputToken, outputToken, totalToken} = req.body; 
-    
-    // ส่งต่อให้ Service
-    logCacheHit({ pageId, savedTokens, savedTime, lang, action, input, output, inputToken, outputToken, totalToken});
-    
+    const { reqId, pageId,savedTokens, processing,savedTime, lang, action, input, output, inputToken, outputToken, totalToken} = req.body; 
+    logCacheHit({ reqId, pageId, savedTokens, processing, savedTime, lang, action, input, output, inputToken, outputToken, totalToken});
     res.json({ status: 'ok' });
 });
 
-// config
+// 2. ดึงการตั้งค่า Authentication
 router.get('/auth-config', (req, res) => {
     try {
         res.json({
@@ -65,7 +52,7 @@ router.get('/auth-config', (req, res) => {
     }
 });
 
-// getClientID
+// 3. ดึง Client ID ของ Power BI Report
 router.get('/Client-ID', (req, res) => {
     try {
         const id = process.env.POWERBI_REPORT_ID;
@@ -76,25 +63,14 @@ router.get('/Client-ID', (req, res) => {
     }
 })
 
-// 1. Get Dashboard Data (Database)
-router.get('/dashboard-data', verifyToken, async (req, res) => {
-    try {
-        const data = getDashboardData();
-        res.json(data);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Data not found" });
-    }
-});
-
-// 2. AI Summarize View
+// 4. สรุปข้อมูลกราฟ (AI Summarize)
 router.post('/summarize-view', verifyToken, async (req, res) => {
-    const { visibleCharts, lang, pageId, sessionId } = req.body; // 👈 รับ pageId เพิ่ม
+    const { visibleCharts, lang, pageId } = req.body; 
     const langInstruction = getLangInstruction(lang);
+    const mascotName = getMascotName(lang); 
 
-    // ⭐ ปรับปรุง: ระบุ Role เป็น Male และเน้นคำลงท้าย 'ครับ' ใน Recommendation
     const prompt = `
-        Role: Senior Data Analyst named "EZ" (Male Persona).
+        Role: Senior Data Analyst named "${mascotName}" (Male Persona).
         
         Objective: 
         Analyze the visuals and provide a summary in 4-5 bullet points.
@@ -126,14 +102,12 @@ router.post('/summarize-view', verifyToken, async (req, res) => {
     `;
 
     try {
-        // 👇 เรียกใช้แบบใหม่ ส่ง logContext ไปด้วย
         const result = await generateAIResponse(prompt, "You are a helpful Male Data Analyst.", {
             action: 'summarize_view',
             pageId: pageId,
             lang: lang,
         });
 
-        // 👇 ส่งกลับทั้ง message, id, usage
         res.json({ 
             message: result.text, 
             id: result.id, 
@@ -146,18 +120,16 @@ router.post('/summarize-view', verifyToken, async (req, res) => {
     }
 });
 
-
-// 3. Character Reaction Endpoint
+// 5. ปฏิกิริยาตัวละคร (Character Reaction)
 router.post('/character-reaction', verifyToken, async (req, res) => {
-    const { pointData, contextData, lang, pageId, sessionId } = req.body; // 👈 รับ pageId
+    const { pointData, contextData, lang, pageId } = req.body; 
     const langInstruction = getLangInstruction(lang);
     const mascotName = getMascotName(lang); 
 
     let prompt = "";
 
-    // ⭐ ปรับปรุง: ระบุ Male Persona และ Friendly Male Tone
     if (pointData) {
-        // 🟢 กรณี 1: จิ้มโดนจุดข้อมูล
+        // กรณี 1: จิ้มโดนจุดข้อมูล
         prompt = `
             Role: ${mascotName} — a professional Male Data Analyst.
             Action: User clicked specific data "${pointData.name}" with value "${pointData.uv}".
@@ -167,7 +139,7 @@ router.post('/character-reaction', verifyToken, async (req, res) => {
             Constraints: Max 2 sentences, no markdown. Speak with a smart, male tone (ending with 'ครับ' for Thai).
         `;
     } else {
-        // 🔵 กรณี 2: คลิกที่ตัวกราฟ
+        // กรณี 2: คลิกที่ตัวกราฟ
         prompt = `
             Role: ${mascotName} — a professional Male Data Analyst.
             Action: User selected an entire chart to analyze.
@@ -205,17 +177,20 @@ router.post('/character-reaction', verifyToken, async (req, res) => {
             input: result.input
         });
     } catch (err) {
-        res.status(500).json({ message: "..." });
+        res.status(500).json({ message: "Failed to generate character reaction." });
     }
 });
 
-// 4. Chat with Somjeed (EZ)
+// 6. ระบบแชทถาม-ตอบ (Chat)
 router.post('/ask-dashboard', verifyToken, async (req, res) => {
-    const { question, allData, lang, pageId, sessionId } = req.body; // 👈 รับ pageId
+    const { question, allData, lang, pageId } = req.body;
     const langInstruction = getLangInstruction(lang);
     const mascotName = getMascotName(lang); 
 
-    // ⭐ ปรับปรุง: ระบุ Male Personality
+    const actionType = question && question.includes("Suggest 10 questions") // ตรวจสอบคำถามที่ส่งมาจาก Client
+        ? 'generate_questions' 
+        : 'chat_ask';
+
     const prompt = `
         Role: ${mascotName} — your Male Power BI dashboard assistant.
 
@@ -244,7 +219,7 @@ router.post('/ask-dashboard', verifyToken, async (req, res) => {
 
     try {
         const result = await generateAIResponse(prompt, "You are a helpful Male AI Dashboard Assistant.", {
-            action: 'chat_ask',
+            action: actionType,
             pageId: pageId,
             lang: lang
         });
@@ -256,44 +231,25 @@ router.post('/ask-dashboard', verifyToken, async (req, res) => {
             input: result.input
         });
     } catch (err) {
-        res.status(500).json({ message: "Error" });
+        res.status(500).json({ message: "Failed to generate AI response." });
     }
 });
 
-// 5. Get Speech Token
-router.post('/speak-eleven', async (req, res) => {
-    try {
-        const { text, lang } = req.body;
-        
-        // 1. เรียก Service (ถ้า Error มันจะ Log ในนั้น แล้วเด้งไป catch เอง)
-        const audioStream = await generateElevenLabsSpeech(text, lang);
-
-        // 2. ส่ง Stream กลับไปที่หน้าเว็บ
-        res.setHeader('Content-Type', 'audio/mpeg');
-        audioStream.pipe(res);
-
-    } catch (err) {
-        // ไม่ต้อง Log ซ้ำแล้ว เพราะ Service ทำหน้าที่นั้นไปแล้ว
-        res.status(500).json({ error: "Speech generation failed" });
-    }
-});
-
+// 7. ขอ Token สังเคราะห์เสียง (Azure)
 router.get('/speech-azure', async (req, res) => {
     try {
         const data = await fetchAzureSpeechToken();
         res.json(data);
     } catch (err) {
-        // Error Log ถูกปริ้นท์ไปแล้วใน Service แต่ถ้าอยากปริ้นท์ตรงนี้อีกก็ได้
         res.status(500).json({ error: "Failed to fetch speech token" });
     }
 });
 
-// 6. ticker
+// 8. สร้างข้อความข่าววิ่ง (Ticker)
 router.post('/generate-ticker', verifyToken, async (req, res) => {
-    const { allData, lang, pageId, sessionId } = req.body; // 👈 รับ pageId
+    const { allData, lang, pageId } = req.body; 
     const langInstruction = getLangInstruction(lang)
 
-    // Ticker ส่วนใหญ่เป็น News Editor ไม่ต้องใส่อารมณ์มาก แต่กำกับภาษาไว้เพื่อความชัวร์
     const prompt = `
         Role: News Editor for Dashboard (Strict Mode).
         Source Data: ${JSON.stringify(allData)}
@@ -330,11 +286,11 @@ router.post('/generate-ticker', verifyToken, async (req, res) => {
             input: result.input
         });
     } catch (err) {
-        res.status(500).json({ error: "AI failed" });
+        res.status(500).json({ error: "Failed to generate ticker content." });
     }
 });
 
-// 7. QR Summary
+// 9. แชร์สรุป (สร้างลิงก์ QR Code)
 router.post('/share', (req, res) => {
     try {
         const { text } = req.body;
@@ -343,7 +299,6 @@ router.post('/share', (req, res) => {
         const id = uuidv4().substring(0, 8);
         summaryStore[id] = text;
         
-        // ส่ง ID กลับไป
         res.json({ id });
     } catch (error) {
         console.error(error);
@@ -351,6 +306,7 @@ router.post('/share', (req, res) => {
     }
 });
 
+// 10. หน้าเว็บสำหรับดูสรุปที่แชร์ (HTML View)
 router.get('/view/:id', (req, res) => {
     const { id } = req.params;
     const content = summaryStore[id];

@@ -32,7 +32,6 @@ const LoadingScreen = () => {
           <div className="spin-ring ring-1"></div>
           <div className="spin-ring ring-2"></div>
           <div className="icon-box">
-            {/* <img src="./logo.png" alt="Logo" /> */}
             <video 
               src="./logo.mp4" 
               autoPlay 

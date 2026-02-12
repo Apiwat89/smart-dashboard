@@ -1,4 +1,3 @@
-// src/main.jsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
@@ -6,9 +5,7 @@ import './index.css';
 import { PublicClientApplication } from "@azure/msal-browser";
 import { MsalProvider } from "@azure/msal-react";
 
-// const BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
-// 1. ✅ ย้าย Config มาประกาศไว้ที่นี่ (เป็นค่าคงที่)
+// Config (เป็นค่าคงที่)
 const loginRequest = {
     scopes: ["User.Read"]
 };
@@ -21,15 +18,12 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 
 const bootstrap = async () => {
   try {
-    // 2. ดึง Config จาก Server
+    // ดึง Config จาก Server
     const response = await fetch(`/api/auth-config`);
-    // const response = await fetch(`${BASE_URL}/api/auth-config`);
-    
     if (!response.ok) throw new Error("โหลด Config ไม่สำเร็จ");
-    
     const serverConfig = await response.json();
 
-    // 3. สร้าง msalConfig
+    // สร้าง msalConfig
     const msalConfig = {
         auth: {
             clientId: serverConfig.clientId,
@@ -45,7 +39,7 @@ const bootstrap = async () => {
     const msalInstance = new PublicClientApplication(msalConfig);
     await msalInstance.initialize();
 
-    // 4. ✅ ส่ง loginRequest และ powerBIRequest เข้าไปเป็น Props ให้ App
+    // ส่ง loginRequest และ powerBIRequest เข้าไปเป็น Props ให้ App
     root.render(
       <React.StrictMode>
         <MsalProvider instance={msalInstance}>
@@ -60,7 +54,7 @@ const bootstrap = async () => {
 
   } catch (error) {
     console.error("Critical Error:", error);
-    root.render(<div style={{padding: 20, color:'red'}}>Error Loading Config: {error.message}</div>);
+    root.render(<div style={{padding: 20, color:'red', fontSize: 40}}>Error Loading Config: {error.message}</div>);
   }
 };
 
