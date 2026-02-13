@@ -7,8 +7,8 @@ const bigquery = new BigQuery({
     projectId: process.env.GCP_PROJECT_ID
 });
 
-const datasetId = 'logs';
-const tableId = 'EzDashboard';   
+const datasetId = process.env.DATASET_ID;
+const tableId = process.env.TABLE_ID; 
 
 // --- ฟังก์ชันแปลงข้อมูลให้ตรงกับ Schema ---
 const prepareLogData = (data) => {
@@ -61,7 +61,7 @@ async function insertLogฺBigQuery(data) {
                 .table(tableId)
                 .insert([row]);
                 
-            // console.log(`✅ BigQuery Logged: ${data.reqId}`);
+            console.log(`✅ BigQuery Logged: ${data.reqId}`);
         } catch (error) {
             console.error("❌ BigQuery Error:", JSON.stringify(error.errors || error));
         }
