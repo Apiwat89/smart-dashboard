@@ -13,7 +13,8 @@ const MODEL_NAME = "gpt-5.2";
 
 // ฟังก์ชันหลัก
 async function generateAIResponse(userMessage, systemRole = "You are a helpful assistant.", logContext = {}) {
-    const startTime = Date.now();
+    const startTime = new Date().toISOString();
+    const startTimeCal = Date.now();
     const reqId = uuidv4();
 
     try {
@@ -41,7 +42,9 @@ async function generateAIResponse(userMessage, systemRole = "You are a helpful a
         const output_tokens = usage.completion_tokens || 0;
         const total_tokens = usage.total_tokens || 0;     
 
-        const duration = Date.now() - startTime;
+        const endTime = new Date().toISOString();
+        const endTimeCal = Date.now();
+        const duration = endTimeCal - startTimeCal;
         
         // แปลงเป็น String เพื่อเก็บใน DB ให้สวยงาม
         const inputLogCheck = `System: ${systemRole}\nUser: ${userMessage}`;
@@ -58,7 +61,9 @@ async function generateAIResponse(userMessage, systemRole = "You are a helpful a
             output_tokens: output_tokens, 
             total_tokens: total_tokens,   
             savedTokens: 0,
-            time: duration,
+            startTime: startTime,
+            endTime: endTime,
+            durationTime: duration,
             savedTime: 0,
             isCached: false
         });
@@ -85,7 +90,12 @@ async function generateAIResponse(userMessage, systemRole = "You are a helpful a
             input: userMessage,
             output: `Error: ${error.message}`,
             input_tokens: 0, output_tokens: 0, total_tokens: 0,
-            savedTokens: 0, time: Date.now() - startTime, savedTime: 0, isCached: false
+            savedTokens: 0,
+            startTime: startTime,
+            endTime: Date.now(),
+            durationTime: Date.now() - startTime, 
+            savedTime: 0, 
+            isCached: false
         });
 
         return {
@@ -110,7 +120,9 @@ function logCacheHit(data) {
         output_tokens: data.outputToken,
         total_tokens: data.totalToken,
         savedTokens: data.savedTokens,
-        time: 0,
+        startTime: data.startTime || 0,
+        endTime: data.endTime || 0,
+        durationTime: 0,
         savedTime: data.savedTime || 0,
         isCached: true
     });

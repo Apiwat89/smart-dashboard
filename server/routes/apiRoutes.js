@@ -1,7 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const fs = require('fs');
-const path = require('path');
 const { generateAIResponse, logCacheHit} = require('../services/aiService');
 const { fetchAzureSpeechToken } = require('../services/speechService');
 const verifyToken = require('../middleware/auth');
@@ -34,8 +32,8 @@ const summaryStore = {};
 
 // 1. บันทึก Log การใช้งาน Cache
 router.post('/log-cache', (req, res) => {
-    const { reqId, pageId,savedTokens, processing,savedTime, lang, action, input, output, inputToken, outputToken, totalToken} = req.body; 
-    logCacheHit({ reqId, pageId, savedTokens, processing, savedTime, lang, action, input, output, inputToken, outputToken, totalToken});
+    const { reqId, pageId,savedTokens, processing, startTime, endTime, savedTime, lang, action, input, output, inputToken, outputToken, totalToken} = req.body; 
+    logCacheHit({ reqId, pageId, savedTokens, processing, startTime, endTime, savedTime, lang, action, input, output, inputToken, outputToken, totalToken});
     res.json({ status: 'ok' });
 });
 

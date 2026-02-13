@@ -24,7 +24,9 @@ const prepareLogData = (data) => {
         output_tokens: data.output_tokens || 0,
         total_tokens: data.total_tokens || 0,
         saved_tokens: data.savedTokens || 0,
-        processing_time_ms: data.time || 0,
+        start_time_ms: data.startTime || 0,
+        end_time_ms: data.endTime || 0,
+        processing_time_ms: data.durationTime || 0,
         saved_time_ms: data.savedTime || 0,
         is_cached: data.isCached ? 1 : 0
     };
@@ -35,14 +37,14 @@ async function insertLogฺBigQuery(data) {
     // บันทึกลง SQLite (เหมือนเดิม - เอาไว้ดูเล่นๆ หรือ Backup)
     const sql = `
         INSERT INTO EzDashboard 
-        (request_id, page_name, action_type, language, input_context, ai_response, input_tokens, output_tokens, total_tokens, saved_tokens, processing_time_ms, saved_time_ms, is_cached)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (request_id, page_name, action_type, language, input_context, ai_response, input_tokens, output_tokens, total_tokens, saved_tokens, start_at, end_at, processing_time_ms, saved_time_ms, is_cached)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     
     const params = [
         data.reqId, data.page, data.action, data.lang, data.input, data.output,
         data.input_tokens, data.output_tokens, data.total_tokens,
-        data.savedTokens, data.time, data.savedTime, data.isCached ? 1 : 0
+        data.savedTokens, data.startTime, data.endTime, data.durationTime, data.savedTime, data.isCached ? 1 : 0
     ];
 
     db.run(sql, params, (err) => {

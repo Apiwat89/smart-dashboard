@@ -16,7 +16,6 @@ function initTable() {
         CREATE TABLE IF NOT EXISTS EzDashboard (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             request_id TEXT,                 
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             page_name TEXT,                  
             action_type TEXT,                
             language TEXT,
@@ -26,9 +25,12 @@ function initTable() {
             output_tokens INTEGER DEFAULT 0, 
             total_tokens INTEGER DEFAULT 0,     
             saved_tokens INTEGER DEFAULT 0,     
+            start_at DATETIME,
+            end_at DATETIME,
             processing_time_ms INTEGER DEFAULT 0, 
             saved_time_ms INTEGER DEFAULT 0,  
-            is_cached INTEGER DEFAULT 0      
+            is_cached INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `;
     

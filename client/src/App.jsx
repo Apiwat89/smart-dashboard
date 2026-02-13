@@ -157,6 +157,8 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
             pageId: activePageId,
             lang: lang,
             action: actionType,
+            startTime: cachedData.startTime || 0,
+            endTime: cachedData.endTime || 0,
             processing: cachedData.originalTime || 0, 
             savedTime: cachedData.originalTime || 0,
         };
@@ -432,8 +434,9 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                 if (visual.title && visual.type !== 'image' && visual.type !== 'textbox') {
                     try {
                         const result = await visual.exportData(models.ExportDataType.Summarized);
-                        const visualData = result.data.length > 5000 
-                            ? result.data.substring(0, 5000) + "... (ตัดข้อมูลส่วนเกิน)" 
+                        // ข้อมูลที่ส่งไปให้ OpenAi ยิ่งเยอะ ค่า input Token ก็ยิ่งสูงนะค้าบบ คำนึงถึง model version ของ OpenAi ด้วยว่าเขารองรับได้มากน้อยแค่ไหน
+                        const visualData = result.data.length > 20000 
+                            ? result.data.substring(0, 20000) + "... (ตัดข้อมูลส่วนเกิน)" 
                             : result.data;
                         allDataText += `\n- ${visual.title}:\n${visualData}\n`;
                     } catch (e) {}
@@ -444,7 +447,8 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
             setCurrentReportData(finalPayload);
             
             const token = await getToken(); 
-            const startTime = Date.now();
+            const startTime = new Date().toISOString();
+            const startTimeCal = Date.now();
 
             // เรียก API พร้อมกัน 3 ตัว
             const [summaryRes, suggestRes, tickerRes] = await Promise.all([
@@ -453,7 +457,9 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                 dashboardService.getNewsTicker(finalPayload, currentLang, token, activePageId)
             ]);
 
-            const duration = Date.now() - startTime;
+            const endTime = new Date().toISOString();
+            const endTimeCal = Date.now();
+            const duration = endTimeCal - startTimeCal;
             const finalQuestions = suggestRes.message.split('\n').filter(q => q.length > 5).slice(0, 10);
             const isAlert = tickerRes?.message?.toUpperCase().startsWith("ALERT:");
             const finalTickerText = tickerRes?.message?.replace(/^(ALERT:|INFO:)/i, "").trim() || "";
@@ -469,6 +475,8 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                 // เก็บข้อมูล Usage สำหรับ Log
                 reqId: summaryRes.id,
                 summaryUsage: summaryRes.usage,
+                startTime: startTime,
+                endTime: endTime,
                 originalTime: duration,
                 summaryPrompt: summaryRes.input,
 
@@ -619,14 +627,17 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                 const token = await getToken();
                 if (!isCurrentEffect) return;
 
-                const startTime = Date.now();
+                const startTime = new Date().toISOString();
+                const startTimeCal = Date.now();
                 const [summaryRes, suggestRes, tickerRes] = await Promise.all([
                     dashboardService.getSummary(currentReportData, lang, token, activePageId),
                     dashboardService.chat("Suggest 10 questions...", currentReportData, lang, token, activePageId),
                     dashboardService.getNewsTicker(currentReportData, lang, token, activePageId)
                 ]);
 
-                const duration = Date.now() - startTime;
+                const endTime = new Date().toISOString();
+                const endTimeCal = Date.now();
+                const duration = endTimeCal - startTimeCal;
                 const questionsList = suggestRes.message.split('\n').filter(line => /^\d+\./.test(line.trim())).map(q => q.replace(/^\d+\.\s*/, '').trim()).slice(0, 10);
                 const isAlert = tickerRes.message?.toUpperCase().startsWith("ALERT:");
                 const cleanTicker = tickerRes.message?.replace(/^(ALERT:|INFO:)/i, "").trim();
@@ -641,6 +652,8 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                     
                     reqId: summaryRes.id,
                     summaryUsage: summaryRes.usage,
+                    startTime: startTime,
+                    endTime: endTime,
                     originalTime: duration,
                     summaryPrompt: summaryRes.input,
 
