@@ -41,7 +41,7 @@ const APP_MENU = [
 ];
 
 function App({ loginRequest, powerBIRequest, TokenID }) {
-    
+
     // --- 1. Authentication & User State ---
     const { instance, accounts } = useMsal();
     const isAuthenticated = useIsAuthenticated();
@@ -796,6 +796,50 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                       ClientID={ClientID}
                       powerBIRequest={powerBIRequest}
                     />
+                </div>
+            </div>
+
+            {/* Test BigQuery */}
+            <div style={{
+                position: 'fixed',     
+                bottom: '20px',     
+                left: '20px',
+                zIndex: 999999,
+                backgroundColor: 'rgba(0, 0, 0, 0.85)', 
+                color: 'white',    
+                padding: '15px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+                maxWidth: '300px',
+                fontFamily: 'sans-serif'
+            }}>
+                <h4 style={{ margin: '0 0 10px 0', borderBottom: '1px solid #555', paddingBottom: '5px' }}>
+                    🛠️ DEV DEBUGGER
+                </h4>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <button 
+                        onClick={() => {
+                            console.log("Token ID:", TokenID);
+                            alert("Token logged to console! (กด F12 ดู)");
+                        }}
+                        style={{ cursor: 'pointer', padding: '5px' }}
+                    >
+                        Log Token ID
+                    </button>
+
+                    <button 
+                        onClick={() => triggerAiChat("สรุปข้อมูลหน้านี้ให้หน่อย")}
+                        style={{ cursor: 'pointer', padding: '5px' }}
+
+                    >
+                        Test BigQuery
+                    </button>
+
+                    <div style={{ fontSize: '12px', color: '#aaa', marginTop: '5px' }}>
+                        Page ID: {activePageId} <br/>
+                        AI Status: {aiState.status}
+                    </div>
                 </div>
             </div>
         </DashboardLayout>

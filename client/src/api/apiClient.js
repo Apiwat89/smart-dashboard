@@ -36,7 +36,6 @@ const getSystemErrorMessage = (lang) => {
 // --- Service Export ---
 
 export const dashboardService = {
-
   // ดึง Client ID ของเครื่อง
   getClientID: async () => {
     try {
