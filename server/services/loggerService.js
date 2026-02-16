@@ -14,7 +14,6 @@ const tableId = process.env.TABLE_ID;
 const prepareLogData = (data) => {
     return {
         request_id: data.reqId || 'unknown',
-        created_at: bigquery.datetime(new Date().toISOString()), 
         page_name: data.page || 'unknown',
         action_type: data.action || 'general',
         language: data.lang || 'TH',
@@ -24,11 +23,12 @@ const prepareLogData = (data) => {
         output_tokens: data.output_tokens || 0,
         total_tokens: data.total_tokens || 0,
         saved_tokens: data.savedTokens || 0,
-        start_time_ms: data.startTime || 0,
-        end_time_ms: data.endTime || 0,
+        start_at: data.startTime ? bigquery.datetime(data.startTime) : null,
+        end_at: data.endTime ? bigquery.datetime(data.endTime) : null,
         processing_time_ms: data.durationTime || 0,
         saved_time_ms: data.savedTime || 0,
-        is_cached: data.isCached ? 1 : 0
+        is_cached: data.isCached ? 1 : 0,
+        created_at: bigquery.datetime(new Date().toISOString())
     };
 };
 
