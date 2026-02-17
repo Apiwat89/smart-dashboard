@@ -16,7 +16,6 @@ const dashboardCache = {};
 
 // รายการเมนูหลักของระบบ
 const APP_MENU = [
-    // แต่ละหน้าจะต้องแมปกับ Page Name ใน Power BI ด้วย จะอยู่หลัง key ของ reports เช่น https://app.powerbi.com/groups/me/reports/me/**********/
     { 
         id: "one", 
         title: "สถิติจังหวัด", 
@@ -800,7 +799,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
             </div>
 
             {/* Test BigQuery */}
-            <div style={{
+            {/* <div style={{
                 position: 'fixed',     
                 bottom: '20px',     
                 left: '20px',
@@ -841,7 +840,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                         AI Status: {aiState.status}
                     </div>
                 </div>
-            </div>
+            </div> */}
         </DashboardLayout>
     );
 }

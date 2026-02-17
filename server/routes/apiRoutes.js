@@ -189,31 +189,54 @@ router.post('/ask-dashboard', verifyToken, async (req, res) => {
         ? 'generate_questions' 
         : 'chat_ask';
 
-    const prompt = `
-        Role: ${mascotName} — your Male Power BI dashboard assistant.
+    let prompt = "";
 
-        Context Data (Only source of truth):
-        ${JSON.stringify(allData)}
+    if (actionType === 'generate_questions') {
+        // กรณี 1: ให้แนะนำคำถาม 10 ข้อ 
+        prompt = `
+            Role: ${mascotName} — expert data analyst.
+            Task: Analyze the provided dataset and suggest 10 insightful questions that a user (Executive or Manager) should ask to get value from this data.
+            
+            Context Data:
+            ${JSON.stringify(allData)}
 
-        User Question:
-        "${question}"
+            Language Instruction:
+            ${langInstruction} (Use this language for the questions)
 
-        Language Instruction:
-        ${langInstruction}
+            Rules:
+            1. Return ONLY a numbered list of 10 questions.
+            2. Do not include any intro or outro text.
+            3. Questions must be specific to the data values provided (e.g., refer to specific departments or metrics in the JSON).
+        `;
 
-        Rules:
-        1. Always use the name '${mascotName}' when referring to yourself.
-        2. Answer ONLY using the provided Context Data.
-        3. Tone: Cheerful, clear, accurate, and MASCULINE (Use 'ครับ' instead of 'ค่ะ').
-        4. CRITICAL: Start your answer IMMEDIATELY with the information. 
-        5. CRITICAL: DO NOT include any introductory phrases like "Here are the answers," "I found the data," or "Based on the dashboard."
-        6. If the user asks for a list, start directly with "1. [First Item]".
+    } else {
+        // กรณี 2: ตอบคำถามจากข้อมูล
+        prompt = `
+            Role: ${mascotName} — your Male Power BI dashboard assistant.
+            
+            Context Data (The ONLY source of truth):
+            ${JSON.stringify(allData)}
 
-        Output Format:
-        - Plain text only.
-        - STRICTLY NO introductory text, no "Here is your data", no conversational filler.
-        - No markdown, no emojis.
-    `;
+            User Question:
+            "${question}"
+
+            Language Instruction:
+            ${langInstruction}
+
+            Strict Behavioral Rules:
+            1. **Persona:** You are Male. Use polite male particles (e.g., use 'ครับ' instead of 'ค่ะ' for Thai). Be professional yet cheerful.
+            2. **Data Integrity:** Answer ONLY using the provided Context Data. If the answer is not in the data, state clearly that the information is not available in the dashboard. Do not hallucinate or make up numbers.
+            3. **Directness (CRITICAL):** Start your answer IMMEDIATELY with the answer. 
+               - BAD: "Based on the data, the sales are..."
+               - BAD: "Hello, here is the info..."
+               - GOOD: "Sales for this month are 500 units..."
+            4. **Formatting:** - Use Plain text only. 
+               - NO Markdown (*, **, #). 
+               - NO Emojis. 
+               - If listing items, use a simple numbered list (1. Item).
+            5. **Clarity:** Keep answers concise and direct. Focus on the numbers/metrics asked.
+        `;
+    }
 
     try {
         const result = await generateAIResponse(prompt, "You are a helpful Male AI Dashboard Assistant.", {
