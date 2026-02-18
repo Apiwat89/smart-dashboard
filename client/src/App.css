@@ -1409,6 +1409,10 @@ body {
     border-right: 0.2vh solid var(--border-color);
   }
 
+  .sidebar-menu::-webkit-scrollbar {
+    width: 0.3vh;
+  }
+
   .sidebar .sidebar-header {
     border-bottom: 0.2vh solid var(--border-color);
     padding: 0 1.5vh;
@@ -1421,10 +1425,11 @@ body {
   }
 
   .sidebar .sidebar-header button {
-    width: 4vw !important;
+    width: 6vh !important;
     height: 6vh !important;
     border-radius: 1.5vh !important;
     border: 0.1vh solid var(--border-color);
+    flex-shrink: 0;
   }
 
   .sidebar .sidebar-header button:hover {
@@ -1443,7 +1448,7 @@ body {
   }
 
   .sidebar .sidebar-menu .menu-item {
-    font-size: 1.4vw;
+    font-size: 1.3vw;
     gap: 2vh;
     padding: 2vh;
     border-radius: 1.5vh;
@@ -1464,14 +1469,14 @@ body {
   }
 
   .sidebar .sidebar-footer .logout-btn {
-    font-size: 1.3vw;
+    font-size: 1.2vw;
     padding: 2vh;
     border-radius: 2vh;
+    gap: 2vh;
   }
 
   .sidebar.collapsed .sidebar-header button {
     width: 6vh !important;
-    padding: 10px;
   }
 
   .resizer-bar {
@@ -1486,288 +1491,291 @@ body {
 
   .resizer-bar:hover {
     background: var(--primary-green-dim) !important;
-    border-right: 20px solid var(--primary-green);
+    border-right: 2vh solid var(--primary-green);
+    margin-left: -0.5vh;
   }
 
   .right-panel {
     grid-area: right;
     width: 100% !important;
-    padding: 30px !important;
-    gap: 25px !important;
+    padding: 1.5vh !important;
+    gap: 1.5vh !important;
     min-width: 0 !important;
-    border-left: 3px solid var(--border-color) !important;
+    border-left: 0.2vh solid var(--border-color) !important;
   }
 
   .lang-switcher-row {
-    padding: 15px 30px;
-    gap: 15px !important;
-    margin-bottom: 20px;
+    padding: 1vh 1.5vh;
+    gap: 0.7vh !important;
     flex-wrap: wrap !important;
     height: auto !important;
+    border-radius: 3vh;
   }
 
   .lang-switcher-row svg {
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 2.2vh;
+    height: 2.2vh;
   }
 
   .lang-btn {
-    font-size: 35px;
-    padding: 10px 30px;
-    border-radius: 50px;
+    font-size: 0.9vw;
+    padding: 0.5vh 1.3vh;
+    border-radius: 1.5vh;
   }
 
   .char-stage {
     flex: 0 0 auto !important;
-    height: 500px !important;
+    height: 23vh !important;
     width: 100% !important;
-    border-radius: 40px !important;
-    border: 10px solid white;
+    border-radius: 2vh !important;
+    border: 0.5vh solid white;
   }
 
   .display-area {
     flex: 1 !important;
-    border-radius: 40px !important;
+    border-radius: 2vh !important;
     background: var(--bg-card) !important;
-    border: 5px solid var(--text-muted2);
+    border: 0.2vh solid var(--text-muted2);
   }
 
   .result-header {
-    padding: 70px 50px;
-    border: 3px solid var(--border-color);
+    padding: 3.5vh 2.5vh;
+    border-bottom: 0.2vh solid var(--border-color);
   }
 
   .result-header .icon-sparkle {
-    width: 1.8rem !important;
-    height: 1.8rem !important;
+    width: 3vh !important;
+    height: 3vh !important;
   }
 
   .result-header .header-title {
-    font-size: 43px;
-    margin-left: 20px;
+    font-size: 1vw;
   }
 
   .header-left, .header-right {
-    gap: 30px !important;
+    gap: 1.5vh !important;
   }
 
   .result-header svg {
-    width: 1.5rem !important;
-    height: 1.5rem !important;
+    width: 2.5vh !important;
+    height: 2.5vh !important;
   }
 
   .result-header .icon-btn {
-    padding: 20px;
-    border-radius: 30px;
+    padding: 0.8vh;
+    border-radius: 1vh;
   }
 
   .result-text {
-    padding: 30px;
-    font-size: 40px;
-    border-radius: 30px;
+    padding: 2.5vh;
+    font-size: 1vw;
+    border-radius: 1.5vh;
   }
 
   .result-content-wrapper {
-    padding: 30px;
+    padding: 1.5vh;
   }
 
   .typing-indicator {
-    margin-left: 20px;
-    margin-right: 20px;
+    margin-left: 1vh;
+    margin-right: 1vh;
   }
 
   .typing-indicator span {
-    width: 30px;
-    height: 30px;
-    margin-top: 15px;
-    margin-left: 5px;
-    margin-right: 5px;
+    width: 1vh;
+    height: 1vh;
+    margin-top: 1vh;
+    margin-left: 0.5vh;
+    margin-right: 0.5vh;
   }
 
   .loading-text {
-    font-size: 48px;
+    font-size: 1.2vw;
   }
 
   .ask-trigger-fab-dynamic {
-    width: 150px;
-    height: 150px;
-    margin-right: 40px;
-    margin-bottom: 30px;
-    border-radius: 50px;
+    width: 7vh;
+    height: 7vh;
+    margin-right: 2vh;
+    margin-bottom: 2vh;
+    border-radius: 2vh;
+  }
+  .ask-trigger-fab-dynamic svg {
+    width: 3vh;
+    height: 3vh;
   }
 
   .chat-interaction-group.is-open .ask-trigger-fab-dynamic {
-    width: 100px;
-    height: 100px;
-    border-radius: 30px;
+    width: 4vh;
+    height: 4vh;
+    border-radius: 1.5vh;
   }
 
   .chat-interaction-group.is-open .ask-trigger-fab-dynamic svg {
-    width: 60px;
-    height: 60px;
+    width: 2.5vh;
+    height: 2.5vh;
   }
 
   .chat-interaction-group.is-open .suggested-questions-box {
-    margin-right: 100px;
-    margin-bottom: 30px;
-    width: 950px;
+    margin-right: 6vh;
+    margin-bottom: 2vh;
+    width: 50vh;
     height: auto;
-    max-height: 1300px;
+    max-height: 80vh;
     opacity: 1;
-    padding: 41px 40px;
-    border-radius: 70px;
+    padding: 2vh 2vh;
+    border-radius: 2vh;
   }
 
   .suggest-header {
-    font-size: 40px;
-    border-bottom: 3px solid rgba(0, 0, 0, 0.05);
-    padding-bottom: 20px;
-    margin-left: 15px;
-    margin-bottom: 20px;
+    font-size: 1.2vw;
+    border-bottom: 0.2vh solid rgba(0, 0, 0, 0.05);
+    padding-bottom: 1vh;
+    margin-left: 1.5vh;
+    margin-bottom: 1.5vh;
   }
 
   .questions-list {
-    gap: 15px;
-    padding-right: 15px;
+    gap: 1vh;
+    padding-right: 1vh;
   }
 
   .question-item {
-    font-size: 40px;
-    padding: 40px 44px;
-    border-radius: 50px;
+    font-size: 1vw;
+    padding: 1.5vh 2vh;
+    border-radius: 2vh;
   }
 
   .scroll-btn-group {
-    gap: 30px !important;
-    padding: 30px 10px 5px 10px !important;
-    border-top: 3px solid #e8e8e8 !important;
-    margin-top: 20px !important;
+    gap: 1vh !important;
+    padding: 1vh 0.2vh 0.2vh 1vh !important;
+    border-top: 0.2vh solid #e8e8e8 !important;
+    margin-top: 2vh !important;
   }
 
   .scroll-btn {
-    height: 100px !important;
-    border-radius: 50px !important;
+    height: 5vh !important;
+    border-radius: 2vh !important;
   }
 
   .scroll-btn svg {
-    width: 60px !important;
-    height: 60px !important;
-    stroke-width: 3px !important;
+    width: 3vh !important;
+    height: 3vh !important;
   }
 
   .ticker-label {
-    width: 450px;
+    width: 22vh;
     justify-content: center;
   }
 
   .ticker-label span {
-    font-size: 38px;
+    font-size: 1.1vw;
   }
 
   .ticker-label svg {
-    width: 1.6rem;
-    height: 1.6rem;
-    margin-right: 5px;
+    width: 2.2vh;
+    height: 2.2vh;
+    margin-right: 0.5vh;
   }
 
   .ticker-content {
-    font-size: 40px;
+    font-size: 1vw;
   }
 
   .login-card {
-    max-width: 2500px;
-    min-height: 1500px;
-    border-radius: 80px;
+    max-width: 110vh;
+    min-height: 70vh;
+    border-radius: 5vh;
   }
 
   .visual-content {
-    padding: 200px 80px;
+    padding: 2vh 4vh;
   }
 
   .logo-badge {
-    width: 200px;
-    margin-bottom: 130px;
+    width: 8vh;
+    margin-bottom: 6vh;
   }
 
   .visual-content h1 {
-    font-size: 80px;
+    font-size: 2.2vw;
   }
 
   .visual-content P {
-    font-size: 45px;
-    margin-bottom: 100px;
+    font-size: 1.3vw;
+    margin-bottom: 3vh;
   }
 
   .feature-list {
-    gap: 40px;
+    gap: 1.5vh;
   }
 
   .feature-list .feature-item {
-    font-size: 40px;
-    gap: 25px;
-    padding: 30px 40px;
-    border-radius: 30px;
+    font-size: 1vw;
+    gap: 1.5vh;
+    padding: 2vh 2.5vh;
+    border-radius: 2vh;
   }
 
   .feature-list .feature-item svg {
-    width: 2rem;
-    height: 2rem;
+    width: 2vh;
+    height: 2vh;
   }
 
   .login-action {
-    padding: 120px;
+    padding: 8vh;
   }
 
   .login-header h2 {
-    font-size: 80px;
+    font-size: 2.2vw;
   }
 
   .login-header p {
-    font-size: 45px;
-    margin-bottom: 120px;
+    font-size: 1.3vw;
+    margin-bottom: 3vh;
   }
 
   .ms-login-btn {
-    max-width: 850px;
-    gap: 40px;
-    padding: 35px 20px;
-    border-radius: 30px;
+    max-width: 100%;
+    gap: 1.5vh;
+    padding: 2.5vh 1.5vh;
+    border-radius: 2vh;
   }
 
   .ms-login-btn .ms-logo {
-    width: 70px;
-    height: 70px;
+    width: 3vh;
+    height: 3vh;
   }
 
   .ms-login-btn span {
-    font-size: 45px;
+    font-size: 1.3vw;
   }
 
   .login-footer p {
-    font-size: 40px;
+    font-size: 1.2vw;
   }
 
   .login-footer .version {
-    font-size: 40px;
+    font-size: 1.1vw;
   }
 
   .loading-content {
-    height: 800px;
+    height: auto;
   }
 
   .logo-wrapper {
-    width: 400px;
-    height: 400px;
+    width: 25vh;
+    height: 25vh;
   }
 
   .icon-box {
-    width: 300px;
-    height: 300px;
+    width: 20vh;
+    height: 20vh;
   }
 
   .orbit-icon {
-    width: 100px;
-    height: 100px;
+    width: 6vh;
+    height: 6vh;
     justify-content: center;
     text-align: center;
     align-items: center;
@@ -1775,79 +1783,88 @@ body {
   }
 
   .orbit-icon svg {
-    width: 60px;
-    height: 60px;
+    width: 3vh;
+    height: 3vh;
   }
 
   .loading-title {
-    font-size: 60px;
-    margin-bottom: 90px;
+    font-size: 4vh;
+    margin-bottom: 6vh;
+    margin-top: 5vh;
   }
 
   .loading-status span {
-    font-size: 40px;
-    margin-bottom: 120px;
+    font-size: 2.5vh;
+    margin-bottom: 6vh;
   }
 
   .progress-bar-wrapper {
-    width: 400px;
-    height: 20px;
+    width: 35vh;
+    height: 1vh;
   }
 
   @keyframes floatBlob {
     0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(20px, -20px) scale(15); }
+    50% { transform: translate(20vh, -20vh) scale(30); }
+  }
+
+  .ring-1 {
+    opacity: 100%;
+  }
+
+  .ring-2 {
+    opacity: 100%;
   }
 
   .AccessDenied h1 {
-    font-size: 130px;
-    margin-bottom: 50px;
+    font-size: 3.2vw;
+    margin-bottom: 3vh;
   }
 
   .AccessDenied p:nth-of-type(1) {
-    font-size: 50px;
-    margin-bottom: 20px;
+    font-size: 1.5vw;
+    margin-bottom: 2vh;
   }
 
   .AccessDenied p:nth-of-type(2) {
-    font-size: 41px;
-    margin-bottom: 80px;
+    font-size: 1.3vw ;
+    margin-bottom: 8vh;
   }
 
   .AccessDenied button {
-    font-size: 45px;
-    padding: 30px 70px;
-    border-radius: 100px;
+    font-size: 1.5vw;
+    padding: 2vh 3vh;
+    border-radius: 5vh;
   }
 
   .qr-modal-content {
-    padding: 100px 100px;
-    border-radius: 60px;
+    padding: 8vh 8vh;
+    border-radius: 3vh;
   }
 
   .qr-modal-title {
-    font-size: 1.8rem;
-    margin-bottom: 80px;
+    font-size: 1.8vw;
+    margin-bottom: 5vh;
   }
 
   .qr-modal-desc {
-    font-size: 40px;
-    margin-top: 80px;
+    font-size: 1.5vw;
+    margin-top: 5vh;
   }
 
   .needs-consent-title {
-    font-size: 2rem !important;
+    font-size: 2vw !important;
   }
 
   .needs-consent-subtext {
-    font-size: 1.5rem !important;
-    margin-top: 50px;
+    font-size: 1.5vw !important;
+    margin-top: 5vh !important;
   }
 
   .needs-consent-button {
-    font-size: 1.7rem !important;
-    padding: 40px 80px !important;
-    border-radius: 50px !important;
-    margin-top: 50px;
+    font-size: 1.7vw !important;
+    padding: 2vh 3vh !important;
+    border-radius: 5vh !important;
+    margin-top: 5vh !important;
   }
 }

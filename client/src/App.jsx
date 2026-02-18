@@ -275,8 +275,8 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     const handleMouseMove = (e) => {
         if (!isResizing.current) return;
         const newWidth = window.innerWidth - e.clientX;
-        const maxLimit = window.innerWidth > 2500 ? 1500 : 600; 
-        if (newWidth > 200 && newWidth < maxLimit) {
+        const maxLimit = window.innerWidth > 2500 ? 5000 : 600; 
+        if (newWidth > 240 && newWidth < maxLimit) {
             setRightPanelWidth(newWidth);
         }
     };
