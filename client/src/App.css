@@ -1307,172 +1307,170 @@ body {
    ========================================= */
 @media screen and (min-width: 2500px) {
   :root {
-    --sidebar-width: 800px;
-    --sidebar-collapsed-width: 250px;
-    --resizer-width: 15px;
-    --header-height: 230px;
-    --ticker-container-height: 120px;
-    font-size: 32px;
+    --sidebar-width: 35vh;
+    --sidebar-collapsed-width: 10vh;
+    --resizer-width: 0.5vh;
+    --header-height: 10vh;
+    --ticker-container-height: 5vh;
+    font-size: 0.8vw;
   }
 
   .app-container {
     display: grid !important;
-    grid-template-columns: var(--sidebar-width) 1fr var(--resizer-width) var(--dynamic-right-width, 600px) !important;
+    grid-template-columns: var(--sidebar-width) 1fr var(--resizer-width) var(--dynamic-right-width, 600vh) !important;
     --current-sidebar-width: var(--sidebar-width);
   }
 
   .app-container.sidebar-closed {
-    grid-template-columns: var(--sidebar-collapsed-width) 1fr var(--resizer-width) var(--dynamic-right-width, 600px) !important;
+    grid-template-columns: var(--sidebar-collapsed-width) 1fr var(--resizer-width) var(--dynamic-right-width, 600vh) !important;
     --current-sidebar-width: var(--sidebar-collapsed-width);
   }
 
   .header {
-    border-bottom: 3px solid var(--border-color) !important;
+    border-bottom: 0.2vh solid var(--border-color) !important;
+    padding: 0 2vh;
   }
 
   .header .header-title-section h2 {
-    font-size: 2rem !important;
+    font-size: 1.4vw !important;
   }
 
   .header .header-title-section span {
-    font-size: 1.5rem !important;
+    font-size: 1.15vw !important;
   }
 
   .header .user-profile {
-    gap: 80px;
+    gap: 3vh; 
   }
 
   .header .user-profile .timerBox {
     display: flex !important;
     align-items: center !important;
-    padding: 20px 25px !important;
+    padding: 0.8vh 1vh !important;
     width: auto !important;
-    min-width: 350px !important;
-    gap: 20px !important;
-    border-radius: 80px !important;
-    border: 3px solid var(--border-color) !important;
+    min-width: 1vh !important;
+    gap: 1vh !important;
+    border-radius: 80vh !important;
+    border: 0.1vh solid var(--border-color) !important;
   }
 
   .header .user-profile .timerBox .timerText .imgTimer {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: 2.5rem !important;
-    height: 2.5rem !important;
-    margin-right: 15px !important;
-    margin-left: 15px;
+    width: 3vh !important;
+    height: 3vh !important;
+    margin-right: 1vh !important;
+    margin-left: 1vh;
   }
 
   .header .user-profile .timerBox span {
-    font-size: 48px;
+    font-size: 1.3vw;
   }
 
   .header .user-profile .timerBox button {
-    width: 3rem !important;
-    height: 3rem !important;
+    width: 3.8vh !important;
+    height: 3.8vh !important;
   }
 
   .header .user-profile .timerBox button .btnPlay,
   .header .user-profile .timerBox button .btnPause {
-    width: 1.5rem;
-    height: 1.5rem;
+    width: 2vh;
+    height: 2vh;
   }
 
   .header .user-profile .themeBtn {
-    width: 4rem;
-    height: 4rem;
+    width: 4.8vh;
+    height: 4.8vh;
   }
 
   .header .user-profile button .ThemeSun,
   .header .user-profile button .ThemeMoon {
-    width: 2rem;
-    height: 2rem;
+    width: 2.5vh;
+    height: 2.5vh;
   }
 
   .header .user-profile .avatar {
-    width: 100px;
-    height: 100px;
-    margin-left: -20px;
-    margin-right: 50px;
+    width: 5vh;
+    height: 5vh;
+    margin-left: -2vh;
+    margin-right: 1vh;
   }
 
   .header .user-profile .user-profile-box .user-name {
-    font-size: 45px !important;
+    font-size: 1.1vw !important;
   }
 
   .header .user-profile .user-profile-box .user-role {
-    font-size: 38px !important;
+    font-size: 0.9vw !important;
   }
 
   .sidebar {
-    border-right: 3px solid var(--border-color);
+    border-right: 0.2vh solid var(--border-color);
   }
 
   .sidebar .sidebar-header {
-    border-bottom: 3px solid var(--border-color);
+    border-bottom: 0.2vh solid var(--border-color);
+    padding: 0 1.5vh;
   }
-
+  
   .sidebar .sidebar-header .logo {
-    font-size: 1.8rem;
-    gap: 20px !important;
-    margin-left: 20px;
+    font-size: 1.4vw;
+    gap: 1vh !important;
+    margin-right: 1vh;
   }
 
   .sidebar .sidebar-header button {
-    width: 7rem !important;
-    height: 4rem !important;
-    border-radius: 30px !important;
-    margin-right: 20px;
-    margin-left: 20px;
-    border: 3px solid var(--border-color);
+    width: 4vw !important;
+    height: 6vh !important;
+    border-radius: 1.5vh !important;
+    border: 0.1vh solid var(--border-color);
   }
 
   .sidebar .sidebar-header button:hover {
-    border: 3px solid var(--primary-green);
+    border: 0.1vh solid var(--primary-green);
   }
 
   .sidebar .sidebar-header button svg {
-    width: 2.5rem !important;
-    height: 2.5rem !important;
+    width: 3.2vh !important;
+    height: 3.2vh !important;
   }
 
   .sidebar .sidebar-menu {
-    padding: 50px;
-    border-right: 3px solid var(--border-color);
+    padding: 1.5vh;
+    border-right: 0.1vh solid var(--border-color);
     overflow-y: auto;
   }
 
   .sidebar .sidebar-menu .menu-item {
-    font-size: 55px;
-    gap: 50px;
-    padding: 40px;
-    border-radius: 40px;
-    margin-bottom: 10px;
+    font-size: 1.4vw;
+    gap: 2vh;
+    padding: 2vh;
+    border-radius: 1.5vh;
+    margin-bottom: 1vh;
   }
 
-  .sidebar .sidebar-menu .menu-item svg {
-    width: 2rem !important;
-    height: 2rem !important;
+  .sidebar .sidebar-menu .menu-item i {
+    font-size: 2vw;
   }
 
   .sidebar .sidebar-footer {
-    padding: 50px;
+    padding: 1.2vh;
   }
 
   .sidebar .sidebar-footer svg {
-    width: 2.5rem !important;
-    height: 2.5rem !important;
+    width: 2.8vh !important;
+    height: 2.8vh !important;
   }
 
   .sidebar .sidebar-footer .logout-btn {
-    font-size: 55px;
-    padding: 40px;
-    border-radius: 40px;
+    font-size: 1.3vw;
+    padding: 2vh;
+    border-radius: 2vh;
   }
 
   .sidebar.collapsed .sidebar-header button {
-    margin-right: 0 !important;
-    width: 4rem !important;
+    width: 6vh !important;
     padding: 10px;
   }
 

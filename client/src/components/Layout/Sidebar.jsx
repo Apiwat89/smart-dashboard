@@ -40,6 +40,17 @@ const Sidebar = ({
         {menuItems?.map((item) => {
           // Dynamic Icon Resolution
           const IconComponent = ICON_MAP[item.icon] || LayoutDashboard;
+          let IconDisplay;
+          if (React.isValidElement(item.icon)) {
+            IconDisplay = item.icon;
+          }
+          else if (typeof item.icon === 'string') {
+            const IconComponent = ICON_MAP[item.icon] || LayoutDashboard;
+            IconDisplay = <IconComponent size={20} />;
+          }
+          else {
+            IconDisplay = <LayoutDashboard size={20} />;
+          }
           
           return (
             <div
@@ -47,7 +58,7 @@ const Sidebar = ({
               className={`menu-item ${activePageId === item.id ? 'active' : ''}`}
               onClick={() => onMenuClick(item.id)}
             >
-              <IconComponent size={20} />
+              {IconDisplay}
               <span>{item.title}</span>
             </div>
           );
