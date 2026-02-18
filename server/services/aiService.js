@@ -12,7 +12,7 @@ const openai = new OpenAI({
 const MODEL_NAME = "gpt-5.2"; 
 
 // ฟังก์ชันหลัก
-async function generateAIResponse(userMessage, systemRole = "You are a helpful assistant.", logContext = {}) {
+async function generateAIResponse(userMessage, logContext = {}) {
     const startTime = new Date().toISOString();
     const startTimeCal = Date.now();
     const reqId = uuidv4();
@@ -20,16 +20,10 @@ async function generateAIResponse(userMessage, systemRole = "You are a helpful a
     try {
         console.log(`Sending to OpenAI (${MODEL_NAME}) [${logContext.action || 'General'}]...`);
 
-        // 1. จัด Format ข้อความแบบ OpenAI (System + User)
-        const messages = [
-            { role: "system", content: systemRole },
-            { role: "user", content: userMessage }
-        ];
-
         // 2. เรียก API
         const completion = await openai.chat.completions.create({
             model: MODEL_NAME,
-            messages: messages,
+            userMessage: userMessage,
             temperature: 0.7, // ปรับความสร้างสรรค์
         });
 
@@ -47,7 +41,7 @@ async function generateAIResponse(userMessage, systemRole = "You are a helpful a
         const duration = endTimeCal - startTimeCal;
         
         // แปลงเป็น String เพื่อเก็บใน DB ให้สวยงาม
-        const inputLogCheck = `System: ${systemRole}\nUser: ${userMessage}`;
+        const inputLogCheck = `${userMessage}`;
 
         // 5. บันทึก Log
         insertLogฺBigQuery({

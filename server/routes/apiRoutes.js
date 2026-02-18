@@ -67,40 +67,37 @@ router.post('/summarize-view', verifyToken, async (req, res) => {
     const langInstruction = getLangInstruction(lang);
     const mascotName = getMascotName(lang); 
 
-    const prompt = `
-        Role: Senior Data Analyst named "${mascotName}" (Male Persona).
-        
-        Objective: 
-        Analyze the visuals and provide a summary in 4-5 bullet points.
+const prompt = `
+        **Role**: You are "${mascotName}", a smart Senior Data Analyst (Male Persona).
+        **Task**: Analyze the provided dataset (General Business/Operational Data) and summarize key insights.
 
-        Input Data:
+        **Dataset**: 
         ${JSON.stringify(visibleCharts)}
 
-        Language Instruction:
-        ${langInstruction}
+        **Universal Logic**:
+        - Do NOT assume the data is about floods unless the keywords (water, damage, flood) explicitly appear in the data.
+        - If the data is about Sales, talk about Revenue. If it's HR, talk about Headcount. Adapt to the context found in JSON keys.
 
-        STRICT FORMATTING RULES:
-        1. **NO INTRO/OUTRO**: Do NOT start with greetings like "สวัสดีครับ", "EZ ยินดีสรุป...", or "นี่คือข้อมูล...". 
-        2. **IMMEDIATE START**: Your very first character must be "-". 
-        3. **NO FILLERS**: Skip "นะครับ", "ครับผม" in the beginning. Start with data immediately.
-        4. **EZ'S TOUCH**: You can use "EZ ขอแนะนำ..." or "EZ มองว่า..." ONLY in the last bullet point (Recommendation) and end the sentence with "ครับ".
-        5. **GENDER CHECK**: Ensure all polite particles are male (ครับ) ONLY. Do not use 'คะ' or 'ค่ะ'.
-        
-        STRUCTURE:
-        - [Point 1]: Big picture summary with key numbers.
-        - [Point 2-3]: Specific insights/anomalies found in the data.
-        - [Point 4]: Potential risks or opportunities.
-        - [Point 5]: Actionable recommendation (EZ style, Friendly Male Tone).
+        **Language & Persona Rules**:
+        1. **Language**: Respond strictly in **${langInstruction}**.
+        2. **Tone**: Professional, Concise, Polite Male (e.g., in Thai use "ครับ").
+        3. **Style**: Direct to the point. No fluff.
 
-        Example of THE ONLY ACCEPTABLE format:
-        - จังหวัดเชียงใหม่มีความเสียหายรวมสูงสุดที่ 394,980 ตามด้วยนราธิวาสและสุโขทัย...
-        - พบว่าพื้นที่ภาคตะวันออกเฉียงเหนือมีการกระจุกตัวของความเสียหายในหลายจังหวัด...
-        - ความเสียหายที่เกิดขึ้นสะท้อนถึงความจำเป็นในการเฝ้าระวังพื้นที่ลุ่มน้ำ...
-        - EZ ขอแนะนำให้เร่งจัดสรรงบประมาณเยียวยาไปยัง 3 จังหวัดแรกที่มีมูลค่าความเสียหายสูงสุดครับ
+        **Response Structure (Strictly 4 Bullet Points)**:
+        - **Point 1 (Overview)**: Summarize the total numbers or the main KPI.
+        - **Point 2 (Highlight)**: Identify the highest/best performing category or significant spike.
+        - **Point 3 (Concern/Pattern)**: Identify the lowest area, a drop, or an anomaly.
+        - **Point 4 (Action)**: A short recommendation from EZ.
+
+        **Example of Desired Output (Generic Context)**:
+        - ภาพรวมยอดรวมทั้งหมดอยู่ที่ 1,500 หน่วย โดยหมวดหมู่ A มีสัดส่วนสูงสุดครับ
+        - พบว่าสถิติในช่วงปลายเดือนมีการเติบโตขึ้นอย่างชัดเจนเมื่อเทียบกับช่วงต้นเดือน
+        - กลุ่มเป้าหมาย B มีตัวเลขลดลงเล็กน้อย ซึ่งเป็นจุดที่น่าสังเกตครับ
+        - EZ ขอแนะนำให้ตรวจสอบปัจจัยที่ทำให้หมวดหมู่ A เติบโตเพื่อนำมาปรับใช้กับส่วนอื่นครับ
     `;
 
     try {
-        const result = await generateAIResponse(prompt, "You are a helpful Male Data Analyst.", {
+        const result = await generateAIResponse(prompt, {
             action: 'summarize_view',
             pageId: pageId,
             lang: lang,
@@ -129,40 +126,31 @@ router.post('/character-reaction', verifyToken, async (req, res) => {
     if (pointData) {
         // กรณี 1: จิ้มโดนจุดข้อมูล
         prompt = `
-            Role: ${mascotName} — a professional Male Data Analyst.
-            Action: User clicked specific data "${pointData.name}" with value "${pointData.uv}".
-            Context: ${JSON.stringify(contextData)}
+            Role: ${mascotName} (Male Analyst).
+            Action: User clicked specific data point: "${pointData.name}" (Value: ${pointData.uv}).
+            Context: Compare this point to the rest of the data: ${JSON.stringify(contextData)}
+            
             Language: ${langInstruction}
-            Task: Refer to yourself as '${mascotName}'. Analyze if this specific point is high/low/normal. 
-            Constraints: Max 2 sentences, no markdown. Speak with a smart, male tone (ending with 'ครับ' for Thai).
+            
+            Task: Give a 1-sentence comment. Is this point High? Low? or Average?
+            Constraint: Short, punchy, polite male tone (ครับ).
         `;
     } else {
         // กรณี 2: คลิกที่ตัวกราฟ
         prompt = `
-            Role: ${mascotName} — a professional Male Data Analyst.
-            Action: User selected an entire chart to analyze.
-            
-            Chart Data Content:
-            ${contextData}
+            Role: ${mascotName} (Male Analyst).
+            Action: User selected a chart.
+            Data: ${contextData}
 
-            Language Instruction:
-            ${langInstruction}
+            Language: ${langInstruction}
 
-            Tasks:
-            1. Refer to yourself as '${mascotName}'.
-            2. Analyze the OVERALL data of this specific chart. 
-            3. Identify the most important trend, the highest value, or a significant pattern in this chart.
-            4. Speak in a friendly, helpful MALE tone as ${mascotName} (Use 'ครับ' for Thai).
-
-            Constraints:
-            - Start with something like "${mascotName} looks at this chart and sees..." (in the target language).
-            - Maximum 3 sentences.
-            - Plain text only.
+            Task: Briefly state the ONE most important trend seen in this chart.
+            Constraint: Max 3 sentences. Start with "${mascotName} sees that..." (translated). Polite male tone.
         `;
     }
 
     try {
-        const result = await generateAIResponse(prompt, `You are ${mascotName}...`, {
+        const result = await generateAIResponse(prompt, {
             action: 'character_reaction',
             pageId: pageId,
             lang: lang
@@ -194,52 +182,36 @@ router.post('/ask-dashboard', verifyToken, async (req, res) => {
     if (actionType === 'generate_questions') {
         // กรณี 1: ให้แนะนำคำถาม 10 ข้อ 
         prompt = `
-            Role: ${mascotName} — expert data analyst.
-            Task: Analyze the provided dataset and suggest 10 insightful questions that a user (Executive or Manager) should ask to get value from this data.
-            
-            Context Data:
-            ${JSON.stringify(allData)}
+            Role: ${mascotName} (Data Expert).
+            Data: ${JSON.stringify(allData)}
+            Language: ${langInstruction}
 
-            Language Instruction:
-            ${langInstruction} (Use this language for the questions)
-
+            Task: Generate 10 short, strategic questions based on this specific data.
             Rules:
-            1. Return ONLY a numbered list of 10 questions.
-            2. Do not include any intro or outro text.
-            3. Questions must be specific to the data values provided (e.g., refer to specific departments or metrics in the JSON).
+            1. Numbered list only (1-10).
+            2. Questions must be relevant to the keys/values in the JSON.
+            3. No intro/outro.
         `;
 
     } else {
         // กรณี 2: ตอบคำถามจากข้อมูล
         prompt = `
-            Role: ${mascotName} — your Male Power BI dashboard assistant.
-            
-            Context Data (The ONLY source of truth):
-            ${JSON.stringify(allData)}
+            Role: ${mascotName} (Male Assistant).
+            Data: ${JSON.stringify(allData)}
+            Question: "${question}"
+            Language: ${langInstruction}
 
-            User Question:
-            "${question}"
-
-            Language Instruction:
-            ${langInstruction}
-
-            Strict Behavioral Rules:
-            1. **Persona:** You are Male. Use polite male particles (e.g., use 'ครับ' instead of 'ค่ะ' for Thai). Be professional yet cheerful.
-            2. **Data Integrity:** Answer ONLY using the provided Context Data. If the answer is not in the data, state clearly that the information is not available in the dashboard. Do not hallucinate or make up numbers.
-            3. **Directness (CRITICAL):** Start your answer IMMEDIATELY with the answer. 
-               - BAD: "Based on the data, the sales are..."
-               - BAD: "Hello, here is the info..."
-               - GOOD: "Sales for this month are 500 units..."
-            4. **Formatting:** - Use Plain text only. 
-               - NO Markdown (*, **, #). 
-               - NO Emojis. 
-               - If listing items, use a simple numbered list (1. Item).
-            5. **Clarity:** Keep answers concise and direct. Focus on the numbers/metrics asked.
+            Rules:
+            1. Answer based ONLY on the Data provided.
+            2. If data is missing, say "Data not available in this view."
+            3. Be extremely concise. Direct answer first.
+            4. Polite Male Tone (ครับ).
+            5. Plain text only.
         `;
     }
 
     try {
-        const result = await generateAIResponse(prompt, "You are a helpful Male AI Dashboard Assistant.", {
+        const result = await generateAIResponse(prompt, {
             action: actionType,
             pageId: pageId,
             lang: lang
@@ -272,25 +244,21 @@ router.post('/generate-ticker', verifyToken, async (req, res) => {
     const langInstruction = getLangInstruction(lang)
 
     const prompt = `
-        Role: News Editor for Dashboard (Strict Mode).
-        Source Data: ${JSON.stringify(allData)}
+        Role: News Ticker Editor.
+        Data: ${JSON.stringify(allData)}
+        Language: ${langInstruction}
         
-        Task:
-        1. Summarize the data into 1 news headline.
-        2. **STRICT STARTING RULE**: 
-        - You MUST start your response with either "ALERT:" or "INFO:".
-        - DO NOT say "EZ says...", "Here is the summary...", or any intro text.
-        - DO NOT translate "ALERT:" or "INFO:". Use these English words only.
+        Task: Create a 1-sentence headline summarizing the most critical data point.
         
         Logic:
-        - Use "ALERT:" if you see negative trends, drops, or risks.
-        - Use "INFO:" for normal updates or positive news.
-
-        Language of content: ${langInstruction} (Ensure specific male polite particles 'ครับ' if particles are needed, avoid 'ค่ะ').
-
+        - If there is a significant spike, drop, or anomaly -> Use prefix "ALERT:"
+        - If data looks stable or normal -> Use prefix "INFO:"
+        
         Constraints:
         - Output format: ALERT: [Content] OR INFO: [Content]
-        - NO Markdown, NO Emojis, NO Intro.
+        - Keep it under 20 words.
+        - Polite Male Tone (ครับ) inside the content.
+        - Do not translate the words "ALERT:" or "INFO:".
     `;
 
     try {
