@@ -856,7 +856,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
             </div>
 
             {/* Test BigQuery */}
-            {/* <div style={{
+            <div style={{
                 position: 'fixed',     
                 bottom: '20px',     
                 left: '20px',
@@ -897,7 +897,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                         AI Status: {aiState.status}
                     </div>
                 </div>
-            </div> */}
+            </div>
         </DashboardLayout>
     );
 }

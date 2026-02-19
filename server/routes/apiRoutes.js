@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { generateAIResponse, logCacheHit} = require('../services/aiService');
-const { fetchAzureSpeechToken } = require('../services/speechService');
+const { generateGoogleSpeech } = require('../services/speechService');
 const verifyToken = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
+const { prompts } = require('./prompts');
 
 // Helper Functions
 
@@ -67,34 +68,7 @@ router.post('/summarize-view', verifyToken, async (req, res) => {
     const langInstruction = getLangInstruction(lang);
     const mascotName = getMascotName(lang); 
 
-const prompt = `
-        **Role**: You are "${mascotName}", a smart Senior Data Analyst (Male Persona).
-        **Task**: Analyze the provided dataset (General Business/Operational Data) and summarize key insights.
-
-        **Dataset**: 
-        ${JSON.stringify(visibleCharts)}
-
-        **Universal Logic**:
-        - Do NOT assume the data is about floods unless the keywords (water, damage, flood) explicitly appear in the data.
-        - If the data is about Sales, talk about Revenue. If it's HR, talk about Headcount. Adapt to the context found in JSON keys.
-
-        **Language & Persona Rules**:
-        1. **Language**: Respond strictly in **${langInstruction}**.
-        2. **Tone**: Professional, Concise, Polite Male (e.g., in Thai use "ครับ").
-        3. **Style**: Direct to the point. No fluff.
-
-        **Response Structure (Strictly 4 Bullet Points)**:
-        - **Point 1 (Overview)**: Summarize the total numbers or the main KPI.
-        - **Point 2 (Highlight)**: Identify the highest/best performing category or significant spike.
-        - **Point 3 (Concern/Pattern)**: Identify the lowest area, a drop, or an anomaly.
-        - **Point 4 (Action)**: A short recommendation from EZ.
-
-        **Example of Desired Output (Generic Context)**:
-        - ภาพรวมยอดรวมทั้งหมดอยู่ที่ 1,500 หน่วย โดยหมวดหมู่ A มีสัดส่วนสูงสุดครับ
-        - พบว่าสถิติในช่วงปลายเดือนมีการเติบโตขึ้นอย่างชัดเจนเมื่อเทียบกับช่วงต้นเดือน
-        - กลุ่มเป้าหมาย B มีตัวเลขลดลงเล็กน้อย ซึ่งเป็นจุดที่น่าสังเกตครับ
-        - EZ ขอแนะนำให้ตรวจสอบปัจจัยที่ทำให้หมวดหมู่ A เติบโตเพื่อนำมาปรับใช้กับส่วนอื่นครับ
-    `;
+    let prompt = prompts.getSummarize(mascotName, langInstruction, visibleCharts);
 
     try {
         const result = await generateAIResponse(prompt, {
@@ -121,32 +95,14 @@ router.post('/character-reaction', verifyToken, async (req, res) => {
     const langInstruction = getLangInstruction(lang);
     const mascotName = getMascotName(lang); 
 
-    let prompt = "";
+    let prompt = [];
 
     if (pointData) {
         // กรณี 1: จิ้มโดนจุดข้อมูล
-        prompt = `
-            Role: ${mascotName} (Male Analyst).
-            Action: User clicked specific data point: "${pointData.name}" (Value: ${pointData.uv}).
-            Context: Compare this point to the rest of the data: ${JSON.stringify(contextData)}
-            
-            Language: ${langInstruction}
-            
-            Task: Give a 1-sentence comment. Is this point High? Low? or Average?
-            Constraint: Short, punchy, polite male tone (ครับ).
-        `;
+        prompt = prompts.getCharacter(true, mascotName, pointData, contextData, langInstruction);
     } else {
         // กรณี 2: คลิกที่ตัวกราฟ
-        prompt = `
-            Role: ${mascotName} (Male Analyst).
-            Action: User selected a chart.
-            Data: ${contextData}
-
-            Language: ${langInstruction}
-
-            Task: Briefly state the ONE most important trend seen in this chart.
-            Constraint: Max 3 sentences. Start with "${mascotName} sees that..." (translated). Polite male tone.
-        `;
+        prompt = prompts.getCharacter(false, mascotName, pointData, contextData, langInstruction);
     }
 
     try {
@@ -177,37 +133,14 @@ router.post('/ask-dashboard', verifyToken, async (req, res) => {
         ? 'generate_questions' 
         : 'chat_ask';
 
-    let prompt = "";
+    let prompt = [];
 
     if (actionType === 'generate_questions') {
         // กรณี 1: ให้แนะนำคำถาม 10 ข้อ 
-        prompt = `
-            Role: ${mascotName} (Data Expert).
-            Data: ${JSON.stringify(allData)}
-            Language: ${langInstruction}
-
-            Task: Generate 10 short, strategic questions based on this specific data.
-            Rules:
-            1. Numbered list only (1-10).
-            2. Questions must be relevant to the keys/values in the JSON.
-            3. No intro/outro.
-        `;
-
+        prompt = prompts.getAskGenerate(true, mascotName, allData, langInstruction, question);
     } else {
         // กรณี 2: ตอบคำถามจากข้อมูล
-        prompt = `
-            Role: ${mascotName} (Male Assistant).
-            Data: ${JSON.stringify(allData)}
-            Question: "${question}"
-            Language: ${langInstruction}
-
-            Rules:
-            1. Answer based ONLY on the Data provided.
-            2. If data is missing, say "Data not available in this view."
-            3. Be extremely concise. Direct answer first.
-            4. Polite Male Tone (ครับ).
-            5. Plain text only.
-        `;
+        prompt = prompts.getAskGenerate(false, mascotName, allData, langInstruction, question)
     }
 
     try {
@@ -229,40 +162,60 @@ router.post('/ask-dashboard', verifyToken, async (req, res) => {
 });
 
 // 7. ขอ Token สังเคราะห์เสียง (Azure)
-router.get('/speech-azure', async (req, res) => {
+// router.get('/speech-azure', async (req, res) => {
+//     try {
+//         const data = await fetchAzureSpeechToken();
+//         res.json(data);
+//     } catch (err) {
+//         res.status(500).json({ error: "Failed to fetch speech token" });
+//     }
+// });
+
+router.post('/speech-google', async (req, res) => {
     try {
-        const data = await fetchAzureSpeechToken();
-        res.json(data);
+        const { text, lang } = req.body; // รับข้อความและภาษาจากหน้าเว็บ
+
+        if (!text) {
+            return res.status(400).json({ error: "No text provided" });
+        }
+
+        // โยนให้ Google แปลงเสียง
+        const audioBase64 = await generateGoogleSpeech(text, lang);
+        
+        // ส่งไฟล์ MP3 (Base64) กลับไปให้หน้าเว็บ
+        res.json({ audioContent: audioBase64 });
     } catch (err) {
-        res.status(500).json({ error: "Failed to fetch speech token" });
+        res.status(500).json({ error: "Failed to generate speech" });
     }
 });
+
+// router.post('/speech-gemini', async (req, res) => { 
+//     try {
+//         const { text, lang } = req.body;
+
+//         if (!text) {
+//             return res.status(400).json({ error: "No text provided" });
+//         }
+
+//         // โยนให้ Gemini แปลงเสียง
+//         const audioBase64 = await generateGeminiSpeech(text, lang);
+        
+//         // ส่งไฟล์ WAV (Base64) กลับไปให้หน้าเว็บ
+//         res.json({ audioContent: audioBase64 });
+//     } catch (err) {
+//         res.status(500).json({ error: "Failed to generate speech via Gemini" });
+//     }
+// });
 
 // 8. สร้างข้อความข่าววิ่ง (Ticker)
 router.post('/generate-ticker', verifyToken, async (req, res) => {
     const { allData, lang, pageId } = req.body; 
     const langInstruction = getLangInstruction(lang)
 
-    const prompt = `
-        Role: News Ticker Editor.
-        Data: ${JSON.stringify(allData)}
-        Language: ${langInstruction}
-        
-        Task: Create a 1-sentence headline summarizing the most critical data point.
-        
-        Logic:
-        - If there is a significant spike, drop, or anomaly -> Use prefix "ALERT:"
-        - If data looks stable or normal -> Use prefix "INFO:"
-        
-        Constraints:
-        - Output format: ALERT: [Content] OR INFO: [Content]
-        - Keep it under 20 words.
-        - Polite Male Tone (ครับ) inside the content.
-        - Do not translate the words "ALERT:" or "INFO:".
-    `;
+    let prompt = prompts.getTicker(allData, langInstruction)
 
     try {
-        const result = await generateAIResponse(prompt, "You are a professional News Summarizer.", {
+        const result = await generateAIResponse(prompt, {
             action: 'generate_ticker',
             pageId: pageId,
             lang: lang

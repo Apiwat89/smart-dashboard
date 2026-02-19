@@ -7,8 +7,8 @@ const bigquery = new BigQuery({
     projectId: process.env.GCP_PROJECT_ID
 });
 
-const datasetId = process.env.DATASET_ID;
-const tableId = process.env.TABLE_ID; 
+const datasetId = process.env.GCP_DATASET_ID;
+const tableId = process.env.GCP_TABLE_ID; 
 
 // --- ฟังก์ชันแปลงข้อมูลให้ตรงกับ Schema ---
 const prepareLogData = (data) => {
@@ -53,7 +53,7 @@ async function insertLogฺBigQuery(data) {
 
     // บันทึกลง BigQuery (เฉพาะตอนอยู่บน Production หรือตั้งค่าเปิดไว้)
     // เช็ค environment variable เพื่อไม่ให้เปลือง Quota ตอน dev
-    if (process.env.NODE_ENV === 'production' || process.env.ENABLE_BIGQUERY === 'true') {
+    if (process.env.NODE_ENV === 'production' || process.env.GCP_ENABLE_BIGQUERY === 'true') {
         try {
             const row = prepareLogData(data);
             

@@ -1,7 +1,7 @@
 const OpenAI = require("openai"); 
 const db = require('../database/database'); 
 const { v4: uuidv4 } = require('uuid'); 
-const { insertLogฺBigQuery } = require('./loggerService');
+const { insertLogฺBigQuery } = require('./loggerService'); // ตรวจสอบชื่อฟังก์ชันให้ตรงกับที่คุณใช้อยู่
 require('dotenv').config();
 
 // Config OpenAI
@@ -11,11 +11,18 @@ const openai = new OpenAI({
 
 const MODEL_NAME = "gpt-5.2"; 
 
-// ฟังก์ชันหลัก
-async function generateAIResponse(userMessage, logContext = {}) {
+async function generateAIResponse(messages, logContext = {}) {
     const startTime = new Date().toISOString();
     const startTimeCal = Date.now();
     const reqId = uuidv4();
+
+    // 1. จัดการข้อความก่อนเรียก AI (บีบอัดช่องว่าง และป้องกัน object object)
+    let compressedPrompt = "";
+    try {
+        compressedPrompt = JSON.stringify(messages).replace(/\s+/g, ' ');
+    } catch (e) {
+        compressedPrompt = "Error parsing messages";
+    }
 
     try {
         console.log(`Sending to OpenAI (${MODEL_NAME}) [${logContext.action || 'General'}]...`);
@@ -23,8 +30,8 @@ async function generateAIResponse(userMessage, logContext = {}) {
         // 2. เรียก API
         const completion = await openai.chat.completions.create({
             model: MODEL_NAME,
-            userMessage: userMessage,
-            temperature: 0.7, // ปรับความสร้างสรรค์
+            messages: messages, 
+            temperature: 0.7, 
         });
 
         // 3. แกะผลลัพธ์
@@ -37,19 +44,15 @@ async function generateAIResponse(userMessage, logContext = {}) {
         const total_tokens = usage.total_tokens || 0;     
 
         const endTime = new Date().toISOString();
-        const endTimeCal = Date.now();
-        const duration = endTimeCal - startTimeCal;
+        const duration = Date.now() - startTimeCal;
         
-        // แปลงเป็น String เพื่อเก็บใน DB ให้สวยงาม
-        const inputLogCheck = `${userMessage}`;
-
         // 5. บันทึก Log
         insertLogฺBigQuery({
             reqId: reqId,
             page: logContext.pageId,
             action: logContext.action,
             lang: logContext.lang,
-            input: inputLogCheck, 
+            input: compressedPrompt, // ✅ ส่งก้อนที่บีบอัดแล้วไปเก็บ จะได้ไม่เป็น \n ยาวๆ
             output: responseText,
             input_tokens: input_tokens,       
             output_tokens: output_tokens, 
@@ -70,7 +73,7 @@ async function generateAIResponse(userMessage, logContext = {}) {
                 output_tokens: output_tokens,
                 total_tokens: total_tokens 
             },
-            input: inputLogCheck 
+            input: compressedPrompt // ✅ แก้ Error ตรงนี้เรียบร้อย
         };
 
     } catch (error) {
@@ -81,13 +84,13 @@ async function generateAIResponse(userMessage, logContext = {}) {
             page: logContext.pageId,
             action: logContext.action,
             lang: logContext.lang,
-            input: userMessage,
+            input: compressedPrompt, // ✅ แก้ Error ตรงนี้เรียบร้อย
             output: `Error: ${error.message}`,
             input_tokens: 0, output_tokens: 0, total_tokens: 0,
             savedTokens: 0,
             startTime: startTime,
-            endTime: Date.now(),
-            durationTime: Date.now() - startTime, 
+            endTime: new Date().toISOString(),
+            durationTime: Date.now() - startTimeCal, 
             savedTime: 0, 
             isCached: false
         });
@@ -96,7 +99,7 @@ async function generateAIResponse(userMessage, logContext = {}) {
             text: "ขออภัยครับ ระบบ AI ขัดข้องชั่วคราว",
             id: reqId,
             usage: { total_tokens: 0 },
-            input: userMessage
+            input: compressedPrompt
         };
     }
 }
