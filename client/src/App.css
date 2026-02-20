@@ -1525,7 +1525,7 @@ body {
 
   .char-stage {
     flex: 0 0 auto !important;
-    height: 23vh !important;
+    height: 10vh !important;
     width: 100% !important;
     border-radius: 2vh !important;
     border: 0.5vh solid white;

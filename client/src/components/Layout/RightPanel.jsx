@@ -76,7 +76,7 @@ const RightPanel = ({
       </div>
 
       {/* 2. Character Zone (Video) */}
-      <div className="char-stage" style={{ flex: '0 0 35%', borderRadius: '16px', overflow: 'hidden', minHeight: '80px', position: 'relative' }}>
+      <div className="char-stage" style={{ flex: '0 0 20%', borderRadius: '16px', overflow: 'hidden', minHeight: '80px', position: 'relative'}}>
         <CharacterZone
           status={aiState.status}
           text={aiState.message}
