@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { generateAIResponse, logCacheHit} = require('../services/aiService');
-const { generateGoogleSpeech } = require('../services/speechService');
+const { generateAzureSpeech, generateGoogleSpeech } = require('../services/speechService');
 const verifyToken = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
 const { prompts } = require('./prompts');
@@ -161,51 +161,31 @@ router.post('/ask-dashboard', verifyToken, async (req, res) => {
     }
 });
 
-// 7. ขอ Token สังเคราะห์เสียง (Azure)
-// router.get('/speech-azure', async (req, res) => {
-//     try {
-//         const data = await fetchAzureSpeechToken();
-//         res.json(data);
-//     } catch (err) {
-//         res.status(500).json({ error: "Failed to fetch speech token" });
-//     }
-// });
-
-router.post('/speech-google', async (req, res) => {
+// 7.1 เส้นทางสำหรับเรียกเสียง Azure
+router.post('/speech-azure', async (req, res) => {
     try {
-        const { text, lang } = req.body; // รับข้อความและภาษาจากหน้าเว็บ
+        const { text, lang } = req.body;
+        if (!text) return res.status(400).json({ error: "No text provided" });
 
-        if (!text) {
-            return res.status(400).json({ error: "No text provided" });
-        }
-
-        // โยนให้ Google แปลงเสียง
-        const audioBase64 = await generateGoogleSpeech(text, lang);
-        
-        // ส่งไฟล์ MP3 (Base64) กลับไปให้หน้าเว็บ
+        const audioBase64 = await generateAzureSpeech(text, lang);
         res.json({ audioContent: audioBase64 });
     } catch (err) {
-        res.status(500).json({ error: "Failed to generate speech" });
+        res.status(500).json({ error: "Failed to generate speech via Azure" });
     }
 });
 
-// router.post('/speech-gemini', async (req, res) => { 
-//     try {
-//         const { text, lang } = req.body;
+// 7.2 เส้นทางสำหรับเรียกเสียง Google
+router.post('/speech-google', async (req, res) => {
+    try {
+        const { text, lang } = req.body;
+        if (!text) return res.status(400).json({ error: "No text provided" });
 
-//         if (!text) {
-//             return res.status(400).json({ error: "No text provided" });
-//         }
-
-//         // โยนให้ Gemini แปลงเสียง
-//         const audioBase64 = await generateGeminiSpeech(text, lang);
-        
-//         // ส่งไฟล์ WAV (Base64) กลับไปให้หน้าเว็บ
-//         res.json({ audioContent: audioBase64 });
-//     } catch (err) {
-//         res.status(500).json({ error: "Failed to generate speech via Gemini" });
-//     }
-// });
+        const audioBase64 = await generateGoogleSpeech(text, lang);
+        res.json({ audioContent: audioBase64 });
+    } catch (err) {
+        res.status(500).json({ error: "Failed to generate speech via Google" });
+    }
+});
 
 // 8. สร้างข้อความข่าววิ่ง (Ticker)
 router.post('/generate-ticker', verifyToken, async (req, res) => {

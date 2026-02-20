@@ -21,78 +21,8 @@ const APP_MENU = [
         id: "one", 
         title: "สถิติจังหวัด", 
         headerTitle: "สถิติน้ำท่วมในแต่ละจังหวัด", 
-        icon: <i class="material-symbols-outlined">directions_walk</i>, 
-        pageName: "798ca254819667030432" 
-    },
-    { 
-        id: "two", 
-        title: "สถิติรายเดือน", 
-        headerTitle: "สถิติน้ำท่วมของเดือนที่เกิดเหตุ", 
-        icon: <i class="material-symbols-outlined">directions_run</i>, 
-        pageName: "5b3cc48690823dd3da6d" 
-    },
-    { 
-        id: "three", 
-        title: "ความเสียหาย", 
-        headerTitle: "ความเสียหายในแต่ละด้าน", 
-        icon: <i class="material-symbols-outlined">directions_bike</i>, 
-        pageName: "e93c812d89901cad35c2" 
-    },
-    { 
-        id: "three", 
-        title: "ความเสียหาย", 
-        headerTitle: "ความเสียหายในแต่ละด้าน", 
-        icon: <i class="material-symbols-outlined">directions_bike</i>, 
-        pageName: "e93c812d89901cad35c2" 
-    },
-    { 
-        id: "three", 
-        title: "ความเสียหาย", 
-        headerTitle: "ความเสียหายในแต่ละด้าน", 
-        icon: <i class="material-symbols-outlined">directions_bike</i>, 
-        pageName: "e93c812d89901cad35c2" 
-    },
-    { 
-        id: "three", 
-        title: "ความเสียหาย", 
-        headerTitle: "ความเสียหายในแต่ละด้าน", 
-        icon: <i class="material-symbols-outlined">directions_bike</i>, 
-        pageName: "e93c812d89901cad35c2" 
-    },
-    { 
-        id: "three", 
-        title: "ความเสียหาย", 
-        headerTitle: "ความเสียหายในแต่ละด้าน", 
-        icon: <i class="material-symbols-outlined">directions_bike</i>, 
-        pageName: "e93c812d89901cad35c2" 
-    },
-    { 
-        id: "three", 
-        title: "ความเสียหาย", 
-        headerTitle: "ความเสียหายในแต่ละด้าน", 
-        icon: <i class="material-symbols-outlined">directions_bike</i>, 
-        pageName: "e93c812d89901cad35c2" 
-    },
-    { 
-        id: "three", 
-        title: "ความเสียหาย", 
-        headerTitle: "ความเสียหายในแต่ละด้าน", 
-        icon: <i class="material-symbols-outlined">directions_bike</i>, 
-        pageName: "e93c812d89901cad35c2" 
-    },
-    { 
-        id: "three", 
-        title: "ความเสียหาย", 
-        headerTitle: "ความเสียหายในแต่ละด้าน", 
-        icon: <i class="material-symbols-outlined">directions_bike</i>, 
-        pageName: "e93c812d89901cad35c2" 
-    },
-    { 
-        id: "three", 
-        title: "ความเสียหาย", 
-        headerTitle: "ความเสียหายในแต่ละด้าน", 
-        icon: <i class="material-symbols-outlined">directions_bike</i>, 
-        pageName: "e93c812d89901cad35c2" 
+        icon: <i class="material-symbols-outlined">partner_heart</i>, 
+        pageName: "7ce52d493ec4f7b9cb5e" 
     },
 ];
 

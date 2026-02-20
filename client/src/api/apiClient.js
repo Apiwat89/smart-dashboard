@@ -118,44 +118,19 @@ export const dashboardService = {
     }
   },
 
-  // ขอ Token สำหรับ Azure Speech Service
-  // getSpeechToken: async (token) => {
-  //   try {
-  //     const res = await client.get('/speech-azure');
-  //     return res.data;
-  //   } catch (e) {
-  //     console.error("Azure Token Fetch Error:", e);
-  //     return null;
-  //   }
-  // },
   getSpeechAudio: async (text, lang) => { 
     try {
-      // 1. เปลี่ยนเป็น POST และส่ง body { text, lang } ไปด้วย
-      const res = await client.post('/speech-google', {
+      // แค่เปลี่ยนคำว่า /speech-azure หรือ /speech-azure หรือ /speech-google ระบบก็จะสลับค่ายให้ทันที!
+      const res = await client.post('/speech-azure', { 
           text: text,
           lang: lang
       });
-      
-      // 2. สิ่งที่ได้กลับมาจะไม่ใช่ Token แล้ว แต่จะเป็น { audioContent: "base64..." }
       return res.data; 
     } catch (e) {
       console.error("Speech Audio Fetch Error:", e);
       return null;
     }
   },
-  // getSpeechAudio: async (text, lang) => { 
-  //   try {
-  //     // ชี้ไปหาเส้นทางใหม่
-  //     const res = await client.post('/speech-gemini', { 
-  //         text: text,
-  //         lang: lang
-  //     });
-  //     return res.data; 
-  //   } catch (e) {
-  //     console.error("Speech Audio Fetch Error:", e);
-  //     return null;
-  //   }
-  // },
 
   // บันทึก Log การใช้งาน Cache (ส่งแล้วไม่ต้องรอผลตอบกลับ)
   logCacheHit: async (data) => {
