@@ -1,9 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { dashboardService } from '../../api/apiClient';
 
-const CharacterZone = ({ status, text, lang, onSpeechEnd}) => {
+const audioCache = {};
+
+const CharacterZone = ({ status, text, lang, onSpeechEnd, onSpeechStart}) => {
   const [visualState, setVisualState] = useState('idle'); 
   const audioRef = useRef(null); 
+
+  const callbacks = useRef({ onSpeechEnd, onSpeechStart });
+  useEffect(() => {
+    callbacks.current = { onSpeechEnd, onSpeechStart };
+  }, [onSpeechEnd, onSpeechStart]);
 
   // Preload Videos (คงเดิม)
   useEffect(() => {
@@ -47,8 +54,19 @@ const CharacterZone = ({ status, text, lang, onSpeechEnd}) => {
 
       const speak = async () => {
         try {
+          const cacheKey = `${lang}_${text}`;
+          let audioData = null;
+
           // 3. เรียก API ใหม่ที่เราส่ง text กับ lang ไปด้วย 
-          const audioData = await dashboardService.getSpeechAudio(text, lang);
+          if (audioCache[cacheKey]) {
+              audioData = audioCache[cacheKey];
+          } else {
+              audioData = await dashboardService.getSpeechAudio(text, lang);
+              
+              if (!isCancelled && audioData && audioData.audioContent) {
+                  audioCache[cacheKey] = audioData;
+              }
+          }
           
           if (isCancelled) return; 
           
@@ -64,7 +82,10 @@ const CharacterZone = ({ status, text, lang, onSpeechEnd}) => {
 
           // 5. ผูก Event แอนิเมชันเข้ากับเสียง
           audio.onplay = () => {
-               if (!isCancelled) setVisualState('talking'); // เสียงเริ่มดัง = ปากเริ่มขยับ
+               if (!isCancelled) {
+                   setVisualState('talking'); 
+                   if (callbacks.current.onSpeechStart) callbacks.current.onSpeechStart(); 
+               }
           };
           
           audio.onended = () => {
@@ -112,7 +133,7 @@ const CharacterZone = ({ status, text, lang, onSpeechEnd}) => {
         stopSpeaking();
     };
     
-  }, [status, text, lang, onSpeechEnd]); 
+  }, [status, text, lang]); 
 
   // Render วิดีโอแอนิเมชัน (คงเดิม 100%)
   const videoStyle = { 

@@ -120,8 +120,8 @@ export const dashboardService = {
 
   getSpeechAudio: async (text, lang) => { 
     try {
-      // แค่เปลี่ยนคำว่า /speech-azure หรือ /speech-azure หรือ /speech-google ระบบก็จะสลับค่ายให้ทันที!
-      const res = await client.post('/speech-azure', { 
+      // แค่เปลี่ยนคำว่า /speech-azure หรือ /speech-google ระบบก็จะสลับค่ายให้ทันที!
+      const res = await client.post('/speech-google', { 
           text: text,
           lang: lang
       });

@@ -22,8 +22,14 @@ const APP_MENU = [
         title: "สถิติจังหวัด", 
         headerTitle: "สถิติน้ำท่วมในแต่ละจังหวัด", 
         icon: <i class="material-symbols-outlined">partner_heart</i>, 
-        pageName: "7ce52d493ec4f7b9cb5e" 
-    },
+        pageName: "e6907073c19777d691e2" 
+    }, // หากมีหลายหน้า ให้เพิ่ม object ในรูปแบบเดียวกันนี้ลงไปใน Array เช่น 
+    // { id: "two", 
+    //  title: "หน้า 2", 
+    //  headerTitle: "ข้อมูลหน้า 2", 
+    //  icon: <i class="material-symbols-outlined">analytics</i>, 
+    //  pageName: "xxxxxx" 
+    // },
 ];
 
 function App({ loginRequest, powerBIRequest, TokenID }) {
@@ -61,6 +67,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     const [isProcessing, setProcessing] = useState(false);
     const [summary, setSummary] = useState("รอข้อมูลจาก Power BI...");
     const [isSummaryLoading, setSummaryLoading] = useState(false);
+    const [isAudioReady, setIsAudioReady] = useState(false);
     
     // Chat & Questions
     const [question, setQuestion] = useState("");
@@ -120,6 +127,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     // ฟังก์ชันจัดการการพูดของ AI
     const handleAiSpeak = (text, isError = false) => {
         stopAllVoices(); 
+        setIsAudioReady(false);
         if (isError) {
             setAiState({ status: 'error', message: text, isVisible: true });
             return;
@@ -224,7 +232,8 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
         if(!textInput || !textInput.trim()) return;
         const startLang = langRef.current;
         stopAllVoices();
-        
+
+        setIsAudioReady(false);
         setSummaryLoading(true); 
         setSummary(""); 
         setProcessing(true);
@@ -262,6 +271,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
             const value = dp.values[0]?.formattedValue || "N/A";
             const chartTitle = event.detail.visual.title || "กราฟ"; 
 
+            setIsAudioReady(false);
             setSummaryLoading(true);
             setSummary(""); 
             setProcessing(true);
@@ -309,6 +319,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
         const startLang = langRef.current;
 
         try {
+            setIsAudioReady(false);
             setSummaryLoading(true);
             setSummary("");
             setProcessing(true);
@@ -365,6 +376,8 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
         const currentLang = langRef.current;
         const cacheKey = `${activePageId}_${currentLang}`;
         
+        setIsAudioReady(false);
+
         // 1. ตรวจสอบ Cache
         if (dashboardCache[cacheKey]) {
             const cached = dashboardCache[cacheKey];
@@ -577,6 +590,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
         let isCurrentEffect = true;
         stopAllVoices();
         setAiState(prev => ({ ...prev, status: 'thinking', message: '' }));
+        setIsAudioReady(false);
 
         const refreshAIContentOnLangChange = async () => {
             if (!currentReportData) return;
@@ -671,6 +685,10 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
 
     // --- Main Render ---
 
+    const isWaitingForAudio = aiState.status === 'talking' && !isAudioReady;
+    const displayMessage = isWaitingForAudio ? "" : (aiState.status === 'talking' ? aiState.message : summary);
+    const isShowLoading = isSummaryLoading || aiState.status === 'thinking' || isWaitingForAudio;
+
     const handleLogin = () => instance.loginRedirect(loginRequest);
     const handleLogout = () => {
         stopAllVoices(); 
@@ -751,13 +769,14 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                 setCurrentLang: setLang, 
                 isProcessing,
                 onSpeechEnd: () => setAiState(prev => ({ ...prev, status: 'idle' })),
+                onSpeechStart: () => setIsAudioReady(true),
                 suggestedQuestions: suggestedQuestions,
                 onSelectQuestion: (q) => { setSummaryLoading(true); setSummary(""); triggerAiChat(q); },
                 summaryWidget: (
                         <div className="ai-summary-in-panel">
                             <ResultBox 
-                                text={aiState.status === 'talking' ? aiState.message : summary} 
-                                isLoading={isSummaryLoading} 
+                                text={displayMessage}
+                                isLoading={isShowLoading}
                                 onRefresh={() => { 
                                     const cacheKey = `${activePageId}_${lang}`;
                                     if (dashboardCache[cacheKey]) delete dashboardCache[cacheKey];
@@ -786,7 +805,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
             </div>
 
             {/* Test BigQuery */}
-            <div style={{
+            {/* <div style={{
                 position: 'fixed',     
                 bottom: '20px',     
                 left: '20px',
@@ -827,7 +846,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                         AI Status: {aiState.status}
                     </div>
                 </div>
-            </div>
+            </div> */}
         </DashboardLayout>
     );
 }

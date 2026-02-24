@@ -4,8 +4,8 @@ require('dotenv').config();
 
 // ฟังก์ชันสร้างเสียงด้วย Azure (คุณ Niwat)
 const generateAzureSpeech = async (text, lang) => {
-    const speechKey = process.env.SPEECH_KEY;
-    const speechRegion = process.env.SPEECH_REGION;
+    const speechKey = process.env.AZURE_SPEECH_KEY;
+    const speechRegion = process.env.AZURE_SPEECH_REGION;
 
     if (!speechKey || !speechRegion) throw new Error('Missing Azure Speech credentials in .env');
 
@@ -56,12 +56,29 @@ const generateAzureSpeech = async (text, lang) => {
 const generateGoogleSpeech = async (text, lang) => {
     const client = new textToSpeech.TextToSpeechClient({
         projectId: process.env.GCP_PROJECT_ID, 
-        keyFilename: process.env.GCP_SPEECH_ID  
+        keyFilename: process.env.GCP_SPEECH_KEY  
     });
 
+    // แปลงข้อความธรรมดา ให้กลายเป็น SSML
+    let cleanText = text;
+    cleanText = cleanText.replace(/<[^>]*>?/gm, ' '); 
+    cleanText = cleanText.replace(/[*|()=“”"']/g, ' '); 
+    cleanText = cleanText.replace(/&/g, '&amp;');
+    cleanText = cleanText.replace(/</g, '&lt;');
+    cleanText = cleanText.replace(/>/g, '&gt;');
+    cleanText = cleanText.replace(/,\s+(?!\d)/g, ',__PAUSE_300__');
+    cleanText = cleanText.replace(/(?<!\d)\.(?!\d)\s*/g, '.__PAUSE_500__');
+    cleanText = cleanText.replace(/\n+/g, '__PAUSE_500__');
+    cleanText = cleanText.replace(/ /g, '<break time="10ms"/>');
+    cleanText = cleanText.replace(/__PAUSE_300__/g, '<break time="300ms"/>');
+    cleanText = cleanText.replace(/__PAUSE_500__/g, '<break time="500ms"/>');
+
+    // 3. ห่อข้อความด้วย Tag <speak>
+    const ssmlText = `<speak>${cleanText}</speak>`;
+    
     const voiceConfigs = {
         'TH': { languageCode: 'th-TH', name: 'th-TH-Chirp3-HD-Achird' }, 
-        'EN': { languageCode: 'en-US', name: 'en-US-Neural2-D' }, 
+        'EN': { languageCode: 'en-US', name: 'en-US-Neural2-J' }, 
         'JP': { languageCode: 'ja-JP', name: 'ja-JP-Neural2-C' }, 
         'CN': { languageCode: 'cmn-CN', name: 'cmn-CN-Wavenet-C' }, 
         'KR': { languageCode: 'ko-KR', name: 'ko-KR-Neural2-C' }, 
@@ -71,7 +88,7 @@ const generateGoogleSpeech = async (text, lang) => {
     const config = voiceConfigs[lang] || voiceConfigs['TH'];
 
     const request = {
-        input: { text: text },
+        input: { ssml: ssmlText }, 
         voice: config,
         audioConfig: { 
             audioEncoding: 'MP3',

@@ -15,22 +15,39 @@ async function generateAIResponse(messages, logContext = {}) {
     const startTime = new Date().toISOString();
     const startTimeCal = Date.now();
     const reqId = uuidv4();
-
-    // 1. จัดการข้อความก่อนเรียก AI (บีบอัดช่องว่าง และป้องกัน object object)
-    let compressedPrompt = "";
-    try {
-        compressedPrompt = JSON.stringify(messages).replace(/\s+/g, ' ');
-    } catch (e) {
-        compressedPrompt = "Error parsing messages";
-    }
+    
+    // 1. จัดการข้อความก่อนบันทึก Log (แบบอ่านง่ายแยก System/User)
+    let logPrompt = "";
 
     try {
         console.log(`Sending to OpenAI (${MODEL_NAME}) [${logContext.action || 'General'}]...`);
 
+        const systemContent = messages.find(m => m.role === "system")?.content || "";
+        const userContent = messages.find(m => m.role === "user")?.content || "";
+
+        const clean = (text) => text
+            .replace(/\\r\\n|\\n/g, '\n')       // แปลงเป็นบรรทัดจริง
+            .replace(/[ \t]+/g, ' ')            // บีบช่องว่างที่ซ้ำซ้อน
+            .replace(/\n{2,}/g, '\n')           // ยุบบรรทัดว่างเกินจำเป็น
+            .trim();
+
+        logPrompt = `
+            [SYSTEM ROLE]:
+            ${clean(systemContent)}
+
+            [USER DATA/QUERY]:
+            ${clean(userContent)}
+                `.trim();
+
+        const messagesToSend = [
+            { role: "system", content: clean(systemContent) },
+            { role: "user", content: clean(userContent) }
+        ];
+
         // 2. เรียก API
         const completion = await openai.chat.completions.create({
             model: MODEL_NAME,
-            messages: messages, 
+            messages: messagesToSend,
             temperature: 0.7, 
         });
 
@@ -52,7 +69,7 @@ async function generateAIResponse(messages, logContext = {}) {
             page: logContext.pageId,
             action: logContext.action,
             lang: logContext.lang,
-            input: compressedPrompt, // ✅ ส่งก้อนที่บีบอัดแล้วไปเก็บ จะได้ไม่เป็น \n ยาวๆ
+            input: logPrompt, 
             output: responseText,
             input_tokens: input_tokens,       
             output_tokens: output_tokens, 
@@ -73,7 +90,7 @@ async function generateAIResponse(messages, logContext = {}) {
                 output_tokens: output_tokens,
                 total_tokens: total_tokens 
             },
-            input: compressedPrompt // ✅ แก้ Error ตรงนี้เรียบร้อย
+            input: logPrompt 
         };
 
     } catch (error) {
@@ -84,7 +101,7 @@ async function generateAIResponse(messages, logContext = {}) {
             page: logContext.pageId,
             action: logContext.action,
             lang: logContext.lang,
-            input: compressedPrompt, // ✅ แก้ Error ตรงนี้เรียบร้อย
+            input: logPrompt, 
             output: `Error: ${error.message}`,
             input_tokens: 0, output_tokens: 0, total_tokens: 0,
             savedTokens: 0,
@@ -99,7 +116,7 @@ async function generateAIResponse(messages, logContext = {}) {
             text: "ขออภัยครับ ระบบ AI ขัดข้องชั่วคราว",
             id: reqId,
             usage: { total_tokens: 0 },
-            input: compressedPrompt
+            input: logPrompt
         };
     }
 }
