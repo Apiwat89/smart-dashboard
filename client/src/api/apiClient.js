@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // --- Configuration ---
 const API_TIMEOUT = 30000;
-const BASE_URL = 'https://smart-dashboard-7382.onrender.com/api';
+const BASE_URL = '/api';
 
 // ตั้งค่า Axios Client Instance
 const client = axios.create({
