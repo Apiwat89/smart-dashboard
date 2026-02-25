@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Sparkles, RefreshCw, Loader2, QrCode, X } from 'lucide-react';
+import { Sparkles, RefreshCw, Loader2, QrCode, X, VolumeX, Volume2} from 'lucide-react';
 import QRCode from "react-qr-code";
 import { dashboardService } from '../../api/apiClient';
 
-const ResultBox = ({ text, isLoading, onRefresh }) => {
+const ResultBox = ({ text, isLoading, onRefresh, isMuted, toggleMute }) => {
   const [showQR, setShowQR] = useState(false);
   const [qrUrl, setQrUrl] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false); 
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Helper: Format Bold Text (**...**)
   const formatText = (inputText) => {
@@ -45,13 +45,12 @@ const ResultBox = ({ text, isLoading, onRefresh }) => {
         <div className="result-header">
           <div className="header-left">
             {isLoading ? <Loader2 size={18} className="icon-sparkle spin-anim" /> : <Sparkles size={18} className="icon-sparkle" />}
-            <span className="header-title">{isLoading ? "Analyzing Data..." : "AI Insight Summary"}</span>
+            <span className="header-title">{isLoading ? "Analyzing Data..." : "EZ Insight Summary"}</span>
           </div>
           
           <div className="header-right">
             {!isLoading && (
               <>
-                {/* ปุ่มสร้าง QR Code แบบผ่าน Server */}
                 <button 
                     className="icon-btn" 
                     title="Scan to Mobile" 
@@ -59,6 +58,10 @@ const ResultBox = ({ text, isLoading, onRefresh }) => {
                     disabled={isGenerating} // ห้ามกดรัวๆ
                 >
                   {isGenerating ? <Loader2 size={16} className="spin-anim"/> : <QrCode size={16} />}
+                </button>
+
+                <button className="icon-btn" onClick={toggleMute} title={isMuted ? "เปิดเสียง" : "ปิดเสียง"}>
+                  {isMuted ? <VolumeX size={18} color="#ef4444" /> : <Volume2 size={18} />}
                 </button>
 
                 <button className="icon-btn" title="Refresh" onClick={onRefresh}>
@@ -93,7 +96,7 @@ const ResultBox = ({ text, isLoading, onRefresh }) => {
                         maxWidth: "35vh",  
                         margin: "0 auto" 
                     }}>
-                      
+
                     <QRCode 
                         value={qrUrl} 
                         size={256} 

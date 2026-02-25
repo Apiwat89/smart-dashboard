@@ -12,7 +12,8 @@ const RightPanel = ({
   onSpeechStart,
   summaryWidget,
   suggestedQuestions = [],
-  onSelectQuestion
+  onSelectQuestion,
+  isGlobalMuted
 }) => {
   const [isSuggestOpen, setIsSuggestOpen] = useState(false);
   const suggestBoxRef = useRef(null);
@@ -87,6 +88,7 @@ const RightPanel = ({
           lang={currentLang}
           onSpeechEnd={onSpeechEnd}
           onSpeechStart={onSpeechStart}
+          isGlobalMuted={isGlobalMuted}
         />
       </div>
 

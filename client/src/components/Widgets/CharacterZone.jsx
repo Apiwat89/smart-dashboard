@@ -3,9 +3,17 @@ import { dashboardService } from '../../api/apiClient';
 
 const audioCache = {};
 
-const CharacterZone = ({ status, text, lang, onSpeechEnd, onSpeechStart}) => {
+const CharacterZone = ({ status, text, lang, onSpeechEnd, onSpeechStart, isGlobalMuted}) => {
   const [visualState, setVisualState] = useState('idle'); 
   const audioRef = useRef(null); 
+
+  const isMutedRef = useRef(isGlobalMuted);
+  useEffect(() => {
+    isMutedRef.current = isGlobalMuted;
+    if (audioRef.current) {
+        audioRef.current.muted = isGlobalMuted; // สั่งปิด-เปิดเสียง MP3 
+    }
+  }, [isGlobalMuted]);
 
   const callbacks = useRef({ onSpeechEnd, onSpeechStart });
   useEffect(() => {
@@ -78,6 +86,7 @@ const CharacterZone = ({ status, text, lang, onSpeechEnd, onSpeechStart}) => {
 
           const audioSrc = "data:audio/mp3;base64," + audioData.audioContent;
           const audio = new Audio(audioSrc);
+          audio.muted = isMutedRef.current;
           audioRef.current = audio;
 
           // 5. ผูก Event แอนิเมชันเข้ากับเสียง

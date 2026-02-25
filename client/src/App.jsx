@@ -47,7 +47,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     const [isAppReady, setAppReady] = useState(false);
     const [showStartButton, setShowStartButton] = useState(false);
     const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
-    const [rightPanelWidth, setRightPanelWidth] = useState(window.innerWidth > 2500 ? 1100 : 380);
+    const [rightPanelWidth, setRightPanelWidth] = useState(window.innerWidth > 2500 ? 1500 : 380);
     const isResizing = useRef(false);
 
     // --- 3. Dashboard Control State ---
@@ -60,6 +60,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     const TIMER_DURATION = 600; 
     const [autoPlayCountdown, setAutoPlayCountdown] = useState(600);
     const [countdown, setCountdown] = useState(0);
+    const [isGlobalMuted, setIsGlobalMuted] = useState(false);
 
     // --- 5. AI & Data State ---
     const [lang, setLang] = useState('TH');
@@ -772,6 +773,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                 onSpeechStart: () => setIsAudioReady(true),
                 suggestedQuestions: suggestedQuestions,
                 onSelectQuestion: (q) => { setSummaryLoading(true); setSummary(""); triggerAiChat(q); },
+                isGlobalMuted: isGlobalMuted,
                 summaryWidget: (
                         <div className="ai-summary-in-panel">
                             <ResultBox 
@@ -785,6 +787,8 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
                                     summarizedPageRef.current = null; 
                                     handleReportRendered(); 
                                 }}
+                                isMuted={isGlobalMuted}
+                                toggleMute={() => setIsGlobalMuted(!isGlobalMuted)}
                             />
                         </div>
                     )
