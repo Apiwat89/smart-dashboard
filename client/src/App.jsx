@@ -19,8 +19,8 @@ const APP_MENU = [
     // icon สามารถดูได้ที่นี่ https://fonts.google.com/icons?icon.size=24&icon.color=%231f1f1f&icon.platform=web 
     { 
         id: "one", 
-        title: "สถิติจังหวัด", 
-        headerTitle: "สถิติน้ำท่วมในแต่ละจังหวัด", 
+        title: "ทดสอบ", 
+        headerTitle: "ทดสอบข้อมูลหน้าแรก", 
         icon: <i class="material-symbols-outlined">partner_heart</i>, 
         pageName: "e6907073c19777d691e2" 
     }, // หากมีหลายหน้า ให้เพิ่ม object ในรูปแบบเดียวกันนี้ลงไปใน Array เช่น 
