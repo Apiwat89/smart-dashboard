@@ -47,7 +47,7 @@ function App({ loginRequest, powerBIRequest, TokenID }) {
     const [isAppReady, setAppReady] = useState(false);
     const [showStartButton, setShowStartButton] = useState(false);
     const [isSidebarCollapsed, setSidebarCollapsed] = useState(false);
-    const [rightPanelWidth, setRightPanelWidth] = useState(window.innerWidth > 2500 ? 1500 : 380);
+    const [rightPanelWidth, setRightPanelWidth] = useState(window.innerWidth > 2500 ? 1500 : 390);
     const isResizing = useRef(false);
 
     // --- 3. Dashboard Control State ---
